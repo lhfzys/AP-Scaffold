@@ -1,0 +1,40 @@
+<Solution>
+  <Folder Name="/00-Solution-Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/platform/" />
+  <Folder Name="/platform/contracts/">
+    <Project Path="platform/contracts/AP.Contracts.Communication/AP.Contracts.Communication.csproj" Id="0187ea4b-d2ee-4571-9106-b58489ef8c36" />
+    <Project Path="platform/contracts/AP.Contracts.Core/AP.Contracts.Core.csproj" Id="d9dfba41-8e36-4045-a9cb-b1694d2b0e0d" />
+    <Project Path="platform/contracts/AP.Contracts.Hardware/AP.Contracts.Hardware.csproj" Id="49e52293-add0-40be-a30d-764aab374010" />
+    <Project Path="platform/contracts/AP.Contracts.System/AP.Contracts.System.csproj" Id="df15cdf6-cee2-4df1-8d30-3066076393d9" />
+  </Folder>
+  <Folder Name="/platform/core/">
+    <Project Path="platform/core/AP.Core/AP.Core.csproj" />
+  </Folder>
+  <Folder Name="/platform/hosts/">
+    <Project Path="platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj" Id="c00972d1-0d55-4a93-bdd9-31b1f102bf31" />
+  </Folder>
+  <Folder Name="/platform/infra/">
+    <Project Path="platform/infra/AP.Infra.Database/AP.Infra.Database.csproj" />
+    <Project Path="platform/infra/AP.Infra.Grpc/AP.Infra.Grpc.csproj" Id="92f86244-df09-4c65-9d0b-80ad7f5406bd" />
+    <Project Path="platform/infra/AP.Infra.Logging/AP.Infra.Logging.csproj" />
+    <Project Path="platform/infra/AP.Infra.Resilience/AP.Infra.Resilience.csproj" Id="08ee25e8-53d3-4fa3-825c-6bb7ea6edcf2" />
+  </Folder>
+  <Folder Name="/platform/plugins/" />
+  <Folder Name="/platform/plugins/hardware/">
+    <Project Path="platform/plugins/hardware/AP.Plugin.Plc.Mitsubishi/AP.Plugin.Plc.Mitsubishi.csproj" Id="ea8d91ba-be96-427c-b55d-54adef7aec6f" />
+    <Project Path="platform/plugins/hardware/AP.Plugin.Scanner/AP.Plugin.Scanner.csproj" Id="4457d934-21ae-4579-af5a-81624a02348d" />
+  </Folder>
+  <Folder Name="/platform/plugins/system/" />
+  <Folder Name="/platform/plugins/system/dashboard/">
+    <Project Path="platform/plugins/system/dashboard/AP.Plugin.Dashboard.Core/AP.Plugin.Dashboard.Core.csproj" Id="1bf77094-16b6-41f2-b5dc-b5e33ab6516a" />
+    <Project Path="platform/plugins/system/dashboard/AP.Plugin.Dashboard.UI/AP.Plugin.Dashboard.UI.csproj" Id="7cd0bd9d-7f98-48c0-80db-0ed897f7d6b8" />
+  </Folder>
+  <Folder Name="/platform/shared/">
+    <Project Path="platform/shared/AP.Shared.PluginSDK/AP.Shared.PluginSDK.csproj" Id="a99b2cb9-5c4e-489c-9750-eb342f2f1dfe" />
+    <Project Path="platform/shared/AP.Shared.UI/AP.Shared.UI.csproj" Id="5f726592-87e9-48a8-b07e-f062bb614a88" />
+    <Project Path="platform/shared/AP.Shared.Utilities/AP.Shared.Utilities.csproj" />
+  </Folder>
+</Solution>

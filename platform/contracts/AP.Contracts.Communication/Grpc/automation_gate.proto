@@ -1,0 +1,35 @@
+﻿syntax = "proto3";
+
+import "Grpc/common.proto"; 
+
+option csharp_namespace = "AP.Contracts.Communication.Grpc.AutomationGate";
+
+package ap.gate;
+
+// 自动化网关服务定义
+service AutomationGate {
+	rpc StreamPlcData (SubscriptionRequest) returns (stream GrpcPlcData);
+	rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message SubscriptionRequest {
+	string client_id = 1;
+	repeated string topics = 2;
+	string client_name = 3;
+}
+
+message GrpcPlcData {
+	string device_name = 1;
+	string tag = 2;
+	string value_json = 3; 
+	ap.common.Timestamp timestamp = 4;
+}
+
+message HeartbeatRequest {
+	string client_id = 1;
+}
+
+message HeartbeatResponse {
+	bool is_alive = 1;
+	int64 server_time = 2;
+}

@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Communication\AP.Contracts.Communication.csproj" />
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
+    <ProjectReference Include="..\..\core\AP.Core\AP.Core.csproj" />
+    <ProjectReference Include="..\..\shared\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
+    <ProjectReference Include="..\AP.Infra.Logging\AP.Infra.Logging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Grpc.Net.Client" />
+  </ItemGroup>
+</Project>

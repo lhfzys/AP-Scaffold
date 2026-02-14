@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
+
+    <ProjectReference Include="..\..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
+
+    <ProjectReference Include="..\..\..\shared\AP.Shared.PluginSDK\AP.Shared.PluginSDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IoTClient" />
+    <PackageReference Include="Polly.Core" />
+  </ItemGroup>
+</Project> 
+

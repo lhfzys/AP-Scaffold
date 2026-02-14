@@ -1,0 +1,6 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:AP.Shared.UI.Converters">
+    <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
+    <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+</ResourceDictionary>

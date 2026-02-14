@@ -1,0 +1,67 @@
+<Project>
+  <PropertyGroup>
+    <Company>lhfon</Company>
+    <Product>Automation.Platform</Product>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <BuildRoot>$(MSBuildThisFileDirectory)bin\$(Configuration)\</BuildRoot>
+
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('AP.Plugin'))">
+    <IsPluginProject>true</IsPluginProject>
+    <OutputPath>$(BuildRoot)plugins\$(MSBuildProjectName)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="!$(MSBuildProjectName.StartsWith('AP.Plugin'))">
+    <IsPluginProject>false</IsPluginProject>
+    <OutputPath>$(BuildRoot)</OutputPath>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(IsPluginProject)' == 'true'">
+    <ProjectReference>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+
+  <Target Name="CleanDuplicateLibs" AfterTargets="Build" Condition="'$(IsPluginProject)' == 'true'">
+    <ItemGroup>
+      <FilesToDelete Include="$(OutputPath)AP.Core.*" />
+      <FilesToDelete Include="$(OutputPath)AP.Shared.*" />
+      <FilesToDelete Include="$(OutputPath)AP.Contracts.*" />
+
+      <FilesToDelete Include="$(OutputPath)Prism.*" />
+      <FilesToDelete Include="$(OutputPath)Polly.*" />
+      <FilesToDelete Include="$(OutputPath)DryIoc.*" />
+      <FilesToDelete Include="$(OutputPath)MediatR.*" />
+      <FilesToDelete Include="$(OutputPath)CommunityToolkit.*" />
+
+      <FilesToDelete Include="$(OutputPath)MaterialDesign*" />
+      <FilesToDelete Include="$(OutputPath)MahApps.Metro*" />
+      <FilesToDelete Include="$(OutputPath)Microsoft.Xaml.Behaviors.*" />
+
+      <FilesToDelete Include="$(OutputPath)Microsoft.Extensions.*" />
+      <FilesToDelete Include="$(OutputPath)System.Diagnostics.DiagnosticSource.dll" />
+      <FilesToDelete Include="$(OutputPath)System.ComponentModel.Annotations.dll" />
+
+      <FilesToDelete Include="$(OutputPath)Serilog.*" />
+      <FilesToDelete Include="$(OutputPath)FreeSql.*" />
+      <FilesToDelete Include="$(OutputPath)Newtonsoft.Json.dll" />
+    </ItemGroup>
+
+    <Message Text="🧹 [瘦身清理] 删除 Host 已有的共享库..." Importance="high" />
+    <Delete Files="@(FilesToDelete)" ContinueOnError="true" />
+  </Target>
+
+</Project>

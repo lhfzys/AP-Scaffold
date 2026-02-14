@@ -1,0 +1,41 @@
+﻿<UserControl x:Class="AP.Shared.UI.Dialogs.Views.ConfirmDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Width="300">
+    <md:Card Padding="20">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <md:PackIcon Kind="{Binding Icon}" 
+                             Width="24" Height="24" 
+                             Foreground="{Binding IconColor}" 
+                             VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Title}" 
+                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <TextBlock Text="{Binding Message}" 
+                       TextWrapping="Wrap" 
+                       Margin="0,10,0,20"
+                       Style="{StaticResource MaterialDesignBody1TextBlock}"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="False"
+                        Visibility="{Binding IsConfirmMode, Converter={StaticResource BoolToVis}}"
+                        Margin="0,0,10,0"/>
+
+                <Button Content="确定"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="True"/>
+            </StackPanel>
+        </StackPanel>
+    </md:Card>
+</UserControl>
