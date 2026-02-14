@@ -7,32 +7,105 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:AP.Host.Desktop.Views"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
-        Title="Automation Platform"
-        Height="768" Width="1024"
+        Title="{Binding WindowTitle}"
+        Height="768" Width="1280"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
         FontFamily="Microsoft YaHei UI, Segoe UI, sans-serif"
-        >
-    <materialDesign:DialogHost Identifier="RootDialogHost"
-                               DialogTheme="Inherit">
-    <Grid>
-        <ContentControl prism:RegionManager.RegionName="MainRegion" />
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto">
 
-        <Grid Background="{DynamicResource MaterialDesignPaper}"
-              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
-                             Value="0"
-                             IsIndeterminate="True"
-                             Width="50" Height="50"/>
-                <TextBlock Text="系统资源初始化中..." 
-                           Margin="0,20,0,0"
-                           HorizontalAlignment="Center"
-                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"/>
-            </StackPanel>
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Closing">
+            <i:InvokeCommandAction Command="{Binding OnClosingCommand}" 
+                                   PassEventArgsToCommand="True" />
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
+
+    <md:DialogHost Identifier="RootDialogHost" DialogTheme="Inherit">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="24,16" md:ElevationAssist.Elevation="Dp4" Panel.ZIndex="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <md:PackIcon Kind="HexagonMultipleOutline" Width="40" Height="40" VerticalAlignment="Center" Margin="0,0,16,0" Opacity="0.9"/>
+
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding CompanyName}" 
+                                       Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
+                                       Foreground="{DynamicResource MaterialDesignPaper}"
+                                       VerticalAlignment="Center"/>
+
+                            <TextBlock Text="{Binding SoftwareName}" 
+                                       Style="{StaticResource MaterialDesignCaptionTextBlock}" 
+                                       Foreground="{DynamicResource MaterialDesignPaper}"
+                                       Opacity="0.8" 
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                            <md:PackIcon Kind="ClockTimeFourOutline" 
+                                         VerticalAlignment="Center" 
+                                         Width="20" Height="20"
+                                         Margin="0,0,8,0"
+                                         Opacity="0.7"/>
+
+                            <TextBlock Text="{Binding CurrentTime}" 
+                                       VerticalAlignment="Center" 
+                                       Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                       Foreground="{DynamicResource MaterialDesignPaper}"/>
+                        </StackPanel>
+
+                        <Button Style="{StaticResource MaterialDesignIconForegroundButton}" 
+                                ToolTip="退出系统"
+                                Width="40" Height="40"
+                                Command="{Binding ExitSystemCommand}">
+                            <md:PackIcon Kind="Power" 
+                                         Width="28" Height="28" 
+                                         Foreground="{DynamicResource MaterialDesignErrorBrush}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </md:ColorZone>
+
+            <ContentControl Grid.Row="1" prism:RegionManager.RegionName="MainRegion" />
+
+            <Grid Grid.Row="0" Grid.RowSpan="2" 
+                  Background="{DynamicResource MaterialDesignPaper}" 
+                  Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" 
+                  Panel.ZIndex="999">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" 
+                                 Value="0" 
+                                 IsIndeterminate="True" 
+                                 Width="50" Height="50"
+                                 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+
+                    <TextBlock Text="系统资源初始化中..." 
+                               Margin="0,24,0,0" 
+                               HorizontalAlignment="Center" 
+                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                               Opacity="0.7"/>
+                </StackPanel>
+            </Grid>
         </Grid>
-    </Grid>
-    </materialDesign:DialogHost>
+    </md:DialogHost>
 </Window>

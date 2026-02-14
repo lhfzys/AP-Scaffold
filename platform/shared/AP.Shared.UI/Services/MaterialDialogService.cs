@@ -35,7 +35,9 @@ public class MaterialDialogService : ICustomDialogService
         var result = await DialogHost.Show(new ConfirmDialogView { DataContext = vm },
             AppConstants.Dialogs.RootIdentifier);
 
-        return result is bool b && b;
+        if (result is bool b) return b;
+        if (result is string s && bool.TryParse(s, out var parsed)) return parsed;
+        return false;
     }
 
     public async Task ShowErrorAsync(string message)
