@@ -27,10 +27,8 @@
     <Project Path="platform/plugins/hardware/AP.Plugin.Plc.Mitsubishi/AP.Plugin.Plc.Mitsubishi.csproj" Id="ea8d91ba-be96-427c-b55d-54adef7aec6f" />
     <Project Path="platform/plugins/hardware/AP.Plugin.Scanner/AP.Plugin.Scanner.csproj" Id="4457d934-21ae-4579-af5a-81624a02348d" />
   </Folder>
-  <Folder Name="/platform/plugins/system/" />
-  <Folder Name="/platform/plugins/system/dashboard/">
-    <Project Path="platform/plugins/system/dashboard/AP.Plugin.Dashboard.Core/AP.Plugin.Dashboard.Core.csproj" Id="1bf77094-16b6-41f2-b5dc-b5e33ab6516a" />
-    <Project Path="platform/plugins/system/dashboard/AP.Plugin.Dashboard.UI/AP.Plugin.Dashboard.UI.csproj" Id="7cd0bd9d-7f98-48c0-80db-0ed897f7d6b8" />
+  <Folder Name="/platform/plugins/system/">
+    <Project Path="platform/plugins/system/AP.Plugin.Layout/AP.Plugin.Layout.csproj" Id="d91e3d98-bff3-4845-ad95-86f80fa005e6" />
   </Folder>
   <Folder Name="/platform/shared/">
     <Project Path="platform/shared/AP.Shared.PluginSDK/AP.Shared.PluginSDK.csproj" Id="a99b2cb9-5c4e-489c-9750-eb342f2f1dfe" />
