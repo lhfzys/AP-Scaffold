@@ -4,6 +4,7 @@
         <ResourceDictionary Source="Converters.xaml" />
 
         <ResourceDictionary Source="../Themes/Generic.xaml" />
+        <ResourceDictionary Source="../Themes/Industrial.Teal.MD3.xaml"/>
 
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

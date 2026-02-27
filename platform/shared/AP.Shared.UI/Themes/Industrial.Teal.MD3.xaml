@@ -1,0 +1,31 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="Color.Success">#4CAF50</Color>
+    <Color x:Key="Color.OnSuccess">#FFFFFF</Color>
+
+    <Color x:Key="Color.Warning">#FF9800</Color>
+    <Color x:Key="Color.OnWarning">#000000</Color>
+
+    <Color x:Key="Color.Error">#F44336</Color>
+    <Color x:Key="Color.OnError">#FFFFFF</Color>
+
+    <Color x:Key="Color.Info">#2196F3</Color>
+    <Color x:Key="Color.OnInfo">#FFFFFF</Color>
+
+    <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}"/>
+    <SolidColorBrush x:Key="Brush.OnSuccess" Color="{StaticResource Color.OnSuccess}"/>
+
+    <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}"/>
+    <SolidColorBrush x:Key="Brush.OnWarning" Color="{StaticResource Color.OnWarning}"/>
+
+    <SolidColorBrush x:Key="Brush.Error" Color="{StaticResource Color.Error}"/>
+    <SolidColorBrush x:Key="Brush.OnError" Color="{StaticResource Color.OnError}"/>
+
+    <SolidColorBrush x:Key="Brush.Info" Color="{StaticResource Color.Info}"/>
+    <SolidColorBrush x:Key="Brush.OnInfo" Color="{StaticResource Color.OnInfo}"/>
+
+    <Color x:Key="Color.Inactive">#BDBDBD</Color>
+    <SolidColorBrush x:Key="Brush.Inactive" Color="{StaticResource Color.Inactive}"/>
+</ResourceDictionary>
