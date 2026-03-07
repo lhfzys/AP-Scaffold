@@ -1,4 +1,10 @@
-﻿using AP.Contracts.Core.Events;
+﻿#region
+
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Windows;
+using AP.Contracts.Core.Events;
 using AP.Core.Enums;
 using AP.Core.Lifecycle;
 using AP.Core.PluginFramework.Abstractions;
@@ -16,14 +22,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System.IO;
-using System.Reflection;
-using System.Windows;
+
+#endregion
 
 namespace AP.Host.Desktop.Bootstrapping;
 
 /// <summary>
-/// 插件启动器
+///     插件启动器
 /// </summary>
 public class Bootstrapper : PrismBootstrapper
 {
@@ -51,7 +56,7 @@ public class Bootstrapper : PrismBootstrapper
     }
 
     /// <summary>
-    /// 注册所有服务 (DI 容器配置)
+    ///     注册所有服务 (DI 容器配置)
     /// </summary>
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
@@ -126,7 +131,7 @@ public class Bootstrapper : PrismBootstrapper
             catch (Exception ex)
             {
                 // 捕获异常，防止一个插件崩溃导致整个程序启动失败
-                System.Diagnostics.Debug.WriteLine($"插件 {descriptor.PluginType.Name} 加载失败: {ex.Message}");
+                Debug.WriteLine($"插件 {descriptor.PluginType.Name} 加载失败: {ex.Message}");
             }
 
         // --- 注册 MediatR ---
@@ -143,7 +148,7 @@ public class Bootstrapper : PrismBootstrapper
     }
 
     /// <summary>
-    /// 初始化完成后 (启动插件)
+    ///     初始化完成后 (启动插件)
     /// </summary>
     protected override void OnInitialized()
     {

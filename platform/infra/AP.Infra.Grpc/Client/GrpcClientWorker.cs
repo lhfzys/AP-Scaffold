@@ -1,17 +1,21 @@
-﻿using AP.Contracts.Communication.Grpc.AutomationGate;
+﻿#region
+
+using AP.Contracts.Communication.Grpc.AutomationGate;
 using AP.Contracts.Hardware.Events;
+using AP.Contracts.Hardware.Models;
 using AP.Shared.Utilities.Constants;
-using AP.Shared.Utilities.Helpers;
 using Grpc.Core;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+#endregion
+
 namespace AP.Infra.Grpc.Client;
 
 /// <summary>
-/// 客户端后台工作者 (负责与 Server 保持长连接并接收数据)
+///     客户端后台工作者 (负责与 Server 保持长连接并接收数据)
 /// </summary>
 public class GrpcClientWorker : BackgroundService
 {
@@ -111,12 +115,12 @@ public class GrpcClientWorker : BackgroundService
         }
     }
 
-    private object ParseValue(string json)
+    private PlcValue ParseValue(string json)
     {
-        if (long.TryParse(json, out var l)) return l;
         if (double.TryParse(json, out var d)) return d;
         if (bool.TryParse(json, out var b)) return b;
-        if (json.StartsWith("\"") && json.EndsWith("\"")) return json.Trim('"');
-        return SerializationHelper.FromJson<object>(json) ?? json;
+        if (json.StartsWith("\"") && json.EndsWith("\""))
+            return json.Trim('"');
+        return json;
     }
 }

@@ -1,6 +1,6 @@
-﻿using AP.Contracts.Core.Models;
+﻿#region
+
 using AP.Contracts.Hardware.Capabilities;
-using AP.Contracts.Hardware.Commands;
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Services;
 using AP.Plugin.Plc.Mitsubishi.Configuration;
@@ -10,6 +10,8 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
+
+#endregion
 
 namespace AP.Plugin.Plc.Mitsubishi.Services;
 
@@ -21,10 +23,11 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     private readonly MitsubishiPlcOptions _options;
     private readonly IMediator _mediator;
 
-    // --- 心跳控制状态 ---
-    private bool _isHeartbeatRunning;
-    private CancellationTokenSource? _heartbeatCts;
+    // --- 看门狗状态 ---
+    private bool _isWatchdogRunning;
+    private CancellationTokenSource? _watchdogCts;
     private bool _currentConnectionState;
+    private readonly string _deviceName;
 
     // 声明能力：支持基础读写 + 批量读写 + 自动重连
     public PlcServiceFeatures SupportedFeatures =>
@@ -51,47 +54,63 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         _client = new MitsubishiClient(version, _options.IpAddress, _options.Port, _options.Timeout);
     }
 
+    /// <summary>
+    ///     连接方法（首次连接或人工触发）
+    /// </summary>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        await _mediator.Publish(new DeviceConnectingEvent($"Mitsubishi-Q ({_options.IpAddress})"), ct);
+        try
+        {
+            // 1. 尝试执行一次真正的连接 (受 Polly 策略保护，比如重试5次)
+            await ExecuteConnectInternalAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("首次连接 PLC 失败，看门狗将在后台接管并持续尝试重连。原因: {Msg}", ex.Message);
+        }
+        finally
+        {
+            // 2. 无论首次连接成功还是失败，都必须把看门狗跑起来！
+            StartWatchdog();
+        }
+    }
+
+    /// <summary>
+    ///     连接与握手逻辑
+    /// </summary>
+    private async Task ExecuteConnectInternalAsync(CancellationToken ct)
+    {
+        await _mediator.Publish(new DeviceConnectingEvent(_deviceName), ct);
 
         try
         {
-            // 使用 Polly 策略保护连接过程
             await _pipeline.ExecuteAsync(async token =>
             {
                 var result = await Task.Run(() => _client.Open(), token);
-
                 if (result.IsSucceed)
                 {
-                    _logger.LogInformation("三菱PLC 已连接: {Ip}:{Port}", _options.IpAddress, _options.Port);
+                    _logger.LogInformation("✅ 三菱PLC 已连接: {Ip}:{Port}", _options.IpAddress, _options.Port);
                     _currentConnectionState = true;
-                    await _mediator.Publish(new DeviceConnectedEvent(
-                        $"Mitsubishi-Q ({_options.IpAddress})",
-                        DateTime.Now
-                    ), token);
-                    StartHeartbeat();
+                    await _mediator.Publish(new DeviceConnectedEvent(_deviceName, DateTime.Now), token);
                 }
                 else
                 {
-                    throw new Exception($"连接超时/被拒绝: {result.Err}");
+                    throw new Exception($"连接被拒绝或超时: {result.Err}");
                 }
             }, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "PLC 连接最终失败");
-            await _mediator.Publish(new DeviceConnectionFailedEvent(
-                $"Mitsubishi-Q ({_options.IpAddress})",
-                ex.Message
-            ), ct);
-            throw;
+            _currentConnectionState = false;
+            _logger.LogError("❌ PLC 建立连接失败: {Msg}", ex.Message);
+            await _mediator.Publish(new DeviceConnectionFailedEvent(_deviceName, ex.Message), ct);
+            throw; // 向外抛出，让 Polly 重试机制生效
         }
     }
 
     public async Task DisconnectAsync()
     {
-        StopHeartbeat();
+        StopWatchdog();
         _currentConnectionState = false;
         _client.Close();
         _logger.LogInformation("PLC 已断开");
@@ -102,90 +121,73 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         ));
     }
 
-    private void StartHeartbeat()
+    /// <summary>
+    ///     核心：7x24小时全自动自愈看门狗
+    /// </summary>
+    private void StartWatchdog()
     {
-        if (_isHeartbeatRunning) return;
-
-        var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "M0" : _options.HeartbeatAddress;
-
-        _isHeartbeatRunning = true;
-        _heartbeatCts = new CancellationTokenSource();
+        if (_isWatchdogRunning) return;
+        _isWatchdogRunning = true;
+        _watchdogCts = new CancellationTokenSource();
 
         _ = Task.Run(async () =>
         {
-            try
+            var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "M0" : _options.HeartbeatAddress;
+            _logger.LogInformation("🛡️ PLC 自动自愈看门狗已启动，心跳地址: {Address}", hbAddress);
+
+            // 完美替代 Task.Delay，无时钟漂移，内存更优
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+
+            while (await timer.WaitForNextTickAsync(_watchdogCts.Token))
             {
-                _logger.LogInformation("PLC 心跳监测已启动，监听地址: {Address}", hbAddress);
-
-                while (!_heartbeatCts.Token.IsCancellationRequested)
+                // 【状态一：已断线】-> 尝试重连
+                if (!_currentConnectionState)
                 {
-                    // 每 2 秒检查一次
-                    await Task.Delay(2000, _heartbeatCts.Token);
-
-                    if (!_currentConnectionState) break;
-
+                    _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
                     try
                     {
-                        // 尝试读取一个 bool 值作为心跳验证
-                        var result = _client.ReadInt16(hbAddress);
-                        _logger.LogInformation("PLC 心跳监测: {Address}", result);
-                        if (!result.IsSucceed)
-                        {
-                            // 读取失败，说明掉线了！
-                            _logger.LogWarning("❌ 心跳检测失败，PLC连接已丢失！原因: {Err}", result.Err);
-
-                            _currentConnectionState = false;
-                            _isHeartbeatRunning = false;
-
-                            // 广播断开事件，界面将瞬间变红，手动重连按钮亮起！
-                            await _mediator.Publish(new DeviceDisconnectedEvent(
-                                $"Mitsubishi-Q ({_options.IpAddress})",
-                                "心跳丢失/网络异常",
-                                DateTime.Now
-                            ));
-                            break;
-                        }
+                        // 这里调用连接逻辑，借助 Polly 实现局部重试
+                        await ExecuteConnectInternalAsync(_watchdogCts.Token);
                     }
                     catch
                     {
-                        // 捕获严重异常(断网/电源切断)
-                        _currentConnectionState = false;
-                        _isHeartbeatRunning = false;
-                        await _mediator.Publish(new DeviceDisconnectedEvent(
-                            $"Mitsubishi-Q ({_options.IpAddress})",
-                            "网络通信异常退出",
-                            DateTime.Now
-                        ));
-                        break;
+                        // 连不上就静默等待下一次 Timer 触发 (避免刷爆日志和 CPU)
+                    }
+
+                    continue;
+                }
+
+                // 【状态二：已连接】-> 执行心跳检测
+                try
+                {
+                    var result = _client.ReadInt16(hbAddress);
+                    if (!result.IsSucceed)
+                    {
+                        _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
+                        _currentConnectionState = false; // 下一次循环将自动进入重连逻辑
+                        await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
+                    _currentConnectionState = false;
+                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // 忽略这个异常，不做处理
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("心跳线程异常退出: {Message}", ex.Message);
-            }
-            finally
-            {
-                _isHeartbeatRunning = false;
-            }
-        }, _heartbeatCts.Token);
+        }, _watchdogCts.Token);
     }
 
-    private void StopHeartbeat()
+    private void StopWatchdog()
     {
-        _heartbeatCts?.Cancel();
-        _heartbeatCts?.Dispose();
-        _heartbeatCts = null;
-        _isHeartbeatRunning = false;
+        _watchdogCts?.Cancel();
+        _watchdogCts?.Dispose();
+        _isWatchdogRunning = false;
     }
 
-    public async Task<bool> IsConnectedAsync()
+    public Task<bool> IsConnectedAsync()
     {
-        return _currentConnectionState;
+        return Task.FromResult(_currentConnectionState);
     }
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)

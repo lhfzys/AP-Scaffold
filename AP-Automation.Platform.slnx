@@ -25,6 +25,7 @@
   <Folder Name="/platform/plugins/" />
   <Folder Name="/platform/plugins/business/">
     <Project Path="platform/plugins/business/AP.Plugin.AirtightnessCheck/AP.Plugin.AirtightnessCheck.csproj" Id="0c301dd3-0689-41aa-99f3-2d1006fefe06" />
+    <Project Path="platform/plugins/business/AP.Plugin.DeviceConfiguration/AP.Plugin.DeviceConfiguration.csproj" Id="45a1f71f-6fc8-42e8-af30-1129b6a16989" />
   </Folder>
   <Folder Name="/platform/plugins/hardware/">
     <Project Path="platform/plugins/hardware/AP.Plugin.Plc.Mitsubishi/AP.Plugin.Plc.Mitsubishi.csproj" Id="ea8d91ba-be96-427c-b55d-54adef7aec6f" />

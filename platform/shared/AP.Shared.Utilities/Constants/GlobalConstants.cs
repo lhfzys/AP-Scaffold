@@ -1,7 +1,7 @@
 ﻿namespace AP.Shared.Utilities.Constants;
 
 /// <summary>
-/// 全局应用常量
+///     全局应用常量
 /// </summary>
 public static class GlobalConstants
 {
@@ -22,7 +22,9 @@ public static class GlobalConstants
     {
         public const string MainRegion = "MainRegion";
         public const string HeaderRegion = "HeaderRegion";
+        public const string ContentRegion = "ContentRegion";
         public const string StatusBarRegion = "StatusBarRegion";
+        public const string SettingsRegion = "SettingsRegion";
     }
 
     // 配置文件的 Key
