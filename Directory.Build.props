@@ -35,6 +35,18 @@
     </ProjectReference>
   </ItemDefinitionGroup>
 
+  <Target Name="CopyPluginsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <PluginOutputs Include="$(BuildRoot)plugins\**\*.*" />
+    </ItemGroup>
+
+    <Message Text="====== 正在复制插件到发布目录: $(PublishDir)plugins\ ======" Importance="high" />
+
+    <Copy SourceFiles="@(PluginOutputs)"
+          DestinationFiles="@(PluginOutputs->'$(PublishDir)plugins\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+  
   <Target Name="CleanDuplicateLibs" AfterTargets="Build" Condition="'$(IsPluginProject)' == 'true'">
     <ItemGroup>
       <FilesToDelete Include="$(OutputPath)AP.Core.*" />
