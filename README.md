@@ -89,6 +89,7 @@ AP-Scaffold/
 │   │   ├── AP.Infra.Database/         # 数据访问 (FreeSql + Repository模式)
 │   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端/拦截器
 │   │   ├── AP.Infra.Logging/          # Serilog 日志配置与增强器
+│   │   ├── AP.Infra.Report/           # 通用报表框架 (归档/导出/清理)
 │   │   └── AP.Infra.Resilience/       # Polly 策略工厂与配置
 │   │
 │   ├── plugins/                       # 插件集 (可插拔的业务/硬件模块)
@@ -239,6 +240,35 @@ await pipeline.ExecuteAsync(async token => {
 └── Industrial.Teal.MD3 # 工业风格主题
 ```
 
+### 7. 通用报表框架
+
+`AP.Infra.Report` 提供工业级报表归档能力，支持定时归档、手动导出、补档和定期清理。
+
+| 特性 | 说明 |
+|------|------|
+| **定时归档** | 每天指定时间自动生成前一天的日报 |
+| **手动导出** | 通过 `ReportService` 随时生成指定日期报表 |
+| **补档** | 支持重新生成历史日期报表（覆盖或新建） |
+| **定期清理** | 自动删除过期报表，保留天数可配置 |
+| **保护机制** | 受保护的报表类型不被自动清理 |
+| **模拟运行** | DryRun 模式预览清理结果，防止误删 |
+
+**架构设计：**
+
+```
+业务插件                          报表框架
+┌─────────────┐                  ┌─────────────────────┐
+│ 检测完成     │   实现接口        │  ReportService      │
+│ 业务数据     │────────────────▶│  ExcelExporter      │
+│ 各自不同     │  IReportDataProvider   │  ReportStorage      │
+└─────────────┘                  │  ReportScheduler    │
+                                 │  ReportCleanupService│
+                                 └─────────────────────┘
+                                           │
+                                           ▼
+                                 reports/2026/01/2026-01-12_Airtightness.xlsx
+```
+
 ---
 
 ## 快速开始
@@ -338,6 +368,48 @@ Configuration/
 }
 ```
 
+### 报表配置
+
+```json
+{
+  "Report": {
+    "Storage": {
+      "RootPath": "reports",
+      "PathFormat": "{year}/{month}/{date}_{type}.xlsx",
+      "DefaultTemplatePath": null
+    },
+    "Archive": {
+      "Enabled": true,
+      "Time": "02:00",
+      "ReportTypes": []
+    },
+    "Retention": {
+      "Enabled": true,
+      "Days": 180,
+      "CheckInterval": "1.00:00:00",
+      "DeleteFiles": true,
+      "ProtectedTypes": []
+    },
+    "Cleanup": {
+      "Enabled": true,
+      "DryRun": false
+    }
+  }
+}
+```
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `Storage.RootPath` | 报表存储根目录 | `reports` |
+| `Storage.PathFormat` | 路径格式模板，支持 `{year}` `{month}` `{date}` `{type}` | `{year}/{month}/{date}_{type}.xlsx` |
+| `Archive.Enabled` | 是否启用定时归档 | `true` |
+| `Archive.Time` | 每天归档执行时间（HH:mm） | `02:00` |
+| `Archive.ReportTypes` | 需归档的报表类型，空则归档所有 | `[]` |
+| `Retention.Days` | 报表保留天数 | `180` |
+| `Retention.DeleteFiles` | 清理时是否删除文件（false 仅删数据库记录） | `true` |
+| `Retention.ProtectedTypes` | 受保护的报表类型（不被自动清理） | `[]` |
+| `Cleanup.DryRun` | 模拟运行模式（true = 只记录不删除） | `false` |
+
 ---
 
 ## 插件开发指南
@@ -416,6 +488,126 @@ public class MyEventHandler : INotificationHandler<MyEvent>
 }
 ```
 
+### 为业务插件添加报表能力
+
+**第 1 步**：在业务插件中引用报表框架
+
+```xml
+<!-- 在 .csproj 中添加 -->
+<ProjectReference Include="..\..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
+```
+
+**第 2 步**：实现 `IReportDataProvider` 接口
+
+```csharp
+using AP.Infra.Report.Abstractions;
+using AP.Infra.Report.Entities;
+
+namespace AP.Plugin.AirtightnessCheck.Reports;
+
+public class AirtightnessReportProvider : IReportDataProvider
+{
+    private readonly ITestRecordRepository _repository;
+
+    public AirtightnessReportProvider(ITestRecordRepository repository)
+    {
+        _repository = repository;
+    }
+
+    // 报表类型标识（英文，用于文件命名）
+    public string ReportType => "Airtightness";
+
+    // 报表显示名称
+    public string ReportName => "气密性检测日报";
+
+    // 获取指定日期的报表数据
+    public async Task<ReportData> GetReportDataAsync(DateTime date, CancellationToken ct = default)
+    {
+        // 从业务数据库查询数据
+        var records = await _repository.GetByDateAsync(date, ct);
+
+        return new ReportData
+        {
+            ReportType = ReportType,
+            ReportName = ReportName,
+            ReportDate = date,
+            // 列标题
+            Headers = ["序号", "激光码", "检测结果", "检测值", "检测时间", "操作员"],
+            // 数据行
+            Rows = records.Select((r, i) => new List<object>
+            {
+                i + 1, r.LaserCode, r.Result, r.TestValue, r.TestTime, r.Operator
+            }).ToList(),
+            // 汇总信息
+            Summary = new Dictionary<string, object>
+            {
+                ["总数"] = records.Count,
+                ["合格数"] = records.Count(r => r.Result == "Pass"),
+                ["不合格数"] = records.Count(r => r.Result == "Fail"),
+                ["合格率"] = records.Count > 0
+                    ? $"{records.Count(r => r.Result == "Pass") * 100.0 / records.Count:F1}%"
+                    : "N/A"
+            }
+        };
+    }
+
+    // 可选：指定 Excel 模板路径
+    public string? GetTemplatePath() => null;
+}
+```
+
+**第 3 步**：在插件中注册
+
+```csharp
+public class AirtightnessPlugin : PluginBase
+{
+    public override void ConfigureServices(IServiceCollection services, IConfiguration config)
+    {
+        // 注册报表框架（如果宿主未注册）
+        services.AddReportFramework(config);
+
+        // 注册本插件的报表数据提供者
+        services.AddReportDataProvider<AirtightnessReportProvider>();
+    }
+}
+```
+
+**第 4 步**：使用 `ReportService` 手动导出或补档
+
+```csharp
+// 注入 ReportService
+public class ReportViewModel : ViewModelBase
+{
+    private readonly ReportService _reportService;
+
+    [RelayCommand]
+    private async Task ExportTodayReport()
+    {
+        // 生成今天的报表
+        var path = await _reportService.GenerateReportAsync("Airtightness", DateTime.Today);
+        // 打开文件所在目录
+        Process.Start("explorer.exe", Path.GetDirectoryName(path));
+    }
+
+    [RelayCommand]
+    private async Task RegenerateReport(DateTime date)
+    {
+        // 补档：重新生成指定日期的报表
+        var path = await _reportService.RegenerateReportAsync("Airtightness", date);
+    }
+}
+```
+
+**报表文件输出示例：**
+
+```
+reports/
+└── 2026/
+    └── 01/
+        ├── 2026-01-12_Airtightness.xlsx
+        └── 2026-01-13_Airtightness.xlsx
+```
+
 ---
 
 ## 部署模式
@@ -452,6 +644,7 @@ public class MyEventHandler : INotificationHandler<MyEvent>
 - [x] MediatR 消息总线
 - [x] Material Design UI 控件库
 - [x] 中央包版本管理
+- [x] 通用报表框架（定时归档 / 手动导出 / 补档 / 定期清理）
 - [ ] 单元测试 / 集成测试体系
 - [ ] 数据库迁移与种子数据
 - [ ] 身份认证与授权

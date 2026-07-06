@@ -20,6 +20,7 @@
     <Project Path="platform/infra/AP.Infra.Database/AP.Infra.Database.csproj" />
     <Project Path="platform/infra/AP.Infra.Grpc/AP.Infra.Grpc.csproj" Id="92f86244-df09-4c65-9d0b-80ad7f5406bd" />
     <Project Path="platform/infra/AP.Infra.Logging/AP.Infra.Logging.csproj" />
+    <Project Path="platform/infra/AP.Infra.Report/AP.Infra.Report.csproj" />
     <Project Path="platform/infra/AP.Infra.Resilience/AP.Infra.Resilience.csproj" Id="08ee25e8-53d3-4fa3-825c-6bb7ea6edcf2" />
   </Folder>
   <Folder Name="/platform/plugins/" />
