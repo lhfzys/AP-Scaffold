@@ -1,5 +1,6 @@
 using AP.Infra.Report.Abstractions;
 using AP.Infra.Report.Configuration;
+using AP.Infra.Report.Entities;
 using AP.Infra.Report.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,9 @@ public static class ServiceCollectionExtensions
         // 注册后台服务
         services.AddHostedService<ReportScheduler>();
         services.AddHostedService<ReportCleanupService>();
+
+        // 注册数据库初始化宿主服务（确保表结构存在）
+        services.AddHostedService<ReportDatabaseInitializer>();
 
         return services;
     }

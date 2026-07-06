@@ -76,7 +76,7 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     }
 
     /// <summary>
-    ///     连接与握手逻辑
+    ///     连接与握手逻辑（含硬超时保护）
     /// </summary>
     private async Task ExecuteConnectInternalAsync(CancellationToken ct)
     {
@@ -86,7 +86,20 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         {
             await _pipeline.ExecuteAsync(async token =>
             {
-                var result = await Task.Run(() => _client.Open(), token);
+                // 硬超时保护：防止 IoTClient.Open() 内部不响应 CancellationToken 导致永久阻塞
+                var connectTimeout = TimeSpan.FromSeconds(_options.Timeout > 0 ? _options.Timeout / 1000.0 * 3 : 10);
+                var connectTask = Task.Run(() => _client.Open(), token);
+                var timeoutTask = Task.Delay(connectTimeout, token);
+
+                var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    throw new TimeoutException($"PLC 连接超时 ({connectTimeout.TotalSeconds:F0}s): {_options.IpAddress}:{_options.Port}");
+                }
+
+                var result = await connectTask;
+
                 if (result.IsSucceed)
                 {
                     _logger.LogInformation("✅ 三菱PLC 已连接: {Ip}:{Port}", _options.IpAddress, _options.Port);
@@ -135,54 +148,100 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
             var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "M0" : _options.HeartbeatAddress;
             _logger.LogInformation("🛡️ PLC 自动自愈看门狗已启动，心跳地址: {Address}", hbAddress);
 
-            // 完美替代 Task.Delay，无时钟漂移，内存更优
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
 
-            while (await timer.WaitForNextTickAsync(_watchdogCts.Token))
+            try
             {
-                // 【状态一：已断线】-> 尝试重连
-                if (!_currentConnectionState)
+                while (await timer.WaitForNextTickAsync(_watchdogCts.Token))
                 {
-                    _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
                     try
                     {
-                        // 这里调用连接逻辑，借助 Polly 实现局部重试
-                        await ExecuteConnectInternalAsync(_watchdogCts.Token);
-                    }
-                    catch
-                    {
-                        // 连不上就静默等待下一次 Timer 触发 (避免刷爆日志和 CPU)
-                    }
+                        // 【状态一：已断线】-> 尝试重连
+                        if (!_currentConnectionState)
+                        {
+                            _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
+                            try
+                            {
+                                await ExecuteConnectInternalAsync(_watchdogCts.Token);
+                            }
+                            catch
+                            {
+                                // 连不上就静默等待下一次 Timer 触发
+                            }
 
-                    continue;
-                }
+                            continue;
+                        }
 
-                // 【状态二：已连接】-> 执行心跳检测
-                try
-                {
-                    var result = _client.ReadInt16(hbAddress);
-                    if (!result.IsSucceed)
+                        // 【状态二：已连接】-> 执行心跳检测
+                        try
+                        {
+                            var result = _client.ReadInt16(hbAddress);
+                            if (!result.IsSucceed)
+                            {
+                                _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
+                                _currentConnectionState = false;
+                                await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
+                            }
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            _logger.LogWarning("⚠️ [看门狗] PLC 客户端已释放，看门狗退出");
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
+                            _currentConnectionState = false;
+                            await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
+                        }
+                    }
+                    catch (OperationCanceledException)
                     {
-                        _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
-                        _currentConnectionState = false; // 下一次循环将自动进入重连逻辑
-                        await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
+                        // 正常取消，退出循环
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "⚠️ [看门狗] 循环体发生未预期异常，继续运行");
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
-                    _currentConnectionState = false;
-                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💀 [看门狗] 看门狗线程异常退出");
+            }
+            finally
+            {
+                _logger.LogInformation("🛡️ PLC 看门狗线程已退出");
+                _isWatchdogRunning = false;
             }
         }, _watchdogCts.Token);
     }
 
     private void StopWatchdog()
     {
-        _watchdogCts?.Cancel();
-        _watchdogCts?.Dispose();
-        _isWatchdogRunning = false;
+        if (!_isWatchdogRunning) return;
+
+        try
+        {
+            _watchdogCts?.Cancel();
+            // 给看门狗线程一点时间优雅退出
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "停止看门狗时发生异常");
+        }
+        finally
+        {
+            _watchdogCts?.Dispose();
+            _watchdogCts = null;
+            _isWatchdogRunning = false;
+        }
     }
 
     public Task<bool> IsConnectedAsync()

@@ -36,6 +36,7 @@ public class Bootstrapper : PrismBootstrapper
     private IConfigurationRoot _configuration = null!;
     private readonly PluginLoader _pluginLoader;
     private List<PluginDescriptor> _loadedPlugins = new();
+    private readonly List<(string PluginName, string Error)> _failedPlugins = new();
 
     public Bootstrapper(AppRole appRole)
     {
@@ -131,7 +132,10 @@ public class Bootstrapper : PrismBootstrapper
             catch (Exception ex)
             {
                 // 捕获异常，防止一个插件崩溃导致整个程序启动失败
-                Debug.WriteLine($"插件 {descriptor.PluginType.Name} 加载失败: {ex.Message}");
+                // 使用 Log.Error 确保 Release 构建下也能记录
+                Log.Error(ex, "插件 {Name} 加载失败", descriptor.Metadata.Name);
+                _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
+                descriptor.IsLoaded = false;
             }
 
         // --- 注册 MediatR ---
@@ -199,6 +203,23 @@ public class Bootstrapper : PrismBootstrapper
                         await clientWorker.StartAsync(CancellationToken.None);
                         Log.Information("gRPC 客户端后台服务已启动");
                     }
+                }
+
+                // 汇总展示加载失败的插件（工业现场关键：操作员需知道功能缺失）
+                if (_failedPlugins.Count > 0)
+                {
+                    var failedMsg = string.Join("\n", _failedPlugins.Select(f => $"  • {f.PluginName}: {f.Error}"));
+                    Log.Warning("以下 {Count} 个插件加载失败:\n{FailedPlugins}", _failedPlugins.Count, failedMsg);
+
+                    // 在 UI 线程弹出警告
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        MessageBox.Show(
+                            $"以下 {_failedPlugins.Count} 个插件加载失败，相关功能可能不可用：\n\n{failedMsg}\n\n请检查日志获取详细信息。",
+                            "插件加载警告",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    });
                 }
 
                 var eventAggregator = container.Resolve<IEventAggregator>();
