@@ -14,6 +14,7 @@ using AP.Infra.Database.Configuration;
 using AP.Infra.Grpc.Client;
 using AP.Infra.Grpc.Server;
 using AP.Infra.Logging.Configuration;
+using AP.Infra.Logging.Helpers;
 using AP.Infra.Resilience.Configuration;
 using AP.Shared.UI.Services;
 using DryIoc.Microsoft.DependencyInjection;
@@ -37,6 +38,8 @@ public class Bootstrapper : PrismBootstrapper
     private readonly PluginLoader _pluginLoader;
     private List<PluginDescriptor> _loadedPlugins = new();
     private readonly List<(string PluginName, string Error)> _failedPlugins = new();
+    private WebApplication? _grpcApp;
+    private PluginLifecycleManager? _lifecycleManager;
 
     public Bootstrapper(AppRole appRole)
     {
@@ -107,12 +110,18 @@ public class Bootstrapper : PrismBootstrapper
 
         var pluginAssemblies = new List<Assembly> { typeof(Bootstrapper).Assembly }; // 包含 Host 自身
 
+        // 构建临时 ServiceProvider 用于插件实例化（支持 DI 解析构造函数参数）
+        var tempProvider = services.BuildServiceProvider();
+
         foreach (var descriptor in _loadedPlugins)
             try
             {
                 var pluginLogger = pluginLoggerFactory.CreateLogger(descriptor.PluginType);
 
-                var instance = Activator.CreateInstance(descriptor.PluginType, pluginLogger) as IPlugin;
+                // 使用 ActivatorUtilities 从 DI 容器解析构造函数参数
+                // 支持 ILogger 和其他已注册的服务（如 IOptions<T>）
+                var instance = ActivatorUtilities
+                    .CreateInstance(tempProvider, descriptor.PluginType, pluginLogger) as IPlugin;
 
                 if (instance == null) continue;
 
@@ -141,7 +150,10 @@ public class Bootstrapper : PrismBootstrapper
         // --- 注册 MediatR ---
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(pluginAssemblies.ToArray()));
         // --- 注册生命周期管理器 ---
-        services.AddSingleton<PluginLifecycleManager>();
+        _lifecycleManager = new PluginLifecycleManager(
+            LoggerFactory.Create(b => b.AddSerilog()).CreateLogger<PluginLifecycleManager>());
+        _lifecycleManager.RegisterPlugins(_loadedPlugins.Where(p => p.IsLoaded));
+        services.AddSingleton(_lifecycleManager);
         // --- 桥接容器 (Microsoft DI -> DryIoc) ---
         var dryIocContainer = containerRegistry.GetContainer();
         dryIocContainer.Populate(services);
@@ -165,31 +177,14 @@ public class Bootstrapper : PrismBootstrapper
             {
                 // 获取容器的新 Scope (也就是当前的根容器)
                 var container = Container.GetContainer();
-                // --- 1. 初始化插件 ---
-                Log.Information("=== 开始初始化插件 ===");
-                foreach (var desc in _loadedPlugins.Where(p => p.IsLoaded && p.Instance != null))
-                    try
-                    {
-                        await desc.Instance!.InitializeAsync(container);
-                        Log.Information("插件已初始化: {Name}", desc.Metadata.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "插件 {Name} 初始化失败", desc.Metadata.Name);
-                    }
 
-                // --- 2. 启动插件 ---
-                Log.Information("=== 开始启动插件 ===");
-                foreach (var desc in _loadedPlugins.Where(p => p.IsLoaded && p.Instance != null))
-                    try
-                    {
-                        await desc.Instance!.StartAsync();
-                        Log.Information("插件已启动: {Name}", desc.Metadata.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "插件 {Name} 启动失败", desc.Metadata.Name);
-                    }
+                // --- 0. 启动时清理过期日志（零开销，仅执行一次） ---
+                var logRetainDays = _configuration.GetValue<int>("Logging:RetainedFileCount", 90);
+                LogCleanupHelper.CleanupIfNeeded("logs", logRetainDays);
+
+                // --- 1. 初始化并启动插件（通过生命周期管理器，带状态机跟踪） ---
+                await _lifecycleManager!.InitializePluginsAsync(container);
+                await _lifecycleManager.StartPluginsAsync();
 
                 // --- 3. 启动 gRPC Server (如果是服务端) ---
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
@@ -257,12 +252,64 @@ public class Bootstrapper : PrismBootstrapper
             var app = builder.Build();
             app.MapGrpcService<GrpcGateService>();
 
+            _grpcApp = app; // 保存引用以便优雅关闭
             app.RunAsync();
             Log.Information("gRPC Server 正在监听端口: {Port}", port);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Kestrel 服务器启动失败");
+        }
+    }
+
+    /// <summary>
+    /// 优雅停止所有插件和服务
+    /// 应在应用退出时调用
+    /// </summary>
+    public async Task ShutdownAsync()
+    {
+        Log.Information("=== 开始优雅关闭 ===");
+
+        var container = Container.GetContainer();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // 10秒超时
+
+        try
+        {
+            // 1. 通过生命周期管理器停止所有插件（按优先级反序，带状态机跟踪）
+            if (_lifecycleManager != null)
+            {
+                await _lifecycleManager.StopPluginsAsync(cts.Token);
+            }
+
+            // 2. 停止 gRPC Server
+            if (_grpcApp != null)
+            {
+                Log.Information("正在停止 gRPC Server...");
+                await _grpcApp.StopAsync(cts.Token);
+                Log.Information("gRPC Server 已停止");
+            }
+
+            // 3. 停止 gRPC Client Worker
+            if (_appRole.HasFlag(AppRole.Client))
+            {
+                var clientWorker = container.GetService<GrpcClientWorker>();
+                if (clientWorker != null)
+                {
+                    Log.Information("正在停止 gRPC Client Worker...");
+                    await clientWorker.StopAsync(cts.Token);
+                    Log.Information("gRPC Client Worker 已停止");
+                }
+            }
+
+            Log.Information("=== 优雅关闭完成 ===");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "优雅关闭过程中发生异常");
+        }
+        finally
+        {
+            cts.Dispose();
         }
     }
 }

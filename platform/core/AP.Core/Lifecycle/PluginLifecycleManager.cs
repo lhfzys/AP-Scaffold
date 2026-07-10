@@ -1,5 +1,4 @@
-﻿using AP.Core.Enums;
-using AP.Core.PluginFramework.Abstractions;
+﻿using AP.Core.PluginFramework.Abstractions;
 using AP.Core.PluginFramework.Loading;
 using AP.Core.StateMachine;
 using Microsoft.Extensions.Logging;
@@ -8,91 +7,89 @@ namespace AP.Core.Lifecycle;
 
 /// <summary>
 /// 插件生命周期管理器 (负责编排所有插件的初始化与启停)
+/// 使用状态机跟踪每个插件的状态，支持有序启动和优雅停止
 /// </summary>
 public class PluginLifecycleManager
 {
-    private readonly PluginLoader _loader;
     private readonly ILogger<PluginLifecycleManager> _logger;
     private readonly List<PluginDescriptor> _loadedPlugins = new();
 
     // 存储每个插件的状态机
     private readonly Dictionary<string, PluginStateMachine> _stateMachines = new();
 
-    public PluginLifecycleManager(PluginLoader loader, ILogger<PluginLifecycleManager> logger)
+    public PluginLifecycleManager(ILogger<PluginLifecycleManager> logger)
     {
-        _loader = loader;
         _logger = logger;
     }
 
     /// <summary>
-    /// 加载并初始化所有插件
+    /// 注册已加载的插件（由 Bootstrapper 调用）
+    /// 插件必须已经完成实例化
+    /// 按照状态机规则依次转换: Unloaded → Discovered → Loading → Loaded
     /// </summary>
-    public async Task LoadPluginsAsync(AppRole role, IServiceProvider rootProvider, CancellationToken ct = default)
+    public void RegisterPlugins(IEnumerable<PluginDescriptor> descriptors)
     {
-        _logger.LogInformation("开始加载插件，运行角色: {Role}", role);
-
-        // 1. 发现插件 (此时 DLL 已加载，但 Instance 未创建)
-        var descriptors = _loader.DiscoverPlugins(role);
-
         foreach (var descriptor in descriptors)
-            try
-            {
-                var pluginId = descriptor.Metadata.Id;
+        {
+            if (!descriptor.IsLoaded || descriptor.Instance == null)
+                continue;
 
-                // 创建状态机
-                var stateMachine = new PluginStateMachine(pluginId, CreateLoggerForStateMachine(pluginId));
-                _stateMachines[pluginId] = stateMachine;
+            var pluginId = descriptor.Metadata.Id;
 
-                stateMachine.TransitionTo(PluginState.Discovered);
+            // 创建状态机（初始状态为 Unloaded）
+            var stateMachine = new PluginStateMachine(pluginId, _logger);
+            _stateMachines[pluginId] = stateMachine;
 
-                // 2. 实例化插件
-                // 注意：这里需要从 descriptor.LoadContext 加载，已经在 Loader 中处理好了 Assembly
-                var instance = Activator.CreateInstance(descriptor.PluginType) as IPlugin;
+            // 按照状态机规则依次转换: Unloaded → Discovered → Loading → Loaded
+            stateMachine.TransitionTo(PluginState.Discovered);
+            stateMachine.TransitionTo(PluginState.Loading);
+            stateMachine.TransitionTo(PluginState.Loaded);
 
-                if (instance == null)
-                    throw new InvalidOperationException($"无法实例化插件类型: {descriptor.PluginType.FullName}");
+            _loadedPlugins.Add(descriptor);
+            _logger.LogDebug("插件已注册到生命周期管理器: {Name} ({Id})", descriptor.Metadata.Name, pluginId);
+        }
 
-                descriptor.Instance = instance;
-                descriptor.IsLoaded = true;
-                _loadedPlugins.Add(descriptor);
+        _logger.LogInformation("已注册 {Count} 个插件到生命周期管理器", _loadedPlugins.Count);
+    }
 
-                stateMachine.TransitionTo(PluginState.Loaded);
-                _logger.LogInformation("插件已加载: {Name} ({Id})", descriptor.Metadata.Name, pluginId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "加载插件 {Id} 失败", descriptor.Metadata.Id);
-                // 如果是必需插件失败，则抛出异常中断启动
-                if (descriptor.Metadata.Required) throw;
-            }
+    /// <summary>
+    /// 初始化所有已注册的插件（按优先级顺序）
+    /// </summary>
+    public async Task InitializePluginsAsync(IServiceProvider rootProvider, CancellationToken ct = default)
+    {
+        _logger.LogInformation("=== 开始初始化插件 ===");
 
-        // 3. 初始化插件 (按优先级顺序)
         foreach (var descriptor in _loadedPlugins.OrderBy(p => p.Metadata.Priority))
         {
             var sm = _stateMachines[descriptor.Metadata.Id];
+
+            // 只有 Loaded 状态的插件才能初始化
+            if (sm.CurrentState != PluginState.Loaded) continue;
+
             try
             {
                 sm.TransitionTo(PluginState.Initializing);
 
-                if (descriptor.Instance != null) await descriptor.Instance.InitializeAsync(rootProvider, ct);
+                await descriptor.Instance!.InitializeAsync(rootProvider, ct);
 
                 sm.TransitionTo(PluginState.Initialized);
+                _logger.LogInformation("插件已初始化: {Name}", descriptor.Metadata.Name);
             }
             catch (Exception ex)
             {
                 sm.TransitionTo(PluginState.Failed);
                 _logger.LogError(ex, "插件 {Name} 初始化失败", descriptor.Metadata.Name);
-                if (descriptor.Metadata.Required) throw;
+                // 初始化失败不中断其他插件
             }
         }
     }
 
     /// <summary>
-    /// 启动所有插件
+    /// 启动所有已初始化的插件（按优先级顺序）
     /// </summary>
     public async Task StartPluginsAsync(CancellationToken ct = default)
     {
-        _logger.LogInformation("正在启动所有插件...");
+        _logger.LogInformation("=== 开始启动插件 ===");
 
         foreach (var descriptor in _loadedPlugins.OrderBy(p => p.Metadata.Priority))
         {
@@ -105,40 +102,43 @@ public class PluginLifecycleManager
             {
                 sm.TransitionTo(PluginState.Starting);
 
-                if (descriptor.Instance != null) await descriptor.Instance.StartAsync(ct);
+                await descriptor.Instance!.StartAsync(ct);
 
                 sm.TransitionTo(PluginState.Running);
+                _logger.LogInformation("插件已启动: {Name}", descriptor.Metadata.Name);
             }
             catch (Exception ex)
             {
                 sm.TransitionTo(PluginState.Failed);
                 _logger.LogError(ex, "插件 {Name} 启动失败", descriptor.Metadata.Name);
-                // 启动失败通常不应导致整个应用崩溃，除非业务有特殊要求
             }
         }
     }
 
     /// <summary>
-    /// 停止所有插件 (按优先级反序)
+    /// 停止所有运行中的插件（按优先级反序，实现优雅停止）
     /// </summary>
     public async Task StopPluginsAsync(CancellationToken ct = default)
     {
-        _logger.LogInformation("正在停止所有插件...");
+        _logger.LogInformation("=== 开始停止插件 ===");
 
-        // 停止时反向操作：优先级低的（后启动的）先停止
+        // 停止时反向操作：优先级高的先停止（后启动的先停止）
         foreach (var descriptor in _loadedPlugins.OrderByDescending(p => p.Metadata.Priority))
         {
             var sm = _stateMachines[descriptor.Metadata.Id];
 
-            if (sm.CurrentState != PluginState.Running && sm.CurrentState != PluginState.Degraded) continue;
+            // 只停止运行中或降级状态的插件
+            if (sm.CurrentState != PluginState.Running && sm.CurrentState != PluginState.Degraded)
+                continue;
 
             try
             {
                 sm.TransitionTo(PluginState.Stopping);
 
-                if (descriptor.Instance != null) await descriptor.Instance.StopAsync(ct);
+                await descriptor.Instance!.StopAsync(ct);
 
                 sm.TransitionTo(PluginState.Stopped);
+                _logger.LogInformation("插件已停止: {Name}", descriptor.Metadata.Name);
             }
             catch (Exception ex)
             {
@@ -148,11 +148,12 @@ public class PluginLifecycleManager
         }
     }
 
-    // 辅助方法：为状态机创建 Logger
-    private ILogger CreateLoggerForStateMachine(string pluginId)
+    /// <summary>
+    /// 获取指定插件的当前状态
+    /// </summary>
+    public PluginState? GetPluginState(string pluginId)
     {
-        // 这里只是简单的演示，实际可以通过 LoggerFactory 创建
-        return _logger;
+        return _stateMachines.TryGetValue(pluginId, out var sm) ? sm.CurrentState : null;
     }
 
     /// <summary>
@@ -161,5 +162,27 @@ public class PluginLifecycleManager
     public IReadOnlyList<PluginDescriptor> GetLoadedPlugins()
     {
         return _loadedPlugins.AsReadOnly();
+    }
+
+    /// <summary>
+    /// 获取所有运行中的插件
+    /// </summary>
+    public IReadOnlyList<PluginDescriptor> GetRunningPlugins()
+    {
+        return _loadedPlugins
+            .Where(p => _stateMachines.TryGetValue(p.Metadata.Id, out var sm) && sm.CurrentState == PluginState.Running)
+            .ToList()
+            .AsReadOnly();
+    }
+
+    /// <summary>
+    /// 获取所有失败的插件
+    /// </summary>
+    public IReadOnlyList<PluginDescriptor> GetFailedPlugins()
+    {
+        return _loadedPlugins
+            .Where(p => _stateMachines.TryGetValue(p.Metadata.Id, out var sm) && sm.CurrentState == PluginState.Failed)
+            .ToList()
+            .AsReadOnly();
     }
 }
