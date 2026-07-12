@@ -1,5 +1,5 @@
 ﻿using AP.Contracts.Core.Events;
-using AP.Host.Desktop.Configuration;
+using AP.Shared.Utilities.Configuration;
 using AP.Shared.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

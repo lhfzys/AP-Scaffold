@@ -34,6 +34,7 @@
   </Folder>
   <Folder Name="/platform/plugins/system/">
     <Project Path="platform/plugins/system/AP.Plugin.Layout/AP.Plugin.Layout.csproj" Id="d91e3d98-bff3-4845-ad95-86f80fa005e6" />
+    <Project Path="platform/plugins/system/AP.Plugin.SystemSettings/AP.Plugin.SystemSettings.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
   </Folder>
   <Folder Name="/platform/shared/">
     <Project Path="platform/shared/AP.Shared.PluginSDK/AP.Shared.PluginSDK.csproj" Id="a99b2cb9-5c4e-489c-9750-eb342f2f1dfe" />

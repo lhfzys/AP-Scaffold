@@ -25,6 +25,7 @@ public static class GlobalConstants
         public const string ContentRegion = "ContentRegion";
         public const string StatusBarRegion = "StatusBarRegion";
         public const string SettingsRegion = "SettingsRegion";
+        public const string SidebarRegion = "SidebarRegion";
     }
 
     // 配置文件的 Key

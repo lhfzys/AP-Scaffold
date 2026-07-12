@@ -1,56 +1,88 @@
-﻿#region
-
-using System.IO.Ports;
-using System.Windows;
+﻿using System.IO.Ports;
 using AP.Plugin.DeviceConfiguration.Models;
+using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.UI.Base;
-using AP.Shared.Utilities.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-
-#endregion
 
 namespace AP.Plugin.DeviceConfiguration.ViewModels;
 
-public partial class ScannerSettingsViewModel : ViewModelBase
+/// <summary>
+/// 扫码枪配置编辑器 ViewModel
+/// </summary>
+public partial class ScannerSettingsViewModel : ViewModelBase, ISettingsEditorViewModel
 {
-    private readonly IMediator _mediator;
-    [ObservableProperty] private string _portName;
-    [ObservableProperty] private int _baudRate;
+    [ObservableProperty] private string _portName = "COM1";
+    [ObservableProperty] private int _baudRate = 9600;
+    [ObservableProperty] private int _dataBits = 8;
+    [ObservableProperty] private string _parity = "None";
+    [ObservableProperty] private string _stopBits = "One";
+    [ObservableProperty] private string _newLine = "\r";
 
-    public ScannerSettingsViewModel(IOptions<ScannerConfigModel> options, IMediator mediator)
+    public bool RequiresRestart => true;
+
+    public ScannerSettingsViewModel(IOptions<ScannerConfigModel> options)
     {
-        _mediator = mediator;
-
-        // 1. 初始化时，从配置文件中读取当前值
-        var currentOptions = options.Value;
-        _portName = currentOptions.PortName ?? "COM1";
-        _baudRate = currentOptions.BaudRate > 0 ? currentOptions.BaudRate : 9600;
+        LoadFromOptions(options.Value);
     }
 
-    [RelayCommand]
-    private async Task ApplySettingsAsync()
+    public void LoadFromConfiguration(IConfiguration configuration)
     {
-        // 2. 将用户在 UI 上修改的值封装为 Options 对象
-        var newOptions = new ScannerConfigModel
+        var section = configuration.GetSection(ScannerConfigModel.SectionName);
+        var options = section.Get<ScannerConfigModel>() ?? new ScannerConfigModel();
+        LoadFromOptions(options);
+    }
+
+    private void LoadFromOptions(ScannerConfigModel options)
+    {
+        PortName = options.PortName ?? "COM1";
+        BaudRate = options.BaudRate > 0 ? options.BaudRate : 9600;
+        DataBits = options.DataBits > 0 ? options.DataBits : 8;
+        Parity = options.Parity.ToString();
+        StopBits = options.StopBits.ToString();
+        NewLine = options.NewLine ?? "\r";
+    }
+
+    public IEnumerable<string> Validate()
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(PortName))
+            errors.Add("通信串口不能为空");
+
+        if (BaudRate <= 0)
+            errors.Add("波特率必须大于 0");
+
+        var validBaudRates = new[] { 9600, 19200, 38400, 57600, 115200 };
+        if (!validBaudRates.Contains(BaudRate))
+            errors.Add($"波特率 {BaudRate} 不是常用值，请确认");
+
+        if (DataBits is < 5 or > 8)
+            errors.Add("数据位必须在 5-8 之间");
+
+        if (!Enum.TryParse<Parity>(Parity, true, out _))
+            errors.Add($"校验位 {Parity} 无效");
+
+        if (!Enum.TryParse<StopBits>(StopBits, true, out _))
+            errors.Add($"停止位 {StopBits} 无效");
+
+        return errors;
+    }
+
+    public object GetConfigurationValue()
+    {
+        var parity = Enum.TryParse<System.IO.Ports.Parity>(Parity, true, out var p) ? p : System.IO.Ports.Parity.None;
+        var stopBits = Enum.TryParse<System.IO.Ports.StopBits>(StopBits, true, out var s) ? s : System.IO.Ports.StopBits.One;
+
+        return new ScannerConfigModel
         {
-            PortName = this.PortName,
-            BaudRate = this.BaudRate,
-            DataBits = 8,
-            StopBits = StopBits.One,
-            Parity = Parity.None
+            PortName = PortName,
+            BaudRate = BaudRate,
+            DataBits = DataBits,
+            Parity = parity,
+            StopBits = stopBits,
+            NewLine = NewLine
         };
-
-        // 3. 核心：持久化到 appsettings.json
-        // 注意：这里的 SectionName 必须和 appsettings.json 中的节点层级完全一致！
-        ConfigurationHelper.UpdateAppSetting("Plugins:Scanner:SerialPort", newOptions);
-
-        // 4. 发送通知或指令给底层服务，让其重启或重连
-        // (视您的底层实现而定，最简单的做法是提示用户重启软件，或者抛出一个重连 Command)
-        // await _mediator.Send(new ReconnectScannerCommand(newOptions));
-
-        MessageBox.Show("扫码枪配置已保存！部分配置可能需要重启软件或重新连接设备后生效。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
