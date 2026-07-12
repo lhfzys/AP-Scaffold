@@ -100,17 +100,17 @@ public class Bootstrapper : PrismBootstrapper
         if (_appRole.HasFlag(AppRole.Client))
             ClientBootstrap.RegisterServices(services);
 
-
-        // --- 扫描并实例化插件 ---
+        // --- 扫描插件元数据 ---
         _loadedPlugins = _pluginLoader.DiscoverPlugins(_appRole);
         Log.Information("已发现 {Count} 个适用插件", _loadedPlugins.Count);
 
-        // 创建一个临时的 logger 工厂用于传递给插件构造函数
+        // 创建 logger 工厂用于传递给插件构造函数
         using var pluginLoggerFactory = LoggerFactory.Create(b => b.AddSerilog());
 
         var pluginAssemblies = new List<Assembly> { typeof(Bootstrapper).Assembly }; // 包含 Host 自身
 
-        // 构建临时 ServiceProvider 用于插件实例化（支持 DI 解析构造函数参数）
+        // ===== 第一阶段：用仅包含平台服务的临时容器实例化插件，收集服务注册和程序集 =====
+        // 注意：ConfigureServices 里通常只注册服务，不解析服务，因此临时容器足够
         var tempProvider = services.BuildServiceProvider();
 
         foreach (var descriptor in _loadedPlugins)
@@ -118,22 +118,22 @@ public class Bootstrapper : PrismBootstrapper
             {
                 var pluginLogger = pluginLoggerFactory.CreateLogger(descriptor.PluginType);
 
-                // 使用 ActivatorUtilities 从 DI 容器解析构造函数参数
-                // 支持 ILogger 和其他已注册的服务（如 IOptions<T>）
-                var instance = ActivatorUtilities
+                // 临时实例仅用于调用 ConfigureServices，不会被最终容器使用
+                var tempInstance = ActivatorUtilities
                     .CreateInstance(tempProvider, descriptor.PluginType, pluginLogger) as IPlugin;
 
-                if (instance == null) continue;
+                if (tempInstance == null)
+                {
+                    descriptor.IsLoaded = false;
+                    continue;
+                }
 
-                descriptor.Instance = instance;
-                descriptor.IsLoaded = true;
-
-                // 注册插件自身的服务
-                if (instance is IConfigurablePlugin configurable)
+                // 注册插件自身的服务（这些服务会被加入最终容器）
+                if (tempInstance is IConfigurablePlugin configurable)
                     configurable.ConfigureServices(services, _configuration);
 
-                // 将插件单例注册到容器 (方便通过 IEnumerable<IPlugin> 获取)
-                services.AddSingleton(typeof(IPlugin), instance);
+                // 第一阶段成功，标记为待加载
+                descriptor.IsLoaded = true;
 
                 // 收集程序集用于 MediatR 扫描
                 pluginAssemblies.Add(descriptor.PluginType.Assembly);
@@ -141,22 +141,53 @@ public class Bootstrapper : PrismBootstrapper
             catch (Exception ex)
             {
                 // 捕获异常，防止一个插件崩溃导致整个程序启动失败
-                // 使用 Log.Error 确保 Release 构建下也能记录
-                Log.Error(ex, "插件 {Name} 加载失败", descriptor.Metadata.Name);
+                Log.Error(ex, "插件 {Name} 服务配置失败", descriptor.Metadata.Name);
                 _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
                 descriptor.IsLoaded = false;
             }
 
         // --- 注册 MediatR ---
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(pluginAssemblies.ToArray()));
+
+        // ===== 第二阶段：构建最终容器，并用最终容器重新实例化插件 =====
+        // 这样插件构造函数能解析到所有已注册的服务（包括其他插件注册的服务）
+        var finalProvider = services.BuildServiceProvider();
+
+        var finalInstances = new List<IPlugin>();
+        foreach (var descriptor in _loadedPlugins.Where(d => d.IsLoaded))
+            try
+            {
+                var pluginLogger = pluginLoggerFactory.CreateLogger(descriptor.PluginType);
+
+                var instance = ActivatorUtilities
+                    .CreateInstance(finalProvider, descriptor.PluginType, pluginLogger) as IPlugin;
+
+                if (instance == null) continue;
+
+                descriptor.Instance = instance;
+                descriptor.IsLoaded = true;
+                finalInstances.Add(instance);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "插件 {Name} 最终实例化失败", descriptor.Metadata.Name);
+                _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
+                descriptor.IsLoaded = false;
+            }
+
+        // --- 桥接容器 (Microsoft DI -> DryIoc) ---
+        var dryIocContainer = containerRegistry.GetContainer();
+        dryIocContainer.Populate(services);
+
+        // 将最终插件实例注册到 DryIoc，便于通过 IEnumerable<IPlugin> 解析
+        foreach (var instance in finalInstances)
+            containerRegistry.RegisterInstance(typeof(IPlugin), instance);
+
         // --- 注册生命周期管理器 ---
         _lifecycleManager = new PluginLifecycleManager(
             LoggerFactory.Create(b => b.AddSerilog()).CreateLogger<PluginLifecycleManager>());
         _lifecycleManager.RegisterPlugins(_loadedPlugins.Where(p => p.IsLoaded));
-        services.AddSingleton(_lifecycleManager);
-        // --- 桥接容器 (Microsoft DI -> DryIoc) ---
-        var dryIocContainer = containerRegistry.GetContainer();
-        dryIocContainer.Populate(services);
+        containerRegistry.RegisterInstance(_lifecycleManager);
 
         containerRegistry.RegisterSingleton<ICustomDialogService, MaterialDialogService>();
         // 让插件也能解析 Prism 的 IContainerProvider
