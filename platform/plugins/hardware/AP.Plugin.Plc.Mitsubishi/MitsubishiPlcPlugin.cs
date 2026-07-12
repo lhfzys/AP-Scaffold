@@ -1,4 +1,5 @@
-﻿using AP.Contracts.Hardware.Services;
+﻿using System.Windows;
+using AP.Contracts.Hardware.Services;
 using AP.Core.Capability;
 using AP.Core.Enums;
 using AP.Core.PluginFramework.Attributes;
@@ -6,6 +7,7 @@ using AP.Infra.Resilience.Factories;
 using AP.Plugin.Plc.Mitsubishi.Configuration;
 using AP.Plugin.Plc.Mitsubishi.Services;
 using AP.Shared.PluginSDK.Base;
+using AP.Shared.PluginSDK.Configuration;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +39,11 @@ public class MitsubishiPlcPlugin : PluginBase
         var configSection = configuration.GetSection(MitsubishiPlcOptions.SectionName);
         services.Configure<MitsubishiPlcOptions>(configSection);
 
-        // 2. 注册服务 (单例，因为我们要维护长连接)
+        // 2. 注册配置编辑器
+        services.AddTransient<MitsubishiPlcConfigurationEditorViewModel>();
+        services.AddSingleton<ISettingsContributor, MitsubishiPlcConfigurationContributor>();
+
+        // 3. 注册服务 (单例，因为我们要维护长连接)
         services.AddSingleton<IPlcService>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<MitsubishiPlcService>>();
@@ -61,6 +67,10 @@ public class MitsubishiPlcPlugin : PluginBase
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
     {
         await base.InitializeAsync(serviceProvider, ct);
+
+        // 注册 PLC 配置编辑器的 ViewModel -> View 数据模板
+        RegisterEditorDataTemplate();
+
         //_logger.LogInformation("三菱PLC 插件初始化完成 (等待启动)");
         // // 初始化时自动连接
         // try
@@ -98,5 +108,15 @@ public class MitsubishiPlcPlugin : PluginBase
         var plcService = ServiceProvider.GetService<IPlcService>();
         if (plcService != null) await plcService.DisconnectAsync();
         await base.StopAsync(ct);
+    }
+
+    private static void RegisterEditorDataTemplate()
+    {
+        var template = new DataTemplate { DataType = typeof(MitsubishiPlcConfigurationEditorViewModel) };
+        template.VisualTree = new FrameworkElementFactory(typeof(MitsubishiPlcConfigurationEditorView));
+
+        var key = new DataTemplateKey(typeof(MitsubishiPlcConfigurationEditorViewModel));
+        if (!Application.Current.Resources.Contains(key))
+            Application.Current.Resources.Add(key, template);
     }
 }

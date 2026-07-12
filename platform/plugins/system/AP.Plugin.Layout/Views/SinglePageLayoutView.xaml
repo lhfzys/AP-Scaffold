@@ -8,48 +8,8 @@
              prism:ViewModelLocator.AutoWireViewModel="True">
     <md:DrawerHost x:Name="MainDrawerHost">
         <md:DrawerHost.RightDrawerContent>
-            <Border Width="380" Background="{DynamicResource MaterialDesignPaper}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-
-                    </Grid.RowDefinitions>
-
-                    <md:ColorZone
-                        Padding="16"
-                        md:ElevationAssist.Elevation="Dp2"
-                        Mode="PrimaryMid">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon
-                                Width="24"
-                                Height="24"
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center"
-                                Foreground="White"
-                                Kind="SettingsOutline" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="18"
-                                FontWeight="Bold"
-                                Foreground="White"
-                                Text="系统参数配置" />
-                        </StackPanel>
-                    </md:ColorZone>
-
-                    <ScrollViewer
-                        Grid.Row="1"
-                        Padding="16,16,16,16"
-                        VerticalScrollBarVisibility="Auto">
-                        <ItemsControl prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.SettingsRegion}">
-                            <ItemsControl.ItemContainerStyle>
-                                <Style TargetType="{x:Type FrameworkElement}">
-                                    <Setter Property="Margin" Value="0,0,0,16" />
-                                </Style>
-                            </ItemsControl.ItemContainerStyle>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
+            <Border Width="900" Background="{DynamicResource MaterialDesignPaper}">
+                <ContentControl prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.SettingsRegion}" />
             </Border>
         </md:DrawerHost.RightDrawerContent>
 

@@ -130,7 +130,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Windows;
-using Prism.Regions;
+using Prism.Navigation.Regions;
 
 namespace AP.Plugin.YourFeature;
 
