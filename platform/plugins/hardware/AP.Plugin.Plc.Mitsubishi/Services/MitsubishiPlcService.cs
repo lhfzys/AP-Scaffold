@@ -1,5 +1,6 @@
 ﻿#region
 
+using System.Threading;
 using AP.Contracts.Hardware.Capabilities;
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Services;
@@ -17,11 +18,13 @@ namespace AP.Plugin.Plc.Mitsubishi.Services;
 
 public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
 {
-    private readonly MitsubishiClient _client;
+    // 客户端实例会在重连时被原子替换，因此不能是 readonly
+    private MitsubishiClient _client;
     private readonly ResiliencePipeline _pipeline;
     private readonly ILogger _logger;
     private readonly MitsubishiPlcOptions _options;
     private readonly IMediator _mediator;
+    private readonly MitsubishiVersion _version;
 
     // --- 看门狗状态 ---
     private bool _isWatchdogRunning;
@@ -47,11 +50,37 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         _mediator = mediator;
 
         // 解析版本号字符串为枚举
-        if (!Enum.TryParse(_options.Version, true, out MitsubishiVersion version))
-            version = MitsubishiVersion.Qna_3E;
+        if (!Enum.TryParse(_options.Version, true, out _version))
+            _version = MitsubishiVersion.Qna_3E;
+
+        _deviceName = $"Mitsubishi-Q ({_options.IpAddress}:{_options.Port})";
 
         // 初始化 IoTClient
-        _client = new MitsubishiClient(version, _options.IpAddress, _options.Port, _options.Timeout);
+        _client = CreateClient();
+    }
+
+    /// <summary>
+    /// 创建新的 PLC 客户端实例
+    /// </summary>
+    private MitsubishiClient CreateClient()
+    {
+        return new MitsubishiClient(_version, _options.IpAddress, _options.Port, _options.Timeout);
+    }
+
+    /// <summary>
+    /// 安全关闭并释放客户端
+    /// </summary>
+    private static void SafeCloseClient(MitsubishiClient? client)
+    {
+        if (client == null) return;
+        try
+        {
+            client.Close();
+        }
+        catch
+        {
+            // 关闭时可能已断开或已释放，忽略异常
+        }
     }
 
     /// <summary>
@@ -88,26 +117,58 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
             {
                 // 硬超时保护：防止 IoTClient.Open() 内部不响应 CancellationToken 导致永久阻塞
                 var connectTimeout = TimeSpan.FromSeconds(_options.Timeout > 0 ? _options.Timeout / 1000.0 * 3 : 10);
-                var connectTask = Task.Run(() => _client.Open(), token);
-                var timeoutTask = Task.Delay(connectTimeout, token);
 
-                var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+                // 每次连接尝试都使用新的客户端实例，避免旧客户端的残留状态或阻塞线程影响新连接
+                var newClient = CreateClient();
 
-                if (completedTask == timeoutTask)
+                using var attemptCts = new CancellationTokenSource(connectTimeout);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, attemptCts.Token);
+
+                // 使用 LongRunning 在专用线程上执行同步的 Open()，避免占用线程池线程
+                var openTask = Task.Factory.StartNew<dynamic>(() =>
                 {
+                    try
+                    {
+                        return newClient.Open();
+                    }
+                    catch (Exception ex)
+                    {
+                        return new { IsSucceed = false, Err = ex.Message };
+                    }
+                }, linkedCts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                var delayTask = Task.Delay(connectTimeout, linkedCts.Token);
+                var completedTask = await Task.WhenAny(openTask, delayTask);
+
+                if (completedTask == delayTask)
+                {
+                    // 超时：丢弃本次尝试的客户端，不等待 Open() 返回，避免线程长期被占用
+                    // 注册一个延续来观察可能发生的异常，防止触发 UnobservedTaskException
+                    _ = openTask.ContinueWith(t =>
+                    {
+                        if (t.Exception != null)
+                            _logger.LogDebug(t.Exception, "PLC 连接尝试在超时后抛出异常，已忽略");
+                    }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+
+                    SafeCloseClient(newClient);
                     throw new TimeoutException($"PLC 连接超时 ({connectTimeout.TotalSeconds:F0}s): {_options.IpAddress}:{_options.Port}");
                 }
 
-                var result = await connectTask;
+                var result = await openTask;
 
                 if (result.IsSucceed)
                 {
+                    // 原子替换当前客户端，确保读写操作不会拿到已关闭的实例
+                    var oldClient = Interlocked.Exchange(ref _client, newClient);
+                    SafeCloseClient(oldClient);
+
                     _logger.LogInformation("✅ 三菱PLC 已连接: {Ip}:{Port}", _options.IpAddress, _options.Port);
                     _currentConnectionState = true;
                     await _mediator.Publish(new DeviceConnectedEvent(_deviceName, DateTime.Now), token);
                 }
                 else
                 {
+                    SafeCloseClient(newClient);
                     throw new Exception($"连接被拒绝或超时: {result.Err}");
                 }
             }, ct);
@@ -125,10 +186,10 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     {
         StopWatchdog();
         _currentConnectionState = false;
-        _client.Close();
+        SafeCloseClient(_client);
         _logger.LogInformation("PLC 已断开");
         await _mediator.Publish(new DeviceDisconnectedEvent(
-            $"Mitsubishi-Q ({_options.IpAddress})",
+            _deviceName,
             "主动断开",
             DateTime.Now
         ));
@@ -167,6 +228,16 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
                             catch
                             {
                                 // 连不上就静默等待下一次 Timer 触发
+                                // 增加退避，避免网络不可达时频繁创建连接线程
+                                try
+                                {
+                                    await Task.Delay(TimeSpan.FromSeconds(5), _watchdogCts.Token);
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    // 正常取消，退出循环
+                                    break;
+                                }
                             }
 
                             continue;
@@ -251,6 +322,9 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
     {
+        // 捕获当前客户端引用，避免重连替换实例后在同一次读写中混用不同客户端
+        var client = _client;
+
         return await _pipeline.ExecuteAsync(async token =>
         {
             // 根据 T 的类型调用不同的 IoTClient 方法
@@ -260,17 +334,17 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
             await Task.Yield(); // 确保异步上下文
 
             if (typeof(T) == typeof(bool))
-                result = _client.ReadBoolean(address);
+                result = client.ReadBoolean(address);
             else if (typeof(T) == typeof(short))
-                result = _client.ReadInt16(address);
+                result = client.ReadInt16(address);
             else if (typeof(T) == typeof(ushort))
-                result = _client.ReadUInt16(address);
+                result = client.ReadUInt16(address);
             else if (typeof(T) == typeof(int))
-                result = _client.ReadInt32(address);
+                result = client.ReadInt32(address);
             else if (typeof(T) == typeof(uint))
-                result = _client.ReadUInt32(address);
+                result = client.ReadUInt32(address);
             else if (typeof(T) == typeof(float))
-                result = _client.ReadFloat(address);
+                result = client.ReadFloat(address);
             else
                 throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
@@ -282,21 +356,24 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
+        // 捕获当前客户端引用，避免重连替换实例后在同一次写入中混用不同客户端
+        var client = _client;
+
         await _pipeline.ExecuteAsync(async token =>
         {
             dynamic result;
             await Task.Yield();
 
             if (value is bool b)
-                result = _client.Write(address, b);
+                result = client.Write(address, b);
             else if (value is short s)
-                result = _client.Write(address, s);
+                result = client.Write(address, s);
             else if (value is ushort us)
-                result = _client.Write(address, us);
+                result = client.Write(address, us);
             else if (value is int i)
-                result = _client.Write(address, i);
+                result = client.Write(address, i);
             else if (value is uint ui)
-                result = _client.Write(address, ui);
+                result = client.Write(address, ui);
             else if (value is float f)
                 result = _client.Write(address, f);
             else
