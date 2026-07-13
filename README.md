@@ -1,6 +1,6 @@
 # AP-Scaffold — 工业自动化通用平台脚手架
 
-基于 **.NET 8 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
+基于 **.NET 9 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
 
 ---
 
@@ -14,7 +14,9 @@
 - [配置说明](#配置说明)
 - [插件开发指南](#插件开发指南)
 - [部署模式](#部署模式)
+- [测试覆盖](#测试覆盖)
 - [开发路线图](#开发路线图)
+- [文档参考](#文档参考)
 
 ---
 
@@ -677,8 +679,10 @@ platform/tests/
 | 工具 | 用途 |
 |------|------|
 | xUnit | 测试框架 |
+| NSubstitute | 接口模拟 / Mock |
 | FluentAssertions | 可读性断言 |
-| Moq | 接口模拟 |
+
+> 详细的测试编写规范、命令运行指南和覆盖率目标，请参阅 **[docs/TESTING.md](docs/TESTING.md)**。
 
 ### 运行测试
 
@@ -691,6 +695,17 @@ dotnet test platform/tests/AP.Core.Tests/AP.Core.Tests.csproj
 dotnet test platform/tests/AP.Shared.Tests/AP.Shared.Tests.csproj
 dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 ```
+
+---
+
+## 文档参考
+
+| 文档 | 说明 |
+|------|------|
+| **[CHANGELOG.md](CHANGELOG.md)** | 版本变更日志 |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 详细的分层架构设计文档 |
+| **[docs/TESTING.md](docs/TESTING.md)** | 测试编写规范与运行指南 |
+| **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备与配置步骤（已迁移至 README） |
 
 ---
 
