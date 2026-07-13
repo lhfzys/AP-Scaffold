@@ -634,6 +634,66 @@ reports/
 
 ---
 
+## 测试覆盖
+
+项目当前包含 **12 个测试文件**，覆盖核心业务逻辑、配置模型和实体对象。
+
+### 测试项目结构
+
+```
+platform/tests/
+├── AP.Core.Tests/                       # 核心框架测试（6 个）
+│   ├── StateMachine/
+│   │   ├── StateTransitionValidatorTests.cs   # 状态转换验证
+│   │   └── PluginStateMachineTests.cs         # 插件状态机
+│   ├── Capability/
+│   │   └── PluginCapabilitiesTests.cs         # 插件能力声明
+│   ├── EventBus/
+│   │   └── EventBusTests.cs                   # MediatR 事件总线
+│   ├── Lifecycle/
+│   │   └── PluginLifecycleManagerTests.cs     # 插件生命周期管理
+│   └── PluginFramework/
+│       ├── PluginMetadataAttributeTests.cs    # 插件元数据特性
+│       ├── RequiresCapabilitiesAttributeTests.cs  # 能力依赖特性
+│       └── PluginInterfaceTests.cs            # IPlugin 接口契约
+│
+├── AP.Shared.Tests/                     # 共享库测试（3 个）
+│   ├── PluginSDK/
+│   │   └── PluginBaseTests.cs                  # 插件基类
+│   └── Utilities/
+│       ├── SerializationHelperTests.cs         # JSON 序列化/反序列化
+│       └── ConfigurationHelperTests.cs         # appsettings.json 配置更新
+│
+└── AP.Infra.Tests/                      # 基础设施层测试（3 个）
+    ├── Report/
+    │   ├── ReportOptionsTests.cs               # 报表配置选项
+    │   └── ReportArchiveEntityTests.cs         # 报表归档实体
+    └── Resilience/
+        └── ResilienceOptionsTests.cs           # 弹性策略配置选项
+```
+
+### 技术栈
+
+| 工具 | 用途 |
+|------|------|
+| xUnit | 测试框架 |
+| FluentAssertions | 可读性断言 |
+| Moq | 接口模拟 |
+
+### 运行测试
+
+```bash
+# 运行所有测试
+dotnet test
+
+# 运行特定项目测试
+dotnet test platform/tests/AP.Core.Tests/AP.Core.Tests.csproj
+dotnet test platform/tests/AP.Shared.Tests/AP.Shared.Tests.csproj
+dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
+```
+
+---
+
 ## 开发路线图
 
 - [x] 插件化架构核心（动态加载、隔离上下文、生命周期）
