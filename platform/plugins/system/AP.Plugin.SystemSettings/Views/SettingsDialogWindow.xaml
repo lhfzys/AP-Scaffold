@@ -1,0 +1,57 @@
+﻿<Window x:Class="AP.Plugin.SystemSettings.Views.SettingsDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="系统配置"
+        Height="720"
+        Width="1100"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        FontFamily="Microsoft YaHei UI, Segoe UI, sans-serif">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <md:PackIcon Kind="Cog"
+                                 Width="28" Height="28"
+                                 Foreground="White"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,12,0"/>
+                    <TextBlock Text="系统配置"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Style="{StaticResource MaterialDesignToolForegroundButton}"
+                        Click="CloseButton_Click"
+                        ToolTip="关闭">
+                    <md:PackIcon Kind="Close" Width="24" Height="24" Foreground="White"/>
+                </Button>
+            </Grid>
+        </md:ColorZone>
+
+        <!-- 内容区 -->
+        <ContentControl Grid.Row="1"
+                        x:Name="SettingsContentHost"
+                        Margin="0"/>
+    </Grid>
+</Window>

@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using AP.Contracts.System.Services;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.SystemSettings.Configuration;
 using AP.Plugin.SystemSettings.Editors;
@@ -34,9 +35,11 @@ public class SystemSettingsPlugin : PluginBase
         // 注册配置框架视图和 ViewModel
         services.AddTransient<SettingsShellView>();
         services.AddTransient<SettingsShellViewModel>();
+        services.AddTransient<SettingsDialogWindow>();
 
         // 注册配置服务
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<ISettingsDialogService, SettingsDialogService>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)

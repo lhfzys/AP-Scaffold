@@ -18,11 +18,32 @@ public static class SecurityServiceExtensions
     /// </summary>
     public static IServiceCollection AddPlatformSecurity(this IServiceCollection services, IConfiguration configuration)
     {
+        var enabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<IUserRepository, UserRepository>();
-        services.AddSingleton<IIdentityService, IdentityService>();
-        services.AddSingleton<IAuditService, AuditService>();
-        services.AddSingleton<AP.Contracts.Security.Abstractions.ISecurityDbInitializer, Data.SecurityDbInitializer>();
+
+        if (enabled)
+        {
+            services.AddSingleton<IUserRepository, UserRepository>();
+            services.AddSingleton<IIdentityService, IdentityService>();
+            services.AddSingleton<ISecurityDbInitializer, Data.SecurityDbInitializer>();
+        }
+        else
+        {
+            // 安全模块禁用时注册匿名实现，保证业务插件依赖注入不失败
+            services.AddSingleton<IIdentityService, AnonymousIdentityService>();
+        }
+
+        // 审计日志不受 Security:Enabled 完全控制，单独判断；默认启用
+        var auditEnabled = configuration.GetValue<bool?>("Security:Audit:Enabled") ?? enabled;
+        if (auditEnabled)
+        {
+            services.AddSingleton<IAuditService, AuditService>();
+        }
+        else
+        {
+            services.AddSingleton<IAuditService, NullAuditService>();
+        }
 
         return services;
     }

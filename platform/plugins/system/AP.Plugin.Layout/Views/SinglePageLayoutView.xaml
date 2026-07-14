@@ -6,93 +6,82 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:constants="clr-namespace:AP.Shared.Utilities.Constants;assembly=AP.Shared.Utilities"
              prism:ViewModelLocator.AutoWireViewModel="True">
-    <md:DrawerHost x:Name="MainDrawerHost">
-        <md:DrawerHost.RightDrawerContent>
-            <Border Width="900" Background="{DynamicResource MaterialDesignPaper}">
-                <ContentControl prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.SettingsRegion}" />
-            </Border>
-        </md:DrawerHost.RightDrawerContent>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
+        <md:ColorZone
+            Grid.Row="0"
+            Padding="16"
+            Panel.ZIndex="1"
+            md:ElevationAssist.Elevation="Dp4"
+            Mode="PrimaryMid">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            </Grid.RowDefinitions>
-
-            <md:ColorZone
-                Grid.Row="0"
-                Padding="16"
-                Panel.ZIndex="1"
-                md:ElevationAssist.Elevation="Dp4"
-                Mode="PrimaryMid">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel
-                        Grid.Column="0"
+                <StackPanel
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <md:PackIcon
+                        Width="32"
+                        Height="32"
+                        Margin="0,0,12,0"
                         VerticalAlignment="Center"
-                        Orientation="Horizontal">
-                        <md:PackIcon
-                            Width="32"
-                            Height="32"
-                            Margin="0,0,12,0"
-                            VerticalAlignment="Center"
-                            Foreground="White"
-                            Kind="Gauge" />
+                        Foreground="White"
+                        Kind="Gauge" />
 
-                        <TextBlock
-                            VerticalAlignment="Center"
-                            FontFamily="Microsoft YaHei UI"
-                            FontSize="22"
-                            FontWeight="Bold"
-                            Foreground="White"
-                            Text="{Binding SoftwareName}" />
-                    </StackPanel>
-
-                    <StackPanel
-                        Grid.Column="2"
+                    <TextBlock
                         VerticalAlignment="Center"
-                        Orientation="Horizontal">
+                        FontFamily="Microsoft YaHei UI"
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="{Binding SoftwareName}" />
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <md:PackIcon
+                        Width="20"
+                        Height="20"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        Kind="ClockTimeFourOutline"
+                        Opacity="0.8" />
+
+                    <TextBlock
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas, Microsoft YaHei"
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="White"
+                        Text="{Binding CurrentTime}" />
+
+                    <Button
+                        Padding="2"
+                        Command="{Binding OpenSettingsCommand}"
+                        Style="{StaticResource MaterialDesignToolForegroundButton}"
+                        ToolTip="打开系统设置">
                         <md:PackIcon
-                            Width="20"
-                            Height="20"
-                            Margin="0,0,8,0"
-                            VerticalAlignment="Center"
-                            Foreground="White"
-                            Kind="ClockTimeFourOutline"
-                            Opacity="0.8" />
+                            Width="24"
+                            Height="24"
+                            Kind="Cog" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </md:ColorZone>
 
-                        <TextBlock
-                            Margin="0,0,16,0"
-                            VerticalAlignment="Center"
-                            FontFamily="Consolas, Microsoft YaHei"
-                            FontSize="18"
-                            FontWeight="SemiBold"
-                            Foreground="White"
-                            Text="{Binding CurrentTime}" />
-
-                        <Button
-                            Padding="2"
-                            Command="{x:Static md:DrawerHost.OpenDrawerCommand}"
-                            CommandParameter="{x:Static Dock.Right}"
-                            Style="{StaticResource MaterialDesignToolForegroundButton}"
-                            ToolTip="打开系统设置">
-                            <md:PackIcon
-                                Width="24"
-                                Height="24"
-                                Kind="Cog" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </md:ColorZone>
-
-            <ContentControl Grid.Row="1" prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />
-        </Grid>
-
-    </md:DrawerHost>
+        <ContentControl Grid.Row="1" prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />
+    </Grid>
 </UserControl>

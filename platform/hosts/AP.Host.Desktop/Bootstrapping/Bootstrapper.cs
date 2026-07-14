@@ -237,18 +237,26 @@ public class Bootstrapper : PrismBootstrapper
                 var logRetainDays = _configuration.GetValue<int>("Logging:RetainedFileCount", 90);
                 LogCleanupHelper.CleanupIfNeeded("logs", logRetainDays);
 
-                UpdateSplashStatus("正在初始化安全模块...", 15);
+                var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
+                if (securityEnabled)
+                {
+                    UpdateSplashStatus("正在初始化安全模块...", 15);
 
-                // --- 0.5 初始化安全模块数据库（默认账号/角色/权限） ---
-                try
-                {
-                    var securityInitializer = container.Resolve<AP.Contracts.Security.Abstractions.ISecurityDbInitializer>();
-                    await securityInitializer.InitializeAsync(CancellationToken.None);
-                    Log.Information("安全模块数据库初始化完成");
+                    // --- 0.5 初始化安全模块数据库（默认账号/角色/权限） ---
+                    try
+                    {
+                        var securityInitializer = container.Resolve<AP.Contracts.Security.Abstractions.ISecurityDbInitializer>();
+                        await securityInitializer.InitializeAsync(CancellationToken.None);
+                        Log.Information("安全模块数据库初始化完成");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "安全模块初始化失败");
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Error(ex, "安全模块初始化失败");
+                    Log.Information("安全模块已禁用，跳过数据库初始化");
                 }
 
                 UpdateSplashStatus("正在初始化配方模块...", 30);
