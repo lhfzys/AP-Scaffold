@@ -231,6 +231,8 @@ AP.Shared.*
 - **全局异常保护**：`GlobalExceptionHandler` 捕获 UI 线程、后台 Task、AppDomain 未处理异常；仅写入崩溃日志（`logs/crash-yyyyMMdd.log`），不弹窗，避免打断自动化流程。
 - **系统托盘**：`TrayIconManager` 支持最小化到托盘、托盘菜单（显示主窗口 / 重启 / 退出）。
 - **登录对话框**：`AP.Plugin.Login` 提供 `ILoginService` 与 `LoginWindow` / `ChangePasswordWindow`，在 `Bootstrapper.InitializeShell` 阶段完成身份认证。
+- **用户管理**：`AP.Plugin.UserManagement` 提供 `UserListView` 与 `UserEditWindow`，仅对拥有 `user.manage` 权限的用户可见。
+- **侧边栏导航**：`AP.Plugin.Layout` 启用 `SidebarRegion` 作为系统管理导航菜单，集中放置系统配置、用户管理、角色管理、审计日志等入口。
 - **配置对话框**：`AP.Plugin.SystemSettings` 提供 `ISettingsDialogService` 与 `SettingsDialogWindow`，配置中心以独立模态窗口打开，不再占用主内容区或右侧抽屉。
 - **安装包**：`installer/setup.iss` 为 Inno Setup 脚本，发布后可一键生成 Windows 安装程序。
 

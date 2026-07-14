@@ -104,7 +104,8 @@ AP-Scaffold/
 │   │   └── system/                    # 系统功能插件
 │   │       ├── AP.Plugin.Layout/      # 布局管理
 │   │       ├── AP.Plugin.Login/       # 登录认证
-│   │       └── AP.Plugin.SystemSettings/ # 系统配置中心
+│   │       ├── AP.Plugin.SystemSettings/ # 系统配置中心
+│   │       └── AP.Plugin.UserManagement/ # 用户管理
 │   │
 │   └── shared/                        # 共享库
 │       ├── AP.Shared.PluginSDK/       # 插件开发 SDK (PluginBase 基类)
