@@ -65,6 +65,9 @@ public class Bootstrapper : PrismBootstrapper
         var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
         if (securityEnabled)
         {
+            // 登录窗口需要在最前显示，先关闭启动画面避免遮挡
+            CloseSplashWindow();
+
             var loginService = Container.Resolve<AP.Contracts.System.Services.ILoginService>();
 
             // 弹出登录窗口
