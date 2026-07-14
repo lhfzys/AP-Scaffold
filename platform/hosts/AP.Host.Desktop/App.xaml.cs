@@ -1,12 +1,16 @@
 ﻿using AP.Host.Desktop.Bootstrapping;
+using AP.Host.Desktop.Services;
+using AP.Host.Desktop.Views;
 using Serilog;
 using System.Windows;
 
 namespace AP.Host.Desktop;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private Bootstrapper? _bootstrapper;
+    private SplashWindow? _splashWindow;
+    private TrayIconManager? _trayIconManager;
 
     public App()
     {
@@ -20,9 +24,20 @@ public partial class App : Application
         // 1. 解析运行角色 (默认为 Standalone)
         var appRole = RoleResolver.Resolve(e.Args);
 
-        // 2. 启动引导器
-        _bootstrapper = new Bootstrapper(appRole);
+        // 2. 显示启动画面
+        _splashWindow = new SplashWindow();
+        _splashWindow.Show();
+
+        // 3. 启动引导器
+        _bootstrapper = new Bootstrapper(appRole, _splashWindow);
         _bootstrapper.Run();
+
+        // 4. 初始化系统托盘
+        _trayIconManager = new TrayIconManager();
+        if (Current.MainWindow != null)
+        {
+            _trayIconManager.Attach(Current.MainWindow);
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -44,6 +59,7 @@ public partial class App : Application
         }
         finally
         {
+            _trayIconManager?.Dispose();
             Log.CloseAndFlush();
         }
 

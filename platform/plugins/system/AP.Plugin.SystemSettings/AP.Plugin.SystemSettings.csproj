@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\..\shared\AP.Shared.PluginSDK\AP.Shared.PluginSDK.csproj" />
     <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.System\AP.Contracts.System.csproj" />
   </ItemGroup>
 
   <ItemGroup>

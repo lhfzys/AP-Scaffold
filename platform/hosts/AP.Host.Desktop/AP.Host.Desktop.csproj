@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,8 @@
     <ProjectReference Include="..\..\infra\AP.Infra.Database\AP.Infra.Database.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Logging\AP.Infra.Logging.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
+    <ProjectReference Include="..\..\infra\AP.Infra.Security\AP.Infra.Security.csproj" />
+    <ProjectReference Include="..\..\infra\AP.Infra.Recipe\AP.Infra.Recipe.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Grpc\AP.Infra.Grpc.csproj" />
   </ItemGroup>
 

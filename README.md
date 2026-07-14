@@ -720,7 +720,9 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 - [x] Material Design UI 控件库
 - [x] 中央包版本管理
 - [x] 通用报表框架（定时归档 / 手动导出 / 补档 / 定期清理）
-- [ ] 身份认证与授权
+- [x] 身份认证与授权（单机本地账号版）
+- [x] 配方/工艺参数管理
+- [ ] 身份认证 UI 与审计日志查看界面
 - [ ] OpenTelemetry 可观测性集成
 - [ ] 更多 PLC 协议支持（西门子、欧姆龙）
 

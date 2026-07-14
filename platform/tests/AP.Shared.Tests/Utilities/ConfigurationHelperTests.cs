@@ -66,7 +66,6 @@ public class ConfigurationHelperTests
     {
         typeof(ConfigurationHelper).IsAbstract.Should().BeTrue();
         typeof(ConfigurationHelper).IsSealed.Should().BeTrue();
-        typeof(ConfigurationHelper).IsStatic().Should().BeTrue();
     }
 
     [Fact]

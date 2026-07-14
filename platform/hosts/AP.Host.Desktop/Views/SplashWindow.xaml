@@ -1,0 +1,55 @@
+﻿<Window x:Class="AP.Host.Desktop.Views.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="启动中"
+        Width="560"
+        Height="320"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Border Background="#FF1E293B"
+            CornerRadius="12"
+            Padding="40">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                       Text="{Binding SoftwareName}"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       HorizontalAlignment="Center" />
+
+            <TextBlock Grid.Row="1"
+                       Text="{Binding CompanyName}"
+                       FontSize="14"
+                       Foreground="#FF94A3B8"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="0,10" />
+
+            <ProgressBar Grid.Row="2"
+                         Value="{Binding ProgressValue}"
+                         Maximum="100"
+                         Height="8"
+                         Background="#FF334155"
+                         Foreground="#FF0EA5E9"
+                         BorderThickness="0"
+                         Margin="0,20,0,10" />
+
+            <TextBlock Grid.Row="3"
+                       Text="{Binding StatusText}"
+                       FontSize="13"
+                       Foreground="#FFCBD5E1"
+                       HorizontalAlignment="Center" />
+        </Grid>
+    </Border>
+</Window>
