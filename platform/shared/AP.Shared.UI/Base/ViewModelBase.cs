@@ -8,6 +8,16 @@ namespace AP.Shared.UI.Base;
 public abstract partial class ViewModelBase : ObservableObject, INavigationAware, IDestructible
 {
     /// <summary>
+    /// 请求关闭所属对话框或窗口事件
+    /// </summary>
+    public event EventHandler? RequestClose;
+
+    /// <summary>
+    /// 触发关闭请求
+    /// </summary>
+    protected void OnRequestClose() => RequestClose?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
     /// 页面标题
     /// </summary>
     [ObservableProperty] private string _title = string.Empty;

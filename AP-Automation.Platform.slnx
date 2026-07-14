@@ -38,6 +38,7 @@
   </Folder>
   <Folder Name="/platform/plugins/system/">
     <Project Path="platform/plugins/system/AP.Plugin.Layout/AP.Plugin.Layout.csproj" Id="d91e3d98-bff3-4845-ad95-86f80fa005e6" />
+    <Project Path="platform/plugins/system/AP.Plugin.Login/AP.Plugin.Login.csproj" Id="5db0ca0e-9b0e-4747-8309-7b75dfa9569f" />
     <Project Path="platform/plugins/system/AP.Plugin.SystemSettings/AP.Plugin.SystemSettings.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
   </Folder>
   <Folder Name="/platform/shared/">

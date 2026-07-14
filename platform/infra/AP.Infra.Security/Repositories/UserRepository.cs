@@ -67,6 +67,7 @@ public class UserRepository : IUserRepository
         entity.UserName = user.UserName;
         entity.DisplayName = user.DisplayName;
         entity.IsEnabled = user.IsEnabled;
+        entity.MustChangePassword = user.MustChangePassword;
 
         await _freeSql.Update<User>().SetSource(entity).ExecuteAffrowsAsync(ct);
     }
@@ -104,6 +105,7 @@ public class UserRepository : IUserRepository
             UserName = user.UserName,
             DisplayName = user.DisplayName,
             IsEnabled = user.IsEnabled,
+            MustChangePassword = user.MustChangePassword,
             Roles = roles,
             Permissions = permissions
         };

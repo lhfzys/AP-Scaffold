@@ -61,6 +61,12 @@ public class IdentityService : IIdentityService
         var newHash = _passwordHasher.HashPassword(request.NewPassword);
         await _userRepository.UpdatePasswordAsync(user.Id, newHash, ct);
 
+        if (user.MustChangePassword)
+        {
+            user.MustChangePassword = false;
+            await _userRepository.UpdateAsync(user, ct);
+        }
+
         return (true, "密码修改成功");
     }
 

@@ -61,6 +61,32 @@ public class Bootstrapper : PrismBootstrapper
     protected override void InitializeShell(DependencyObject shell)
     {
         Application.Current.MainWindow = (Window)shell;
+
+        var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        if (securityEnabled)
+        {
+            var loginService = Container.Resolve<AP.Contracts.System.Services.ILoginService>();
+
+            // 弹出登录窗口
+            if (!loginService.ShowLoginDialog())
+            {
+                Application.Current.Shutdown();
+                return;
+            }
+
+            // 首次登录强制修改密码
+            var identityService = Container.Resolve<AP.Contracts.Security.Abstractions.IIdentityService>();
+            var currentUser = identityService.CurrentUser;
+            if (currentUser != null && currentUser.MustChangePassword)
+            {
+                if (!loginService.ShowChangePasswordDialog(currentUser.UserName))
+                {
+                    Application.Current.Shutdown();
+                    return;
+                }
+            }
+        }
+
         Application.Current.MainWindow.Show();
     }
 
