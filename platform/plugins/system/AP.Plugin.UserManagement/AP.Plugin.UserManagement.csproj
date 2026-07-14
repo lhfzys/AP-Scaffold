@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\shared\AP.Shared.PluginSDK\AP.Shared.PluginSDK.csproj" />
+    <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.System\AP.Contracts.System.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="MaterialDesignThemes" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Prism.Core" />
+    <PackageReference Include="Prism.Wpf" />
+  </ItemGroup>
+
+</Project>

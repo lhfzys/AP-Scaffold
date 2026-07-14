@@ -26,8 +26,10 @@ public class LayoutPlugin : PluginBase
 
         services.AddTransient<StandardLayoutView>();
         services.AddTransient<SinglePageLayoutView>();
+        services.AddTransient<SidebarView>();
 
         services.AddTransient<LayoutViewModel>();
+        services.AddTransient<SidebarViewModel>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
@@ -36,6 +38,7 @@ public class LayoutPlugin : PluginBase
 
         ViewModelLocationProvider.Register(typeof(StandardLayoutView).ToString(), typeof(LayoutViewModel));
         ViewModelLocationProvider.Register(typeof(SinglePageLayoutView).ToString(), typeof(LayoutViewModel));
+        ViewModelLocationProvider.Register(typeof(SidebarView).ToString(), typeof(SidebarViewModel));
 
         var config = serviceProvider.GetRequiredService<IConfiguration>();
         var regionManager = serviceProvider.GetRequiredService<IRegionManager>();
@@ -48,6 +51,13 @@ public class LayoutPlugin : PluginBase
                 layoutMode.Equals("SinglePage", StringComparison.OrdinalIgnoreCase)
                     ? typeof(SinglePageLayoutView)
                     : typeof(StandardLayoutView));
+
+            if (!layoutMode.Equals("SinglePage", StringComparison.OrdinalIgnoreCase))
+            {
+                regionManager.RegisterViewWithRegion(
+                    AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.SidebarRegion,
+                    typeof(SidebarView));
+            }
         });
 
         Logger.LogInformation("布局引擎已加载，当前模式: {Mode}", layoutMode);
