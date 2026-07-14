@@ -80,17 +80,6 @@
                             Height="24"
                             Kind="Logout" />
                     </Button>
-
-                    <Button
-                        Padding="2"
-                        Command="{Binding OpenSettingsCommand}"
-                        Style="{StaticResource MaterialDesignToolForegroundButton}"
-                        ToolTip="打开系统设置">
-                        <md:PackIcon
-                            Width="24"
-                            Height="24"
-                            Kind="Cog" />
-                    </Button>
                 </StackPanel>
             </Grid>
         </md:ColorZone>
