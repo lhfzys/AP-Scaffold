@@ -51,13 +51,6 @@ public class LayoutPlugin : PluginBase
                 layoutMode.Equals("SinglePage", StringComparison.OrdinalIgnoreCase)
                     ? typeof(SinglePageLayoutView)
                     : typeof(StandardLayoutView));
-
-            if (!layoutMode.Equals("SinglePage", StringComparison.OrdinalIgnoreCase))
-            {
-                regionManager.RegisterViewWithRegion(
-                    AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.SidebarRegion,
-                    typeof(SidebarView));
-            }
         });
 
         Logger.LogInformation("布局引擎已加载，当前模式: {Mode}", layoutMode);
