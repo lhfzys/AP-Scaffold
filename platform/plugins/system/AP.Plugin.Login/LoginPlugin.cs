@@ -16,7 +16,7 @@ namespace AP.Plugin.Login;
 [PluginMetadata("AP.Plugin.Login", Name = "登录认证", Version = "1.0.0", Priority = 1)]
 public class LoginPlugin : PluginBase
 {
-    public LoginPlugin(ILogger<LoginPlugin> logger) : base(logger)
+    public LoginPlugin(ILogger logger) : base(logger)
     {
     }
 
