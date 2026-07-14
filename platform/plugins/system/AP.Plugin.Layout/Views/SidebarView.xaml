@@ -22,52 +22,56 @@
                        Foreground="White"/>
         </md:ColorZone>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="8,12">
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                <Button Style="{StaticResource MaterialDesignPaperButton}"
+                        HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         Command="{Binding OpenSettingsCommand}"
                         Height="40"
-                        Margin="0,2">
+                        Margin="0,4">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="Cog" Width="22" Height="22" Margin="0,0,12,0"/>
-                        <TextBlock Text="系统配置" VerticalAlignment="Center" FontSize="14"/>
+                        <md:PackIcon Kind="Cog" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="系统配置" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                <Button Style="{StaticResource MaterialDesignPaperButton}"
+                        HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         Command="{Binding OpenUserManagementCommand}"
                         Visibility="{Binding CanManageUsers, Converter={StaticResource BoolToVis}}"
                         Height="40"
-                        Margin="0,2">
+                        Margin="0,4">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="AccountMultiple" Width="22" Height="22" Margin="0,0,12,0"/>
-                        <TextBlock Text="用户管理" VerticalAlignment="Center" FontSize="14"/>
+                        <md:PackIcon Kind="AccountMultiple" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="用户管理" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                <Button Style="{StaticResource MaterialDesignPaperButton}"
+                        HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         IsEnabled="False"
                         Opacity="0.5"
                         Height="40"
-                        Margin="0,2">
+                        Margin="0,4">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="ShieldAccount" Width="22" Height="22" Margin="0,0,12,0"/>
-                        <TextBlock Text="角色管理（待实现）" VerticalAlignment="Center" FontSize="14"/>
+                        <md:PackIcon Kind="ShieldAccount" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="角色管理（待实现）" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                <Button Style="{StaticResource MaterialDesignPaperButton}"
+                        HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"
                         IsEnabled="False"
                         Opacity="0.5"
                         Height="40"
-                        Margin="0,2">
+                        Margin="0,4">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="ClipboardTextClock" Width="22" Height="22" Margin="0,0,12,0"/>
-                        <TextBlock Text="审计日志（待实现）" VerticalAlignment="Center" FontSize="14"/>
+                        <md:PackIcon Kind="ClipboardTextClock" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="审计日志（待实现）" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
