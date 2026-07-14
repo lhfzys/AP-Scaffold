@@ -48,10 +48,13 @@
 - 修复 `PluginLifecycleManager.RegisterPlugins` 未按优先级排序的问题
 - 修复 `ConfigurationHelper.UpdateAppSetting` 空 section 未抛异常的问题
 - 修复测试项目 CPM 版本管理配置不一致的问题
+- 安全模块改为可选：`Security:Enabled` 配置开关，关闭时跳过用户/角色/权限表初始化并注入匿名实现
+- 配置界面改为独立模态弹窗：`SettingsDialogWindow` + `ISettingsDialogService`，替代原右侧抽屉模式
+- 修复 `ConfigurationHelperTests` 使用 .NET 9 才有的 `Type.IsStatic` 导致 net8.0 编译失败的问题
 
 ### 技术栈
 
-- .NET 9.0
+- .NET 8（目标框架），使用 .NET 10 SDK 构建
 - WPF + Prism + DryIoc
 - FreeSql (SQLite / PostgreSQL)
 - gRPC (ASP.NET Core gRPC)
