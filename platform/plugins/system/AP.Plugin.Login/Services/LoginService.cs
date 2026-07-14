@@ -23,8 +23,8 @@ public class LoginService : ILoginService
         var window = _serviceProvider.GetRequiredService<LoginWindow>();
         var viewModel = _serviceProvider.GetRequiredService<LoginViewModel>();
         window.DataContext = viewModel;
-        window.Owner = System.Windows.Application.Current.MainWindow;
 
+        SetWindowOwner(window);
         SubscribeClose(viewModel, window);
 
         window.ShowDialog();
@@ -37,12 +37,26 @@ public class LoginService : ILoginService
         var viewModel = _serviceProvider.GetRequiredService<ChangePasswordViewModel>();
         viewModel.UserName = userName;
         window.DataContext = viewModel;
-        window.Owner = System.Windows.Application.Current.MainWindow;
 
+        SetWindowOwner(window);
         SubscribeClose(viewModel, window);
 
         window.ShowDialog();
         return viewModel.IsChanged;
+    }
+
+    private static void SetWindowOwner(System.Windows.Window window)
+    {
+        var owner = System.Windows.Application.Current.MainWindow;
+        if (owner != null && owner.IsVisible)
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen;
+        }
     }
 
     private static void SubscribeClose(ViewModelBase viewModel, System.Windows.Window window)
