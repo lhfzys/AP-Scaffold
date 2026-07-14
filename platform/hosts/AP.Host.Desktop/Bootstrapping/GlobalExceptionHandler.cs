@@ -1,7 +1,10 @@
 ﻿using Serilog;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
 
 namespace AP.Host.Desktop.Bootstrapping;
 
@@ -29,6 +32,14 @@ public static class GlobalExceptionHandler
     ];
 
     /// <summary>
+    /// 崩溃日志文件路径
+    /// </summary>
+    private static readonly string CrashLogPath = Path.Combine(
+        AppContext.BaseDirectory,
+        "logs",
+        $"crash-{DateTime.Now:yyyyMMdd}.log");
+
+    /// <summary>
     /// 初始化全局异常捕获
     /// </summary>
     public static void Initialize()
@@ -44,6 +55,41 @@ public static class GlobalExceptionHandler
     }
 
     /// <summary>
+    /// 安全地写入崩溃日志（不依赖 Serilog 是否已完成初始化）
+    /// </summary>
+    private static void WriteCrashLog(string category, Exception? ex)
+    {
+        try
+        {
+            var logDir = Path.GetDirectoryName(CrashLogPath);
+            if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
+                Directory.CreateDirectory(logDir);
+
+            var builder = new StringBuilder();
+            builder.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{category}]");
+            if (ex != null)
+            {
+                builder.AppendLine($"Type: {ex.GetType().FullName}");
+                builder.AppendLine($"Message: {ex.Message}");
+                builder.AppendLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                    builder.AppendLine($"InnerException: {ex.InnerException}");
+            }
+            else
+            {
+                builder.AppendLine("No exception object available.");
+            }
+            builder.AppendLine(new string('-', 60));
+
+            File.AppendAllText(CrashLogPath, builder.ToString(), Encoding.UTF8);
+        }
+        catch
+        {
+            // 崩溃日志写入失败时不应再抛异常
+        }
+    }
+
+    /// <summary>
     /// UI 线程异常处理
     /// 区分可恢复和不可恢复异常
     /// </summary>
@@ -55,27 +101,19 @@ public static class GlobalExceptionHandler
         if (IsFatalException(ex))
         {
             Log.Fatal(ex, "💀 [UI线程] 发生不可恢复异常，程序即将退出");
+            WriteCrashLog("FATAL-UI", ex);
 
             e.Handled = false; // 不标记为已处理，让应用正常崩溃
-
-            MessageBox.Show(
-                $"发生严重错误，程序无法继续运行。\n\n错误类型: {ex.GetType().Name}\n错误详情: {ex.Message}\n\n程序即将退出，请检查日志获取详细信息。",
-                "致命错误",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
 
             // 主动退出，避免程序处于不一致状态
             Environment.Exit(1);
             return;
         }
 
-        // 可恢复异常：记录日志，标记为已处理，显示警告
+        // 可恢复异常：记录日志，标记为已处理，不弹窗以避免打断自动化流程
         Log.Error(ex, "💥 [UI线程] 发生可恢复异常");
-
+        WriteCrashLog("RECOVERABLE-UI", ex);
         e.Handled = true;
-
-        var errorMsg = $"程序遇到问题，但已拦截。建议联系管理员。\n\n错误详情: {ex.Message}";
-        MessageBox.Show(errorMsg, "系统警告", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     /// <summary>
@@ -89,24 +127,16 @@ public static class GlobalExceptionHandler
         if (IsFatalException(ex))
         {
             Log.Fatal(ex, "💀 [后台线程] 发生不可恢复异常，程序即将退出");
+            WriteCrashLog("FATAL-BACKGROUND", ex);
             e.SetObserved();
 
-            // 在 UI 线程显示错误并退出
-            Application.Current?.Dispatcher.Invoke(() =>
-            {
-                MessageBox.Show(
-                    $"后台任务发生严重错误，程序无法继续运行。\n\n错误类型: {ex?.GetType().Name}\n错误详情: {ex?.Message}",
-                    "致命错误",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-
-                Environment.Exit(1);
-            });
+            Environment.Exit(1);
             return;
         }
 
         // 可恢复异常：记录日志，标记为已观察
         Log.Error(ex, "💥 [后台线程] 发生未捕获异常");
+        WriteCrashLog("RECOVERABLE-BACKGROUND", ex);
         e.SetObserved();
     }
 
@@ -118,12 +148,7 @@ public static class GlobalExceptionHandler
     {
         var ex = e.ExceptionObject as Exception;
         Log.Fatal(ex, "💀 [致命错误] 系统即将终止 (IsTerminating: {IsTerminating})", e.IsTerminating);
-
-        MessageBox.Show(
-            $"发生致命错误，程序即将退出。\n\n错误类型: {ex?.GetType().Name}\n错误详情: {ex?.Message}\n\n请检查日志获取详细信息。",
-            "致命错误",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
+        WriteCrashLog($"APPDOMAIN-FATAL (IsTerminating={e.IsTerminating})", ex);
     }
 
     /// <summary>

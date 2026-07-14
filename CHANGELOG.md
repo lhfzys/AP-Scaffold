@@ -11,6 +11,18 @@
 
 ### 新增
 
+- **安全模块**：新增 `AP.Contracts.Security` / `AP.Infra.Security`
+  - 本地用户/角色/权限体系（`IIdentityService`、`IUserRepository`、`IPasswordHasher`）
+  - PBKDF2 + 随机盐值密码哈希
+  - 审计日志服务 `IAuditService`
+  - 启动时自动初始化默认角色、权限和 `admin` 账号
+- **配方管理**：新增 `AP.Contracts.Recipe` / `AP.Infra.Recipe`
+  - 配方增删改查、版本控制、默认配方、配方切换
+  - 首次启动自动创建 `DEFAULT` 默认配方
+- **启动画面**：`SplashWindow` 显示启动进度，各初始化阶段实时更新
+- **系统托盘**：`TrayIconManager` 支持最小化到托盘、显示主窗口、重启、退出
+- **安装包**：新增 `installer/setup.iss`（Inno Setup 脚本）及构建说明
+- **全局异常保护**：移除弹窗，改为仅写入崩溃日志 `logs/crash-yyyyMMdd.log`
 - **API 文档**：新增 `docs/ARCHITECTURE.md` 架构设计文档
   - 完整的分层架构概览与调用链说明
   - 核心框架（Core）各模块详细文档：插件框架、生命周期、状态机、能力声明、事件总线
@@ -33,6 +45,9 @@
 - 初始项目结构搭建完成
 - 完善测试项目结构：AP.Core.Tests、AP.Shared.Tests、AP.Infra.Tests
 - 测试覆盖核心框架关键路径
+- 修复 `PluginLifecycleManager.RegisterPlugins` 未按优先级排序的问题
+- 修复 `ConfigurationHelper.UpdateAppSetting` 空 section 未抛异常的问题
+- 修复测试项目 CPM 版本管理配置不一致的问题
 
 ### 技术栈
 

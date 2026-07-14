@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
+    <ProjectReference Include="..\..\infra\AP.Infra.Database\AP.Infra.Database.csproj" />
+    <ProjectReference Include="..\..\shared\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
+  </ItemGroup>
+
+</Project>

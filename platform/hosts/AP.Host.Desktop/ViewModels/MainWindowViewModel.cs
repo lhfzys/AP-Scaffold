@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
 
 namespace AP.Host.Desktop.ViewModels;
 

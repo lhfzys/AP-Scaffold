@@ -16,6 +16,8 @@ using AP.Infra.Grpc.Server;
 using AP.Infra.Logging.Configuration;
 using AP.Infra.Logging.Helpers;
 using AP.Infra.Resilience.Configuration;
+using AP.Infra.Recipe.Configuration;
+using AP.Infra.Security.Configuration;
 using AP.Shared.UI.Services;
 using DryIoc.Microsoft.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
@@ -23,6 +25,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Application = System.Windows.Application;
 
 #endregion
 
@@ -34,6 +37,7 @@ namespace AP.Host.Desktop.Bootstrapping;
 public class Bootstrapper : PrismBootstrapper
 {
     private readonly AppRole _appRole;
+    private readonly Views.SplashWindow? _splashWindow;
     private IConfigurationRoot _configuration = null!;
     private readonly PluginLoader _pluginLoader;
     private List<PluginDescriptor> _loadedPlugins = new();
@@ -41,9 +45,10 @@ public class Bootstrapper : PrismBootstrapper
     private WebApplication? _grpcApp;
     private PluginLifecycleManager? _lifecycleManager;
 
-    public Bootstrapper(AppRole appRole)
+    public Bootstrapper(AppRole appRole, Views.SplashWindow? splashWindow = null)
     {
         _appRole = appRole;
+        _splashWindow = splashWindow;
         var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
         _pluginLoader = new PluginLoader(loggerFactory.CreateLogger<PluginLoader>());
     }
@@ -57,6 +62,21 @@ public class Bootstrapper : PrismBootstrapper
     {
         Application.Current.MainWindow = (Window)shell;
         Application.Current.MainWindow.Show();
+    }
+
+    private void UpdateSplashStatus(string message, double progress)
+    {
+        _splashWindow?.Dispatcher.Invoke(() =>
+        {
+            if (_splashWindow.ViewModel == null) return;
+            _splashWindow.ViewModel.StatusText = message;
+            _splashWindow.ViewModel.ProgressValue = progress;
+        });
+    }
+
+    private void CloseSplashWindow()
+    {
+        _splashWindow?.Dispatcher.Invoke(() => _splashWindow.Close());
     }
 
     /// <summary>
@@ -89,6 +109,8 @@ public class Bootstrapper : PrismBootstrapper
         services.AddPlatformLogging(_configuration);
         services.AddPlatformDatabase(_configuration, _appRole);
         services.AddPlatformResilience(_configuration);
+        services.AddPlatformSecurity(_configuration);
+        services.AddPlatformRecipe(_configuration);
 
         // --- 添加 gRPC 服务 (根据角色) ---
         if (_appRole.HasFlag(AppRole.Server))
@@ -209,13 +231,47 @@ public class Bootstrapper : PrismBootstrapper
                 // 获取容器的新 Scope (也就是当前的根容器)
                 var container = Container.GetContainer();
 
+                UpdateSplashStatus("正在清理过期日志...", 5);
+
                 // --- 0. 启动时清理过期日志（零开销，仅执行一次） ---
                 var logRetainDays = _configuration.GetValue<int>("Logging:RetainedFileCount", 90);
                 LogCleanupHelper.CleanupIfNeeded("logs", logRetainDays);
 
+                UpdateSplashStatus("正在初始化安全模块...", 15);
+
+                // --- 0.5 初始化安全模块数据库（默认账号/角色/权限） ---
+                try
+                {
+                    var securityInitializer = container.Resolve<AP.Contracts.Security.Abstractions.ISecurityDbInitializer>();
+                    await securityInitializer.InitializeAsync(CancellationToken.None);
+                    Log.Information("安全模块数据库初始化完成");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "安全模块初始化失败");
+                }
+
+                UpdateSplashStatus("正在初始化配方模块...", 30);
+
+                // --- 0.6 初始化配方模块数据库 ---
+                try
+                {
+                    var recipeDbInitializer = container.Resolve<AP.Contracts.Recipe.Abstractions.IRecipeDbInitializer>();
+                    await recipeDbInitializer.InitializeAsync(CancellationToken.None);
+                    Log.Information("配方模块数据库初始化完成");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "配方模块初始化失败");
+                }
+
+                UpdateSplashStatus("正在初始化插件...", 50);
+
                 // --- 1. 初始化并启动插件（通过生命周期管理器，带状态机跟踪） ---
                 await _lifecycleManager!.InitializePluginsAsync(container);
                 await _lifecycleManager.StartPluginsAsync();
+
+                UpdateSplashStatus("正在启动服务...", 75);
 
                 // --- 3. 启动 gRPC Server (如果是服务端) ---
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
@@ -231,25 +287,19 @@ public class Bootstrapper : PrismBootstrapper
                     }
                 }
 
+                UpdateSplashStatus("正在完成启动...", 95);
+
                 // 汇总展示加载失败的插件（工业现场关键：操作员需知道功能缺失）
                 if (_failedPlugins.Count > 0)
                 {
                     var failedMsg = string.Join("\n", _failedPlugins.Select(f => $"  • {f.PluginName}: {f.Error}"));
                     Log.Warning("以下 {Count} 个插件加载失败:\n{FailedPlugins}", _failedPlugins.Count, failedMsg);
-
-                    // 在 UI 线程弹出警告
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        MessageBox.Show(
-                            $"以下 {_failedPlugins.Count} 个插件加载失败，相关功能可能不可用：\n\n{failedMsg}\n\n请检查日志获取详细信息。",
-                            "插件加载警告",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                    });
                 }
 
                 var eventAggregator = container.Resolve<IEventAggregator>();
                 eventAggregator.GetEvent<AppInitializedEvent>().Publish();
+
+                CloseSplashWindow();
 
                 Log.Information(">>> 系统启动完成 <<<");
             }

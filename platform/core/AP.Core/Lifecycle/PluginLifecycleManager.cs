@@ -49,6 +49,9 @@ public class PluginLifecycleManager
             _logger.LogDebug("插件已注册到生命周期管理器: {Name} ({Id})", descriptor.Metadata.Name, pluginId);
         }
 
+        // 注册完成后按优先级升序排序，保证后续查询和启停顺序一致
+        _loadedPlugins.Sort((a, b) => a.Metadata.Priority.CompareTo(b.Metadata.Priority));
+
         _logger.LogInformation("已注册 {Count} 个插件到生命周期管理器", _loadedPlugins.Count);
     }
 

@@ -17,6 +17,9 @@ public static class ConfigurationHelper
     /// <param name="fileName">配置文件名（默认 appsettings.json）</param>
     public static void UpdateAppSetting<T>(string sectionName, T newValue, string fileName = "appsettings.json")
     {
+        if (string.IsNullOrWhiteSpace(sectionName))
+            throw new ArgumentException("配置节点路径不能为空", nameof(sectionName));
+
         try
         {
             var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration", fileName);
