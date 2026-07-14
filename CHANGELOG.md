@@ -39,6 +39,12 @@
 - **状态机增强**：新增 `Frozen`（已冻结）和 `Deprecated`（已废弃）状态
   - 完整的状态枚举定义（13 个状态）
   - 对应更新 `StateTransitionValidator` 转换规则
+- **登录认证插件**：新增 `AP.Plugin.Login`
+  - 启动时弹出登录窗口（`Security:Enabled=true`）
+  - 默认账号 `admin/admin123` 首次登录强制改密
+  - 主界面顶部显示当前用户、支持退出登录后重新登录
+  - 登录/登出/改密记录审计日志
+  - `ILoginService` 接口定义在 `AP.Contracts.System` 中，宿主与插件解耦
 
 ### 变更
 
@@ -50,6 +56,8 @@
 - 修复测试项目 CPM 版本管理配置不一致的问题
 - 安全模块改为可选：`Security:Enabled` 配置开关，关闭时跳过用户/角色/权限表初始化并注入匿名实现
 - 配置界面改为独立模态弹窗：`SettingsDialogWindow` + `ISettingsDialogService`，替代原右侧抽屉模式
+- `UserInfo` 增加 `MustChangePassword` 属性，`IdentityService` 改密成功后自动清除该标志
+- `ViewModelBase` 增加 `RequestClose` 事件，统一模态窗口关闭机制
 - 修复 `ConfigurationHelperTests` 使用 .NET 9 才有的 `Type.IsStatic` 导致 net8.0 编译失败的问题
 
 ### 技术栈
