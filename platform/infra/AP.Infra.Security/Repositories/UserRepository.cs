@@ -1,4 +1,4 @@
-using AP.Contracts.Security.Abstractions;
+﻿using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Models;
 using AP.Infra.Security.Entities;
 using FreeSql;
@@ -21,29 +21,31 @@ public class UserRepository : IUserRepository
     {
         var user = await _freeSql.Select<User>()
             .Where(u => u.UserName == userName)
-            .IncludeMany(u => u.Roles, then => then.Include(r => r.Permissions))
             .ToOneAsync(ct);
 
-        return user == null ? null : MapToInfo(user);
+        return user == null ? null : await LoadUserRolesAndMapAsync(user, ct);
     }
 
     public async Task<UserInfo?> GetByIdAsync(long id, CancellationToken ct = default)
     {
         var user = await _freeSql.Select<User>()
             .Where(u => u.Id == id)
-            .IncludeMany(u => u.Roles, then => then.Include(r => r.Permissions))
             .ToOneAsync(ct);
 
-        return user == null ? null : MapToInfo(user);
+        return user == null ? null : await LoadUserRolesAndMapAsync(user, ct);
     }
 
     public async Task<IReadOnlyList<UserInfo>> GetAllAsync(CancellationToken ct = default)
     {
-        var users = await _freeSql.Select<User>()
-            .IncludeMany(u => u.Roles, then => then.Include(r => r.Permissions))
-            .ToListAsync(ct);
+        var users = await _freeSql.Select<User>().ToListAsync(ct);
 
-        return users.Select(MapToInfo).ToList();
+        var result = new List<UserInfo>();
+        foreach (var user in users)
+        {
+            result.Add(await LoadUserRolesAndMapAsync(user, ct));
+        }
+
+        return result;
     }
 
     public async Task CreateAsync(UserInfo user, string passwordHash, CancellationToken ct = default)
@@ -53,7 +55,8 @@ public class UserRepository : IUserRepository
             UserName = user.UserName,
             DisplayName = user.DisplayName,
             PasswordHash = passwordHash,
-            IsEnabled = user.IsEnabled
+            IsEnabled = user.IsEnabled,
+            MustChangePassword = user.MustChangePassword
         };
 
         await _freeSql.Insert(entity).ExecuteIdentityAsync(ct);
@@ -90,14 +93,45 @@ public class UserRepository : IUserRepository
         return user?.PasswordHash;
     }
 
-    private static UserInfo MapToInfo(User user)
+    /// <summary>
+    /// 手动加载用户角色与权限，避免 FreeSql IncludeMany 在 ManyToMany 导航上的解析问题
+    /// </summary>
+    private async Task<UserInfo> LoadUserRolesAndMapAsync(User user, CancellationToken ct)
     {
-        var roles = user.Roles.Select(r => r.Name).ToList();
-        var permissions = user.Roles
-            .SelectMany(r => r.Permissions)
-            .Select(p => p.Code)
-            .Distinct()
-            .ToList();
+        var roleIds = await _freeSql.Select<UserRole>()
+            .Where(ur => ur.UserId == user.Id)
+            .ToListAsync(ur => ur.RoleId, ct);
+
+        if (roleIds.Count == 0)
+            return MapToInfo(user, Array.Empty<Role>(), Array.Empty<Permission>());
+
+        var roles = await _freeSql.Select<Role>()
+            .Where(r => roleIds.Contains(r.Id))
+            .ToListAsync(ct);
+
+        var permissionIds = await _freeSql.Select<RolePermission>()
+            .Where(rp => roleIds.Contains(rp.RoleId))
+            .ToListAsync(rp => rp.PermissionId, ct);
+
+        List<Permission> permissions;
+        if (permissionIds.Count == 0)
+        {
+            permissions = new List<Permission>();
+        }
+        else
+        {
+            permissions = await _freeSql.Select<Permission>()
+                .Where(p => permissionIds.Contains(p.Id))
+                .ToListAsync(ct);
+        }
+
+        return MapToInfo(user, roles, permissions);
+    }
+
+    private static UserInfo MapToInfo(User user, IEnumerable<Role> roles, IEnumerable<Permission> permissions)
+    {
+        var roleNames = roles.Select(r => r.Name).ToList();
+        var permissionCodes = permissions.Select(p => p.Code).Distinct().ToList();
 
         return new UserInfo
         {
@@ -106,8 +140,8 @@ public class UserRepository : IUserRepository
             DisplayName = user.DisplayName,
             IsEnabled = user.IsEnabled,
             MustChangePassword = user.MustChangePassword,
-            Roles = roles,
-            Permissions = permissions
+            Roles = roleNames,
+            Permissions = permissionCodes
         };
     }
 }
