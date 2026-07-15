@@ -22,7 +22,9 @@ public class SecurityDbInitializer : ISecurityDbInitializer
         "report.export",
         "user.manage",
         "role.manage",
-        "audit.view"
+        "audit.view",
+        "device.config",
+        "test.start"
     ];
 
     private readonly IFreeSql _freeSql;
@@ -71,7 +73,8 @@ public class SecurityDbInitializer : ISecurityDbInitializer
             "recipe.view",
             "recipe.switch",
             "report.view",
-            "report.export"
+            "report.export",
+            "test.start"
         ], ct);
         await BindRolePermissionsAsync(technicianRole.Id,
         [
@@ -81,7 +84,8 @@ public class SecurityDbInitializer : ISecurityDbInitializer
             "recipe.edit",
             "recipe.switch",
             "report.view",
-            "report.export"
+            "report.export",
+            "device.config"
         ], ct);
 
         // 5. 初始化默认管理员账号（admin / admin123）

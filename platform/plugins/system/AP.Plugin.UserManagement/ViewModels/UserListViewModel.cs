@@ -95,7 +95,7 @@ public partial class UserListViewModel : ViewModelBase
         var window = _serviceProvider.GetRequiredService<Views.UserEditWindow>();
         if (window.DataContext is UserEditViewModel vm)
         {
-            vm.InitializeForCreate();
+            await vm.InitializeForCreateAsync();
         }
 
         window.ShowDialog();
@@ -114,7 +114,7 @@ public partial class UserListViewModel : ViewModelBase
         var window = _serviceProvider.GetRequiredService<Views.UserEditWindow>();
         if (window.DataContext is UserEditViewModel vm)
         {
-            vm.InitializeForEdit(SelectedUser);
+            await vm.InitializeForEditAsync(SelectedUser);
         }
 
         window.ShowDialog();

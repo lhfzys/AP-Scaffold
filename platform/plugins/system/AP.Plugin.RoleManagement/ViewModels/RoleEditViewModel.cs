@@ -39,10 +39,7 @@ public partial class RoleEditViewModel : ViewModelBase
     private string _description = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<PermissionItem> _availablePermissions = new();
-
-    [ObservableProperty]
-    private ObservableCollection<PermissionItem> _selectedPermissions = new();
+    private ObservableCollection<PermissionGroupItem> _availablePermissions = new();
 
     public bool IsSaved { get; private set; }
 
@@ -91,13 +88,22 @@ public partial class RoleEditViewModel : ViewModelBase
         var selectedSet = new HashSet<string>(selectedCodes, StringComparer.OrdinalIgnoreCase);
         var permissions = await _permissionRepository.GetAllAsync();
 
-        AvailablePermissions = new ObservableCollection<PermissionItem>(
-            permissions.Select(p => new PermissionItem
+        var groups = permissions
+            .Select(p => new PermissionItem
             {
                 Code = p.Code,
                 Name = string.IsNullOrWhiteSpace(p.Name) || p.Name == p.Code ? GetFriendlyName(p.Code) : p.Name,
                 IsSelected = selectedSet.Contains(p.Code)
-            }));
+            })
+            .GroupBy(p => GetGroupName(p.Code))
+            .Select(g => new PermissionGroupItem
+            {
+                GroupName = g.Key,
+                Permissions = new ObservableCollection<PermissionItem>(g.OrderBy(p => p.Name))
+            })
+            .OrderBy(g => g.GroupName);
+
+        AvailablePermissions = new ObservableCollection<PermissionGroupItem>(groups);
     }
 
     private static string GetFriendlyName(string code)
@@ -114,7 +120,26 @@ public partial class RoleEditViewModel : ViewModelBase
             "user.manage" => "用户管理",
             "role.manage" => "角色管理",
             "audit.view" => "审计日志",
+            "device.config" => "设备参数配置",
+            "test.start" => "启动检测",
             _ => code
+        };
+    }
+
+    private static string GetGroupName(string code)
+    {
+        var prefix = code.Split('.')[0];
+        return prefix switch
+        {
+            "system" => "系统",
+            "recipe" => "配方",
+            "report" => "报表",
+            "user" => "用户",
+            "role" => "角色",
+            "device" => "设备",
+            "test" => "检测",
+            "audit" => "审计",
+            _ => prefix
         };
     }
 
@@ -135,7 +160,11 @@ public partial class RoleEditViewModel : ViewModelBase
                 Id = RoleId,
                 Name = RoleName.Trim(),
                 Description = Description.Trim(),
-                Permissions = AvailablePermissions.Where(p => p.IsSelected).Select(p => p.Code).ToList()
+                Permissions = AvailablePermissions
+                    .SelectMany(g => g.Permissions)
+                    .Where(p => p.IsSelected)
+                    .Select(p => p.Code)
+                    .ToList()
             };
 
             if (_isEdit)
@@ -212,4 +241,16 @@ public partial class PermissionItem : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+}
+
+/// <summary>
+/// 权限分组项
+/// </summary>
+public partial class PermissionGroupItem : ObservableObject
+{
+    [ObservableProperty]
+    private string _groupName = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<PermissionItem> _permissions = new();
 }
