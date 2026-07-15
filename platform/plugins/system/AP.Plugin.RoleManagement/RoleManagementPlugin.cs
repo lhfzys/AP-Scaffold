@@ -1,6 +1,7 @@
 ﻿#region
 
 using System.Windows;
+using AP.Contracts.Security.Abstractions;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.RoleManagement.ViewModels;
 using AP.Plugin.RoleManagement.Views;
@@ -34,6 +35,21 @@ public class RoleManagementPlugin : PluginBase
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
     {
         await base.InitializeAsync(serviceProvider, ct);
+
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        if (!securityEnabled)
+        {
+            Logger.LogInformation("安全模块已禁用，跳过角色管理视图注册");
+            return;
+        }
+
+        var identityService = serviceProvider.GetRequiredService<IIdentityService>();
+        if (!identityService.HasPermission("role.manage"))
+        {
+            Logger.LogInformation("当前用户没有 role.manage 权限，跳过角色管理视图注册");
+            return;
+        }
 
         ViewModelLocationProvider.Register(typeof(RoleListView).ToString(), typeof(RoleListViewModel));
         ViewModelLocationProvider.Register(typeof(RoleEditWindow).ToString(), typeof(RoleEditViewModel));

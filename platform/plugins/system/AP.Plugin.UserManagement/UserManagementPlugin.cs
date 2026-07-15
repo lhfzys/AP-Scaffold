@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using AP.Contracts.Security.Abstractions;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.UserManagement.ViewModels;
 using AP.Plugin.UserManagement.Views;
@@ -33,6 +34,21 @@ public class UserManagementPlugin : PluginBase
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
     {
         await base.InitializeAsync(serviceProvider, ct);
+
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        if (!securityEnabled)
+        {
+            Logger.LogInformation("安全模块已禁用，跳过用户管理视图注册");
+            return;
+        }
+
+        var identityService = serviceProvider.GetRequiredService<IIdentityService>();
+        if (!identityService.HasPermission("user.manage"))
+        {
+            Logger.LogInformation("当前用户没有 user.manage 权限，跳过用户管理视图注册");
+            return;
+        }
 
         ViewModelLocationProvider.Register(typeof(UserListView).ToString(), typeof(UserListViewModel));
         ViewModelLocationProvider.Register(typeof(UserEditWindow).ToString(), typeof(UserEditViewModel));
