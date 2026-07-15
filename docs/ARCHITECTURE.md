@@ -346,7 +346,10 @@ public class DeviceConnectionHandler : INotificationHandler<DeviceConnectedEvent
 | `AP.Contracts.Core` | 核心事件（设备连接/断开）、错误模型 |
 | `AP.Contracts.Hardware` | 硬件服务接口（IPlcService 等）、设备事件 |
 | `AP.Contracts.Communication` | gRPC 服务/消息协定 |
-| `AP.Contracts.System` | 系统服务接口（配置、健康检查等） |
+| `AP.Contracts.System` | 系统服务接口（ILoginService、ISettingsDialogService 等） |
+| `AP.Contracts.Security` | 安全/权限/审计日志契约（IIdentityService、ISecurityDbInitializer、IAuditService 等） |
+| `AP.Contracts.Recipe` | 配方管理契约（IRecipeService、IRecipeDbInitializer 等） |
+| `AP.Contracts.Report` | 报表中心契约（IReportCenterService、报表归档模型等） |
 
 **设计原则**：
 - Contracts 只定义接口和模型，不包含实现
@@ -533,8 +536,10 @@ public abstract class PluginBase : IPlugin
    d. 注册到 PluginLifecycleManager
 8. 调用 PluginLifecycleManager.InitializePluginsAsync()
 9. 调用 PluginLifecycleManager.StartPluginsAsync()
-10. 根据 AppRole 启动 gRPC（Server 启动 Kestrel，Client 启动 Worker）
-11. 显示主窗口（Standalone 或 Client 模式）
+10. 手动初始化报表数据库（`ReportDatabaseInitializer.StartAsync`）
+11. 调用 `PluginLifecycleManager.InitializePluginsAsync()` 和 `StartPluginsAsync()`
+12. 根据 AppRole 启动 gRPC（Server 启动 Kestrel，Client 启动 Worker）
+13. 显示主窗口（Standalone 或 Client 模式）
 ```
 
 ---
@@ -559,7 +564,7 @@ public abstract class PluginBase : IPlugin
 
 | 插件 | 功能 |
 |------|------|
-| `AP.Plugin.Layout` | 布局管理 |
+| `AP.Plugin.Layout` | 布局管理 / Sidebar 导航 |
 
 ---
 
@@ -729,4 +734,4 @@ PLC Service (通过 IPlcService 接口)
 
 ---
 
-**最后更新**: 2026-07-13
+**最后更新**: 2026-07-14

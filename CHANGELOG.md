@@ -52,6 +52,32 @@
 - **布局优化**：启用 `SidebarRegion` 作为系统管理导航菜单
   - 左侧边栏显示系统配置、用户管理、角色管理（预留）、审计日志（预留）入口
   - 用户管理入口按 `user.manage` 权限动态显示/隐藏
+- **角色管理插件**：新增 `AP.Plugin.RoleManagement`
+  - 角色列表、权限分配、新增/编辑/删除
+  - 仅对拥有 `role.manage` 权限的用户可见
+  - 角色操作记录审计日志
+- **审计日志可视化插件**：新增 `AP.Plugin.AuditLog`
+  - 审计日志列表查询、筛选、分页
+  - 仅对拥有 `audit.view` 权限的用户可见
+- **配方管理插件**：新增 `AP.Plugin.RecipeManagement`
+  - 配方列表、编辑、参数维护、设为默认、切换配方
+  - 按 `recipe.view` / `recipe.edit` / `recipe.switch` 控制界面
+- **报表中心插件**：新增 `AP.Contracts.Report` / `AP.Plugin.ReportCenter`
+  - 报表归档查询、手动生成、打开、导出
+  - 按 `report.view` 权限显示
+- **用户/角色管理视图修复**
+  - `RoleListView` 改为构造函数注入 `RoleListViewModel`，移除 `AutoWireViewModel`
+  - 统一所有插件视图采用构造函数注入 ViewModel 模式
+  - `UserManagementPlugin` / `RoleManagementPlugin` 按 `Security:Enabled` 和当前权限条件注册 Region 视图
+- **报表初始化修复**
+  - 在 `AP.Host.Desktop` 中直接引用 `AP.Infra.Report` 和 `AP.Contracts.Report`，解决启动时 `ReflectionTypeLoadException`
+  - 在 `Bootstrapper.OnInitialized` 中手动调用 `ReportDatabaseInitializer.StartAsync`，解决 `report_archives` 表缺失
+- **UI 修复**
+  - 用户管理“角色”列、角色管理“权限”列的 Chip 文字颜色由白色改为 `MaterialDesign.Brush.OnSurface`，解决浅色背景下看不清的问题
+- **文档更新**
+  - 新增 `AGENTS.md`（AI 交接文档）
+  - 新增 `docs/PROJECT_STATUS.md`（项目状态与工作计划）
+  - 更新 `README.md`、`docs/ARCHITECTURE.md`、`docs/GETTING_STARTED.md`、`docs/TESTING.md` 以匹配当前实际代码
 
 ### 变更
 

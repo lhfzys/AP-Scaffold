@@ -15,6 +15,7 @@ using AP.Infra.Grpc.Client;
 using AP.Infra.Grpc.Server;
 using AP.Infra.Logging.Configuration;
 using AP.Infra.Logging.Helpers;
+using AP.Infra.Report.Extensions;
 using AP.Infra.Resilience.Configuration;
 using AP.Infra.Recipe.Configuration;
 using AP.Infra.Security.Configuration;
@@ -152,6 +153,7 @@ public class Bootstrapper : PrismBootstrapper
         services.AddPlatformResilience(_configuration);
         services.AddPlatformSecurity(_configuration);
         services.AddPlatformRecipe(_configuration);
+        services.AddReportFramework(_configuration);
 
         // --- 添加 gRPC 服务 (根据角色) ---
         if (_appRole.HasFlag(AppRole.Server))
@@ -312,6 +314,20 @@ public class Bootstrapper : PrismBootstrapper
                 catch (Exception ex)
                 {
                     Log.Error(ex, "配方模块初始化失败");
+                }
+
+                UpdateSplashStatus("正在初始化报表模块...", 40);
+
+                // --- 0.7 初始化报表模块数据库 ---
+                try
+                {
+                    var reportDbInitializer = container.Resolve<AP.Infra.Report.Services.ReportDatabaseInitializer>();
+                    await reportDbInitializer.StartAsync(CancellationToken.None);
+                    Log.Information("报表模块数据库初始化完成");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "报表模块初始化失败");
                 }
 
                 UpdateSplashStatus("正在初始化插件...", 50);

@@ -1,6 +1,6 @@
 # AP-Scaffold — 工业自动化通用平台脚手架
 
-基于 **.NET 9 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
+基于 **.NET 8 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
 
 ---
 
@@ -85,14 +85,19 @@ AP-Scaffold/
 │   │   ├── AP.Contracts.Core/         # 核心事件、错误模型
 │   │   ├── AP.Contracts.Hardware/     # 硬件服务接口、设备事件
 │   │   ├── AP.Contracts.Communication/ # gRPC 契约
-│   │   └── AP.Contracts.System/       # 系统服务接口
+│   │   ├── AP.Contracts.System/       # 系统服务接口
+│   │   ├── AP.Contracts.Security/     # 安全/权限/审计日志契约
+│   │   ├── AP.Contracts.Recipe/       # 配方管理契约
+│   │   └── AP.Contracts.Report/       # 报表中心契约
 │   │
 │   ├── infra/                         # 基础设施层 (可复用的横切关注点)
 │   │   ├── AP.Infra.Database/         # 数据访问 (FreeSql + Repository模式)
 │   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端/拦截器
 │   │   ├── AP.Infra.Logging/          # Serilog 日志配置与增强器
 │   │   ├── AP.Infra.Report/           # 通用报表框架 (归档/导出/清理)
-│   │   └── AP.Infra.Resilience/       # Polly 策略工厂与配置
+│   │   ├── AP.Infra.Resilience/       # Polly 策略工厂与配置
+│   │   ├── AP.Infra.Security/         # 安全/权限/审计日志实现
+│   │   └── AP.Infra.Recipe/           # 配方管理实现
 │   │
 │   ├── plugins/                       # 插件集 (可插拔的业务/硬件模块)
 │   │   ├── hardware/                  # 硬件驱动插件
@@ -102,10 +107,14 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.AirtightnessCheck/   # 气密性检测
 │   │   │   └── AP.Plugin.DeviceConfiguration/ # 设备参数配置
 │   │   └── system/                    # 系统功能插件
-│   │       ├── AP.Plugin.Layout/      # 布局管理
+│   │       ├── AP.Plugin.Layout/      # 布局管理/Sidebar
 │   │       ├── AP.Plugin.Login/       # 登录认证
 │   │       ├── AP.Plugin.SystemSettings/ # 系统配置中心
-│   │       └── AP.Plugin.UserManagement/ # 用户管理
+│   │       ├── AP.Plugin.UserManagement/ # 用户管理
+│   │       ├── AP.Plugin.RoleManagement/ # 角色管理
+│   │       ├── AP.Plugin.AuditLog/    # 审计日志查看
+│   │       ├── AP.Plugin.RecipeManagement/ # 配方管理
+│   │       └── AP.Plugin.ReportCenter/ # 报表中心
 │   │
 │   └── shared/                        # 共享库
 │       ├── AP.Shared.PluginSDK/       # 插件开发 SDK (PluginBase 基类)
@@ -708,7 +717,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 | **[CHANGELOG.md](CHANGELOG.md)** | 版本变更日志 |
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 详细的分层架构设计文档 |
 | **[docs/TESTING.md](docs/TESTING.md)** | 测试编写规范与运行指南 |
-| **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备与配置步骤（已迁移至 README） |
+| **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备、配置步骤与插件开发示例 |
 
 ---
 
@@ -724,8 +733,11 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 - [x] 中央包版本管理
 - [x] 通用报表框架（定时归档 / 手动导出 / 补档 / 定期清理）
 - [x] 身份认证与授权（单机本地账号版）
-- [x] 配方/工艺参数管理
-- [ ] 身份认证 UI 与审计日志查看界面
+- [x] 身份认证 UI（登录/用户管理/角色管理）
+- [x] 审计日志查看界面
+- [x] 配方/工艺参数管理（骨架）
+- [x] 报表中心（骨架）
+- [ ] 报表/配方接入真实业务数据
 - [ ] OpenTelemetry 可观测性集成
 - [ ] 更多 PLC 协议支持（西门子、欧姆龙）
 

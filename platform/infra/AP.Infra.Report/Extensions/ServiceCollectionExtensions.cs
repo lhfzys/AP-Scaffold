@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<ReportCleanupService>();
 
         // 注册数据库初始化宿主服务（确保表结构存在）
+        services.AddSingleton<ReportDatabaseInitializer>();
         services.AddHostedService<ReportDatabaseInitializer>();
 
         return services;

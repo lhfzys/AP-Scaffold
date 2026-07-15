@@ -244,7 +244,7 @@ public partial class YourFeatureViewModel : ViewModelBase
 ```xml
 <Target Name="CopyPluginToOutput" AfterTargets="Build">
   <PropertyGroup>
-    <PluginOutputPath>$(SolutionDir)platform\hosts\AP.Host.Desktop\bin\$(Configuration)\net8.0-windows\plugins\$(TargetName)\</PluginOutputPath>
+    <PluginOutputPath>$(SolutionDir)bin\$(Configuration)\plugins\$(TargetName)\</PluginOutputPath>
   </PropertyGroup>
   <MakeDir Directories="$(PluginOutputPath)" />
   <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginOutputPath)" SkipUnchangedFiles="true" />
@@ -680,7 +680,9 @@ AP-Scaffold/
 │   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端
 │   │   ├── AP.Infra.Logging/          # Serilog 日志
 │   │   ├── AP.Infra.Report/           # 报表框架
-│   │   └── AP.Infra.Resilience/       # Polly 容错策略
+│   │   ├── AP.Infra.Resilience/       # Polly 容错策略
+│   │   ├── AP.Infra.Security/         # 安全/权限/审计日志
+│   │   └── AP.Infra.Recipe/           # 配方管理
 │   │
 │   ├── plugins/                       # 插件集
 │   │   ├── hardware/                  # 硬件驱动插件
@@ -690,7 +692,14 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.AirtightnessCheck/
 │   │   │   └── AP.Plugin.DeviceConfiguration/
 │   │   └── system/                    # 系统功能插件
-│   │       └── AP.Plugin.Layout/
+│   │       ├── AP.Plugin.Layout/      # 布局/Sidebar
+│   │       ├── AP.Plugin.Login/       # 登录认证
+│   │       ├── AP.Plugin.SystemSettings/ # 系统配置中心
+│   │       ├── AP.Plugin.UserManagement/ # 用户管理
+│   │       ├── AP.Plugin.RoleManagement/ # 角色管理/权限分配
+│   │       ├── AP.Plugin.AuditLog/    # 审计日志查看
+│   │       ├── AP.Plugin.RecipeManagement/ # 配方管理
+│   │       └── AP.Plugin.ReportCenter/ # 报表中心
 │   │
 │   └── shared/                        # 共享库
 │       ├── AP.Shared.PluginSDK/       # 插件开发 SDK
@@ -710,4 +719,4 @@ AP-Scaffold/
 
 ---
 
-**最后更新**: 2026-07-10
+**最后更新**: 2026-07-14

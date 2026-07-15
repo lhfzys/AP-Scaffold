@@ -334,7 +334,7 @@ Attribute 测试位于 `AP.Core.Tests/PluginFramework/`，主要验证：
 
 ```bash
 # 从解决方案根目录运行
-dotnet test platform/AP-Automation.Platform.slnx
+dotnet test AP-Automation.Platform.slnx
 
 # 或直接从 tests 目录
 dotnet test platform/tests/AP.Core.Tests
@@ -456,4 +456,4 @@ reportgenerator -reports:platform/tests/AP.Core.Tests/coverage.cobertura.xml -ta
 
 ---
 
-**最后更新**: 2026-07-13
+**最后更新**: 2026-07-14

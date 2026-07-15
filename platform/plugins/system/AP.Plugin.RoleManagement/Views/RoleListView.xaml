@@ -115,7 +115,7 @@
                                                     VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding}"
                                                            FontSize="12"
-                                                           Foreground="White"
+                                                           Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"
                                                            VerticalAlignment="Center"/>
                                             </Border>
                                         </DataTemplate>

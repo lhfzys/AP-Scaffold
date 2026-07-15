@@ -30,7 +30,7 @@ bld/
 *.ide/
 
 # MSTest test Results
-[Tt]est[Rr]esult*/
+[Tt]est[Rr]eult*/
 [Bb]uild[Ll]og.*
 
 #NUNIT
@@ -242,3 +242,14 @@ $RECYCLE.BIN/
 .module-cache
 
 *.lutconfig
+
+# =========================
+# AP-Scaffold runtime data
+# =========================
+
+# Local SQLite database files generated at runtime
+local_data.db
+local_data.db-*
+
+# Serilog log output directory
+logs/
