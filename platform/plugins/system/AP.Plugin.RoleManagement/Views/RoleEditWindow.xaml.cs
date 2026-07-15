@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using AP.Plugin.RoleManagement.ViewModels;
 
 namespace AP.Plugin.RoleManagement.Views;
@@ -8,25 +8,12 @@ namespace AP.Plugin.RoleManagement.Views;
 /// </summary>
 public partial class RoleEditWindow : Window
 {
-    private RoleEditViewModel? _viewModel;
-
-    public RoleEditWindow()
+    public RoleEditWindow(RoleEditViewModel viewModel)
     {
         InitializeComponent();
-        DataContextChanged += OnDataContextChanged;
-    }
-
-    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (_viewModel != null)
-        {
-            _viewModel.RequestClose -= OnViewModelRequestClose;
-        }
-
-        if (DataContext is not RoleEditViewModel vm) return;
-
-        _viewModel = vm;
-        _viewModel.RequestClose += OnViewModelRequestClose;
+        DataContext = viewModel;
+        viewModel.RequestClose += OnViewModelRequestClose;
+        Closed += (_, _) => viewModel.RequestClose -= OnViewModelRequestClose;
     }
 
     private void OnViewModelRequestClose(object? sender, EventArgs e)

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using AP.Plugin.UserManagement.ViewModels;
 
@@ -9,27 +9,17 @@ namespace AP.Plugin.UserManagement.Views;
 /// </summary>
 public partial class UserEditWindow : Window
 {
-    public UserEditWindow()
+    public UserEditWindow(UserEditViewModel viewModel)
     {
         InitializeComponent();
-        DataContextChanged += OnDataContextChanged;
-    }
-
-    private UserEditViewModel? _viewModel;
-
-    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (_viewModel != null)
+        DataContext = viewModel;
+        viewModel.RequestClose += OnViewModelRequestClose;
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Closed += (_, _) =>
         {
-            _viewModel.RequestClose -= OnViewModelRequestClose;
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
-
-        if (DataContext is not UserEditViewModel vm) return;
-
-        _viewModel = vm;
-        _viewModel.RequestClose += OnViewModelRequestClose;
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            viewModel.RequestClose -= OnViewModelRequestClose;
+            viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        };
 
         SyncSelectedRoles();
     }

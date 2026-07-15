@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
+using System.Linq;
 using AP.Shared.UI.Base;
 using AP.Shared.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,6 +21,7 @@ namespace AP.Plugin.UserManagement.ViewModels;
 public partial class UserEditViewModel : ViewModelBase
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IIdentityService _identityService;
     private readonly IAuditService _auditService;
@@ -65,6 +67,7 @@ public partial class UserEditViewModel : ViewModelBase
 
     public UserEditViewModel(
         IUserRepository userRepository,
+        IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
         IIdentityService identityService,
         IAuditService auditService,
@@ -72,22 +75,15 @@ public partial class UserEditViewModel : ViewModelBase
         ILogger<UserEditViewModel> logger)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _identityService = identityService;
         _auditService = auditService;
         _dialogService = dialogService;
         _logger = logger;
-
-        // 初始化可选角色（实际应从角色表读取，阶段 2 先硬编码常用角色）
-        AvailableRoles = new ObservableCollection<string>
-        {
-            "Administrator",
-            "Operator",
-            "Technician"
-        };
     }
 
-    public void InitializeForCreate()
+    public async Task InitializeForCreateAsync()
     {
         IsSaved = false;
         _isEdit = false;
@@ -99,10 +95,11 @@ public partial class UserEditViewModel : ViewModelBase
         MustChangePassword = true;
         Password = string.Empty;
         ConfirmPassword = string.Empty;
+        await LoadRolesAsync();
         SelectedRoles = new ObservableCollection<string>();
     }
 
-    public void InitializeForEdit(UserInfo user)
+    public async Task InitializeForEditAsync(UserInfo user)
     {
         IsSaved = false;
         _isEdit = true;
@@ -114,7 +111,14 @@ public partial class UserEditViewModel : ViewModelBase
         MustChangePassword = user.MustChangePassword;
         Password = string.Empty;
         ConfirmPassword = string.Empty;
+        await LoadRolesAsync();
         SelectedRoles = new ObservableCollection<string>(user.Roles);
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        var roles = await _roleRepository.GetAllAsync();
+        AvailableRoles = new ObservableCollection<string>(roles.Select(r => r.Name).OrderBy(n => n));
     }
 
     [RelayCommand]

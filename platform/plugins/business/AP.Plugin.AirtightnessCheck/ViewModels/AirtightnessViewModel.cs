@@ -68,6 +68,19 @@ public partial class AirtightnessViewModel : ViewModelBase
         return CurrentIndex > 0;
     }
 
+    [RelayCommand]
+    private void StartTest()
+    {
+        // 将当前步骤定位到气密检测步骤（索引 2），后续可接入真实检测启动逻辑
+        if (CurrentIndex < 2)
+        {
+            CurrentIndex = 2;
+            UpdateStepStates();
+            NextStepCommand.NotifyCanExecuteChanged();
+            PrevStepCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     private void UpdateStepStates()
     {
         foreach (var step in Steps)
