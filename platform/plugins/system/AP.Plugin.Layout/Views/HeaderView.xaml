@@ -62,17 +62,6 @@
                          VerticalAlignment="Center"/>
 
                 <Button Style="{StaticResource MaterialDesignToolForegroundButton}"
-                        Command="{Binding OpenSettingsCommand}"
-                        ToolTip="系统设置"
-                        Padding="6"
-                        Margin="0,0,4,0">
-                    <md:PackIcon Kind="Cog"
-                                 Width="22"
-                                 Height="22"
-                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"/>
-                </Button>
-
-                <Button Style="{StaticResource MaterialDesignToolForegroundButton}"
                         Command="{Binding LogoutCommand}"
                         IsEnabled="{Binding CanLogout}"
                         ToolTip="退出登录"

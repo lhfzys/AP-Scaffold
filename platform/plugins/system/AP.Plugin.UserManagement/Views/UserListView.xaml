@@ -85,11 +85,9 @@
                       IsReadOnly="True"
                       GridLinesVisibility="Horizontal"
                       BorderThickness="0"
-                      Background="Transparent"
-                      Style="{StaticResource MaterialDesignDataGrid}"
-                      ColumnHeaderStyle="{StaticResource MaterialDesignDataGridColumnHeader}"
-                      RowStyle="{StaticResource MaterialDesignDataGridRow}"
-                      CellStyle="{StaticResource MaterialDesignDataGridCell}">
+                      Background="{DynamicResource Brush.Surface}"
+                      Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"
+                      Style="{StaticResource MaterialDesignDataGrid}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="用户名"
                                         Binding="{Binding UserName}"
@@ -110,9 +108,16 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <md:Chip Content="{Binding}"
-                                                     Margin="0,0,6,0"
-                                                     Style="{StaticResource MaterialDesignOutlinedChip}"/>
+                                            <Border Background="{DynamicResource PrimaryHueLightBrush}"
+                                                    CornerRadius="{DynamicResource Layout.CornerRadius.Small}"
+                                                    Padding="6,2"
+                                                    Margin="0,0,6,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding}"
+                                                           FontSize="12"
+                                                           Foreground="White"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
