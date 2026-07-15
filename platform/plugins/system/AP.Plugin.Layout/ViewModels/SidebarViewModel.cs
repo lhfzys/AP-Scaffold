@@ -40,6 +40,7 @@ public partial class SidebarViewModel : ViewModelBase
         var canManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
         var canManageRoles = securityEnabled && _identityService.HasPermission("role.manage");
         var canViewAudit = securityEnabled && _identityService.HasPermission("audit.view");
+        var canViewRecipe = securityEnabled && _identityService.HasPermission("recipe.view");
 
         NavigationItems = new ObservableCollection<NavigationItem>
         {
@@ -49,6 +50,13 @@ public partial class SidebarViewModel : ViewModelBase
                 Label = "系统配置",
                 NavigationTarget = "SettingsShellView",
                 IsSelected = true
+            },
+            new()
+            {
+                IconKind = PackIconKind.FlaskOutline,
+                Label = "配方管理",
+                NavigationTarget = "RecipeListView",
+                IsVisible = canViewRecipe
             },
             new()
             {
@@ -94,6 +102,8 @@ public partial class SidebarViewModel : ViewModelBase
         if (value.NavigationTarget == "RoleListView" && !_identityService.HasPermission("role.manage"))
             return;
         if (value.NavigationTarget == "AuditLogListView" && !_identityService.HasPermission("audit.view"))
+            return;
+        if (value.NavigationTarget == "RecipeListView" && !_identityService.HasPermission("recipe.view"))
             return;
 
         _regionManager.RequestNavigate(

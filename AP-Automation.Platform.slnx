@@ -43,6 +43,7 @@
     <Project Path="platform/plugins/system/AP.Plugin.UserManagement/AP.Plugin.UserManagement.csproj" Id="dd2c77b4-beac-4a3a-9acc-f3bcba4b4ea9" />
     <Project Path="platform/plugins/system/AP.Plugin.RoleManagement/AP.Plugin.RoleManagement.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567892" />
     <Project Path="platform/plugins/system/AP.Plugin.AuditLog/AP.Plugin.AuditLog.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567893" />
+    <Project Path="platform/plugins/system/AP.Plugin.RecipeManagement/AP.Plugin.RecipeManagement.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567894" />
   </Folder>
   <Folder Name="/platform/shared/">
     <Project Path="platform/shared/AP.Shared.PluginSDK/AP.Shared.PluginSDK.csproj" Id="a99b2cb9-5c4e-489c-9750-eb342f2f1dfe" />
