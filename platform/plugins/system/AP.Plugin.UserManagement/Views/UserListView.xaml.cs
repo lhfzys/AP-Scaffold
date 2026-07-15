@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+using System.Windows.Controls;
+using AP.Plugin.UserManagement.ViewModels;
 
 namespace AP.Plugin.UserManagement.Views;
 
@@ -7,8 +8,9 @@ namespace AP.Plugin.UserManagement.Views;
 /// </summary>
 public partial class UserListView : UserControl
 {
-    public UserListView()
+    public UserListView(UserListViewModel viewModel)
     {
         InitializeComponent();
+        DataContext = viewModel;
     }
 }

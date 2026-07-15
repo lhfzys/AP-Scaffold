@@ -4,8 +4,7 @@
              xmlns:local="clr-namespace:AP.Plugin.Layout.Views"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:constants="clr-namespace:AP.Shared.Utilities.Constants;assembly=AP.Shared.Utilities"
-             prism:ViewModelLocator.AutoWireViewModel="True">
+             xmlns:constants="clr-namespace:AP.Shared.Utilities.Constants;assembly=AP.Shared.Utilities">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

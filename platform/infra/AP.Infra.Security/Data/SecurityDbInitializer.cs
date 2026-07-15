@@ -21,6 +21,7 @@ public class SecurityDbInitializer : ISecurityDbInitializer
         "report.view",
         "report.export",
         "user.manage",
+        "role.manage",
         "audit.view"
     ];
 

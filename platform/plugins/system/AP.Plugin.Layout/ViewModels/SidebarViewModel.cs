@@ -38,6 +38,7 @@ public partial class SidebarViewModel : ViewModelBase
 
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
         var canManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
+        var canManageRoles = securityEnabled && _identityService.HasPermission("role.manage");
 
         NavigationItems = new ObservableCollection<NavigationItem>
         {
@@ -59,8 +60,8 @@ public partial class SidebarViewModel : ViewModelBase
             {
                 IconKind = PackIconKind.ShieldAccount,
                 Label = "角色管理",
-                NavigationTarget = "",
-                IsVisible = false
+                NavigationTarget = "RoleListView",
+                IsVisible = canManageRoles
             },
             new()
             {
@@ -89,6 +90,8 @@ public partial class SidebarViewModel : ViewModelBase
         if (string.IsNullOrEmpty(value.NavigationTarget)) return;
         if (value.NavigationTarget == "UserListView" && !_identityService.HasPermission("user.manage"))
             return;
+        if (value.NavigationTarget == "RoleListView" && !_identityService.HasPermission("role.manage"))
+            return;
 
         _regionManager.RequestNavigate(
             AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
@@ -98,14 +101,6 @@ public partial class SidebarViewModel : ViewModelBase
     private void OnNavigate(NavigationItem? item)
     {
         if (item == null) return;
-        if (string.IsNullOrEmpty(item.NavigationTarget)) return;
-        if (item.NavigationTarget == "UserListView" && !_identityService.HasPermission("user.manage"))
-            return;
-
         SelectedItem = item;
-
-        _regionManager.RequestNavigate(
-            AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
-            item.NavigationTarget);
     }
 }
