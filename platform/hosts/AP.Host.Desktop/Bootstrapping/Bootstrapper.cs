@@ -65,6 +65,18 @@ public class Bootstrapper : PrismBootstrapper
         var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
         if (securityEnabled)
         {
+            // 登录前必须完成安全模块初始化，确保默认账号/角色/权限已就绪
+            try
+            {
+                var securityInitializer = Container.Resolve<AP.Contracts.Security.Abstractions.ISecurityDbInitializer>();
+                securityInitializer.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+                Log.Information("登录前安全模块初始化完成");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "登录前安全模块初始化失败");
+            }
+
             // 登录窗口需要在最前显示，先关闭启动画面避免遮挡
             CloseSplashWindow();
 
