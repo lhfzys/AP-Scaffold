@@ -21,4 +21,14 @@ public interface IAuditService
         int skip = 0,
         int take = 100,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// 统计审计日志数量
+    /// </summary>
+    Task<int> CountAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        string? userName = null,
+        AuditActionType? actionType = null,
+        CancellationToken ct = default);
 }
