@@ -15,7 +15,34 @@ public partial class UserEditWindow : Window
         DataContextChanged += OnDataContextChanged;
     }
 
+    private UserEditViewModel? _viewModel;
+
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.RequestClose -= OnViewModelRequestClose;
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        if (DataContext is not UserEditViewModel vm) return;
+
+        _viewModel = vm;
+        _viewModel.RequestClose += OnViewModelRequestClose;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+        SyncSelectedRoles();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(UserEditViewModel.SelectedRoles))
+        {
+            SyncSelectedRoles();
+        }
+    }
+
+    private void SyncSelectedRoles()
     {
         if (DataContext is not UserEditViewModel vm) return;
 
@@ -24,6 +51,15 @@ public partial class UserEditWindow : Window
         {
             RolesListBox.SelectedItems.Add(role);
         }
+    }
+
+    private void OnViewModelRequestClose(object? sender, EventArgs e)
+    {
+        if (DataContext is UserEditViewModel vm)
+        {
+            DialogResult = vm.IsSaved;
+        }
+        Close();
     }
 
     private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)

@@ -92,7 +92,7 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,0,1,0">
-                <views:SidebarView />
+                <ContentControl x:Name="SidebarContainer" />
             </Border>
 
             <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />

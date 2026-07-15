@@ -105,6 +105,12 @@ public class GrpcClientWorker : BackgroundService
             {
                 break;
             }
+            catch (Exception ex) when (IsCancellationRelated(ex) || stoppingToken.IsCancellationRequested)
+            {
+                // 应用关闭或取消导致底层 Socket/IO 异常，属于正常情况
+                _logger.LogDebug(ex, "gRPC 客户端因取消而停止");
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "gRPC 客户端发生错误");
@@ -122,5 +128,23 @@ public class GrpcClientWorker : BackgroundService
         if (json.StartsWith("\"") && json.EndsWith("\""))
             return json.Trim('"');
         return json;
+    }
+
+    private static bool IsCancellationRelated(Exception ex)
+    {
+        if (ex is OperationCanceledException)
+            return true;
+
+        if (ex is IOException ioEx && ioEx.InnerException is System.Net.Sockets.SocketException socketEx)
+        {
+            return socketEx.SocketErrorCode == System.Net.Sockets.SocketError.OperationAborted
+                || socketEx.Message.Contains("已中止 I/O 操作", StringComparison.OrdinalIgnoreCase)
+                || socketEx.Message.Contains("aborted", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (ex.InnerException != null)
+            return IsCancellationRelated(ex.InnerException);
+
+        return false;
     }
 }
