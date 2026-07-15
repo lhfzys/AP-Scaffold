@@ -1,6 +1,8 @@
+using AP.Contracts.Report.Abstractions;
 using AP.Infra.Report.Abstractions;
 using AP.Infra.Report.Configuration;
 using AP.Infra.Report.Entities;
+using AP.Infra.Report.Reporting;
 using AP.Infra.Report.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +31,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IReportStorage, ReportStorage>();
         services.AddSingleton<IReportRepository, ReportRepository>();
         services.AddSingleton<ReportService>();
+        services.AddSingleton<IReportCenterService, ReportCenterService>();
+
+        // 注册示例报表数据提供者（骨架演示用）
+        services.AddReportDataProvider<SampleReportDataProvider>();
 
         // 注册后台服务
         services.AddHostedService<ReportScheduler>();

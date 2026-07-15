@@ -41,6 +41,7 @@ public partial class SidebarViewModel : ViewModelBase
         var canManageRoles = securityEnabled && _identityService.HasPermission("role.manage");
         var canViewAudit = securityEnabled && _identityService.HasPermission("audit.view");
         var canViewRecipe = securityEnabled && _identityService.HasPermission("recipe.view");
+        var canViewReport = securityEnabled && _identityService.HasPermission("report.view");
 
         NavigationItems = new ObservableCollection<NavigationItem>
         {
@@ -78,6 +79,13 @@ public partial class SidebarViewModel : ViewModelBase
                 Label = "审计日志",
                 NavigationTarget = "AuditLogListView",
                 IsVisible = canViewAudit
+            },
+            new()
+            {
+                IconKind = PackIconKind.FileChartOutline,
+                Label = "报表中心",
+                NavigationTarget = "ReportListView",
+                IsVisible = canViewReport
             }
         };
 
@@ -104,6 +112,8 @@ public partial class SidebarViewModel : ViewModelBase
         if (value.NavigationTarget == "AuditLogListView" && !_identityService.HasPermission("audit.view"))
             return;
         if (value.NavigationTarget == "RecipeListView" && !_identityService.HasPermission("recipe.view"))
+            return;
+        if (value.NavigationTarget == "ReportListView" && !_identityService.HasPermission("report.view"))
             return;
 
         _regionManager.RequestNavigate(
