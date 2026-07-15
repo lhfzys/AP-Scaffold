@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
     <ProjectReference Include="..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
   </ItemGroup>
 
   <ItemGroup>

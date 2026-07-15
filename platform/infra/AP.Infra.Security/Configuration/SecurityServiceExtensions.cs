@@ -25,6 +25,8 @@ public static class SecurityServiceExtensions
         if (enabled)
         {
             services.AddSingleton<IUserRepository, UserRepository>();
+            services.AddSingleton<IRoleRepository, RoleRepository>();
+            services.AddSingleton<IPermissionRepository, PermissionRepository>();
             services.AddSingleton<IIdentityService, IdentityService>();
             services.AddSingleton<ISecurityDbInitializer, Data.SecurityDbInitializer>();
         }

@@ -59,7 +59,8 @@ public class UserRepository : IUserRepository
             MustChangePassword = user.MustChangePassword
         };
 
-        await _freeSql.Insert(entity).ExecuteIdentityAsync(ct);
+        var userId = await _freeSql.Insert(entity).ExecuteIdentityAsync(ct);
+        await BindRolesAsync(userId, user.Roles, ct);
     }
 
     public async Task UpdateAsync(UserInfo user, CancellationToken ct = default)
@@ -73,6 +74,10 @@ public class UserRepository : IUserRepository
         entity.MustChangePassword = user.MustChangePassword;
 
         await _freeSql.Update<User>().SetSource(entity).ExecuteAffrowsAsync(ct);
+
+        // 重新绑定用户角色
+        await _freeSql.Delete<UserRole>().Where(ur => ur.UserId == user.Id).ExecuteAffrowsAsync(ct);
+        await BindRolesAsync(user.Id, user.Roles, ct);
     }
 
     public async Task UpdatePasswordAsync(long id, string passwordHash, CancellationToken ct = default)
@@ -126,6 +131,21 @@ public class UserRepository : IUserRepository
         }
 
         return MapToInfo(user, roles, permissions);
+    }
+
+    private async Task BindRolesAsync(long userId, IEnumerable<string> roleNames, CancellationToken ct)
+    {
+        var names = roleNames?.ToList() ?? new List<string>();
+        if (names.Count == 0) return;
+
+        var roles = await _freeSql.Select<Role>()
+            .Where(r => names.Contains(r.Name))
+            .ToListAsync(ct);
+
+        foreach (var role in roles)
+        {
+            await _freeSql.Insert(new UserRole { UserId = userId, RoleId = role.Id }).ExecuteAffrowsAsync(ct);
+        }
     }
 
     private static UserInfo MapToInfo(User user, IEnumerable<Role> roles, IEnumerable<Permission> permissions)
