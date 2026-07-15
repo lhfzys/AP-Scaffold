@@ -13,6 +13,11 @@ public class UserInfo
 
     public bool IsEnabled { get; set; }
 
+    /// <summary>
+    /// 首次登录后是否必须修改密码
+    /// </summary>
+    public bool MustChangePassword { get; set; }
+
     public IReadOnlyList<string> Roles { get; set; } = Array.Empty<string>();
 
     public IReadOnlyList<string> Permissions { get; set; } = Array.Empty<string>();

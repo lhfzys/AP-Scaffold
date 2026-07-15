@@ -26,8 +26,10 @@ public class LayoutPlugin : PluginBase
 
         services.AddTransient<StandardLayoutView>();
         services.AddTransient<SinglePageLayoutView>();
+        services.AddTransient<SidebarView>();
 
         services.AddTransient<LayoutViewModel>();
+        services.AddTransient<SidebarViewModel>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
@@ -36,6 +38,7 @@ public class LayoutPlugin : PluginBase
 
         ViewModelLocationProvider.Register(typeof(StandardLayoutView).ToString(), typeof(LayoutViewModel));
         ViewModelLocationProvider.Register(typeof(SinglePageLayoutView).ToString(), typeof(LayoutViewModel));
+        ViewModelLocationProvider.Register(typeof(SidebarView).ToString(), typeof(SidebarViewModel));
 
         var config = serviceProvider.GetRequiredService<IConfiguration>();
         var regionManager = serviceProvider.GetRequiredService<IRegionManager>();

@@ -13,5 +13,6 @@ public enum AuditActionType
     Execute,
     SwitchRecipe,
     ExportReport,
-    ManualControl
+    ManualControl,
+    PasswordChanged
 }

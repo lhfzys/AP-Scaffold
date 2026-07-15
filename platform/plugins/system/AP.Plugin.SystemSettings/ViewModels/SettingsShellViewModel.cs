@@ -34,11 +34,6 @@ public partial class SettingsShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isBusy;
 
-    /// <summary>
-    /// 请求关闭配置对话框事件
-    /// </summary>
-    public event EventHandler? RequestClose;
-
     public SettingsShellViewModel(
         IServiceProvider serviceProvider,
         IEnumerable<ISettingsContributor> contributors,
@@ -133,7 +128,7 @@ public partial class SettingsShellViewModel : ViewModelBase
 
             _logger.LogInformation("配置保存成功，备份：{BackupPath}", result.BackupPath);
 
-            RequestClose?.Invoke(this, EventArgs.Empty);
+            OnRequestClose();
         }
         finally
         {
@@ -149,6 +144,6 @@ public partial class SettingsShellViewModel : ViewModelBase
             contributor.Editor.LoadFromConfiguration(_configuration);
         }
 
-        RequestClose?.Invoke(this, EventArgs.Empty);
+        OnRequestClose();
     }
 }

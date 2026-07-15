@@ -5,6 +5,7 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:constants="clr-namespace:AP.Shared.Utilities.Constants;assembly=AP.Shared.Utilities"
+             xmlns:views="clr-namespace:AP.Plugin.Layout.Views"
              prism:ViewModelLocator.AutoWireViewModel="True">
     <Grid>
         <Grid.RowDefinitions>
@@ -51,15 +52,34 @@
                                Foreground="White"
                                FontFamily="Consolas, Microsoft YaHei"/>
 
+                    <Border Background="{DynamicResource PrimaryHueDarkBrush}" 
+                            CornerRadius="4" 
+                            Padding="10,4" 
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="AccountCircle" 
+                                         Width="18" Height="18"
+                                         Foreground="White" 
+                                         VerticalAlignment="Center" 
+                                         Margin="0,0,6,0"/>
+                            <TextBlock Text="{Binding CurrentUserName}" 
+                                       VerticalAlignment="Center" 
+                                       FontSize="13"
+                                       Foreground="White"/>
+                        </StackPanel>
+                    </Border>
+
                     <Button
                         Padding="2"
-                        Command="{Binding OpenSettingsCommand}"
+                        Command="{Binding LogoutCommand}"
+                        IsEnabled="{Binding CanLogout}"
                         Style="{StaticResource MaterialDesignToolForegroundButton}"
-                        ToolTip="打开系统设置">
+                        ToolTip="退出登录">
                         <md:PackIcon
                             Width="24"
                             Height="24"
-                            Kind="Cog" />
+                            Kind="Logout" />
                     </Button>
                 </StackPanel>
             </Grid>
@@ -72,7 +92,7 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,0,1,0">
-                <ContentControl prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.SidebarRegion}" />
+                <ContentControl x:Name="SidebarContainer" />
             </Border>
 
             <ContentControl Grid.Column="1" prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />
