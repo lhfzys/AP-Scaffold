@@ -1,7 +1,9 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:system="clr-namespace:System;assembly=System.Runtime">
 
+    <!-- 语义颜色：状态/反馈 -->
     <Color x:Key="Color.Success">#4CAF50</Color>
     <Color x:Key="Color.OnSuccess">#FFFFFF</Color>
 
@@ -28,4 +30,84 @@
 
     <Color x:Key="Color.Inactive">#BDBDBD</Color>
     <SolidColorBrush x:Key="Brush.Inactive" Color="{StaticResource Color.Inactive}"/>
+
+    <!-- 主色/次色（与 App.xaml 中 BundledTheme 保持一致） -->
+    <Color x:Key="Color.Primary">#009688</Color>
+    <Color x:Key="Color.Secondary">#FF5722</Color>
+
+    <!-- 表面颜色（用于卡片、侧边栏、 elevated 容器） -->
+    <Color x:Key="Color.Surface">#FFFFFF</Color>
+    <Color x:Key="Color.SurfaceVariant">#F5F5F5</Color>
+    <Color x:Key="Color.OnSurface">#1C1B1F</Color>
+    <Color x:Key="Color.OnSurfaceVariant">#49454F</Color>
+
+    <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}"/>
+    <SolidColorBrush x:Key="Brush.SurfaceVariant" Color="{StaticResource Color.SurfaceVariant}"/>
+    <SolidColorBrush x:Key="Brush.OnSurface" Color="{StaticResource Color.OnSurface}"/>
+    <SolidColorBrush x:Key="Brush.OnSurfaceVariant" Color="{StaticResource Color.OnSurfaceVariant}"/>
+
+    <!-- 间距规模 -->
+    <system:Double x:Key="Layout.Spacing.Small">8</system:Double>
+    <system:Double x:Key="Layout.Spacing.Medium">16</system:Double>
+    <system:Double x:Key="Layout.Spacing.Large">24</system:Double>
+
+    <GridLength x:Key="Layout.GridSpacing.Small">8</GridLength>
+    <GridLength x:Key="Layout.GridSpacing.Medium">16</GridLength>
+    <GridLength x:Key="Layout.GridSpacing.Large">24</GridLength>
+
+    <!-- 圆角规模 -->
+    <CornerRadius x:Key="Layout.CornerRadius.Small">4</CornerRadius>
+    <CornerRadius x:Key="Layout.CornerRadius.Medium">8</CornerRadius>
+    <CornerRadius x:Key="Layout.CornerRadius.Large">16</CornerRadius>
+
+    <!-- 阴影/海拔（ElevationAssist 使用 DpN 字符串，这里仅作语义参考） -->
+    <system:Double x:Key="Layout.Elevation.Dp0">0</system:Double>
+    <system:Double x:Key="Layout.Elevation.Dp1">1</system:Double>
+    <system:Double x:Key="Layout.Elevation.Dp2">2</system:Double>
+    <system:Double x:Key="Layout.Elevation.Dp4">4</system:Double>
+
+    <!-- 字体规模（TextBlock 样式） -->
+    <Style x:Key="TextStyle.Display" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="32"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="LineHeight" Value="40"/>
+    </Style>
+
+    <Style x:Key="TextStyle.Headline" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="32"/>
+    </Style>
+
+    <Style x:Key="TextStyle.Title" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="28"/>
+    </Style>
+
+    <Style x:Key="TextStyle.Body" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Regular"/>
+        <Setter Property="LineHeight" Value="20"/>
+    </Style>
+
+    <Style x:Key="TextStyle.Label" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="LineHeight" Value="16"/>
+    </Style>
+
+    <Style x:Key="TextStyle.Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Regular"/>
+        <Setter Property="Opacity" Value="0.7"/>
+    </Style>
+
+    <!-- 通用按钮高度 -->
+    <system:Double x:Key="Button.StandardHeight">40</system:Double>
+    <system:Double x:Key="Button.SmallHeight">32</system:Double>
+
+    <!-- 通用输入框高度 -->
+    <system:Double x:Key="TextBox.StandardHeight">40</system:Double>
+
 </ResourceDictionary>

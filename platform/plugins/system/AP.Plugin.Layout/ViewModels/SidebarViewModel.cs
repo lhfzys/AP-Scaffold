@@ -1,10 +1,12 @@
 ﻿#region
 
+using System.Collections.ObjectModel;
 using AP.Contracts.Security.Abstractions;
-using AP.Contracts.System.Services;
+using AP.Plugin.Layout.Models;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MaterialDesignThemes.Wpf;
 using Microsoft.Extensions.Configuration;
 using Prism.Navigation.Regions;
 
@@ -18,40 +20,92 @@ namespace AP.Plugin.Layout.ViewModels;
 public partial class SidebarViewModel : ViewModelBase
 {
     private readonly IRegionManager _regionManager;
-    private readonly ISettingsDialogService _settingsDialogService;
     private readonly IIdentityService _identityService;
 
     [ObservableProperty]
-    private bool _canManageUsers;
+    private ObservableCollection<NavigationItem> _navigationItems = new();
+
+    [ObservableProperty]
+    private NavigationItem? _selectedItem;
 
     public SidebarViewModel(
         IRegionManager regionManager,
-        ISettingsDialogService settingsDialogService,
         IIdentityService identityService,
         IConfiguration configuration)
     {
         _regionManager = regionManager;
-        _settingsDialogService = settingsDialogService;
         _identityService = identityService;
 
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
-        CanManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
+        var canManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
+
+        NavigationItems = new ObservableCollection<NavigationItem>
+        {
+            new()
+            {
+                IconKind = PackIconKind.Cog,
+                Label = "系统配置",
+                NavigationTarget = "SettingsShellView",
+                IsSelected = true
+            },
+            new()
+            {
+                IconKind = PackIconKind.AccountMultiple,
+                Label = "用户管理",
+                NavigationTarget = "UserListView",
+                IsVisible = canManageUsers
+            },
+            new()
+            {
+                IconKind = PackIconKind.ShieldAccount,
+                Label = "角色管理",
+                NavigationTarget = "",
+                IsVisible = false
+            },
+            new()
+            {
+                IconKind = PackIconKind.ClipboardTextClock,
+                Label = "审计日志",
+                NavigationTarget = "",
+                IsVisible = false
+            }
+        };
+
+        foreach (var item in NavigationItems)
+        {
+            item.Command = new RelayCommand<NavigationItem?>(OnNavigate);
+        }
     }
 
-    [RelayCommand]
-    private void OpenUserManagement()
+    partial void OnSelectedItemChanged(NavigationItem? value)
     {
-        if (!_identityService.HasPermission("user.manage"))
+        if (value == null) return;
+
+        foreach (var item in NavigationItems)
+        {
+            item.IsSelected = item == value;
+        }
+
+        if (string.IsNullOrEmpty(value.NavigationTarget)) return;
+        if (value.NavigationTarget == "UserListView" && !_identityService.HasPermission("user.manage"))
             return;
 
         _regionManager.RequestNavigate(
             AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
-            "UserListView");
+            value.NavigationTarget);
     }
 
-    [RelayCommand]
-    private void OpenSettings()
+    private void OnNavigate(NavigationItem? item)
     {
-        _settingsDialogService.ShowSettingsDialog();
+        if (item == null) return;
+        if (string.IsNullOrEmpty(item.NavigationTarget)) return;
+        if (item.NavigationTarget == "UserListView" && !_identityService.HasPermission("user.manage"))
+            return;
+
+        SelectedItem = item;
+
+        _regionManager.RequestNavigate(
+            AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+            item.NavigationTarget);
     }
 }

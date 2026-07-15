@@ -57,6 +57,11 @@ public class SystemSettingsPlugin : PluginBase
             regionManager.RegisterViewWithRegion(
                 AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.SettingsRegion,
                 typeof(SettingsShellView));
+
+            // 同时作为普通内容视图注册到 ContentRegion，支持在右侧内容区显示
+            regionManager.RegisterViewWithRegion(
+                AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+                typeof(SettingsShellView));
         });
 
         Logger.LogInformation("系统配置中心已加载");

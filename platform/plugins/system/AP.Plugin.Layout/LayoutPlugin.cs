@@ -26,6 +26,7 @@ public class LayoutPlugin : PluginBase
 
         services.AddTransient<StandardLayoutView>();
         services.AddTransient<SinglePageLayoutView>();
+        services.AddTransient<HeaderView>();
         services.AddTransient<SidebarView>();
 
         services.AddTransient<LayoutViewModel>();

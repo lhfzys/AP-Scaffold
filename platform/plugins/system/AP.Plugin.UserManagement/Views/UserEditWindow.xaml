@@ -11,8 +11,8 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{DynamicResource MaterialDesignPaper}"
-        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesign.Brush.Background}"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.OnBackground}"
         FontFamily="Microsoft YaHei UI, Segoe UI, sans-serif">
     <Grid>
         <Grid.RowDefinitions>
@@ -86,10 +86,12 @@
                 <Button Content="取消"
                         Style="{StaticResource MaterialDesignPaperButton}"
                         Command="{Binding CancelCommand}"
+                        Height="{DynamicResource Button.StandardHeight}"
                         Margin="0,0,12,0"/>
                 <Button Content="保存"
                         Style="{StaticResource MaterialDesignRaisedButton}"
-                        Command="{Binding SaveCommand}"/>
+                        Command="{Binding SaveCommand}"
+                        Height="{DynamicResource Button.StandardHeight}"/>
             </StackPanel>
         </Border>
     </Grid>
