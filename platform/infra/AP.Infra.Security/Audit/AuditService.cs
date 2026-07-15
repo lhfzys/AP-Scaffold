@@ -42,6 +42,29 @@ public class AuditService : IAuditService
         int take = 100,
         CancellationToken ct = default)
     {
+        var query = BuildQuery(startTime, endTime, userName, actionType);
+        var logs = await query.OrderByDescending(a => a.Timestamp).Page(skip / take + 1, take).ToListAsync(ct);
+
+        return logs.Select(MapToEntry).ToList();
+    }
+
+    public async Task<int> CountAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        string? userName = null,
+        AuditActionType? actionType = null,
+        CancellationToken ct = default)
+    {
+        var query = BuildQuery(startTime, endTime, userName, actionType);
+        return (int)await query.CountAsync(ct);
+    }
+
+    private ISelect<AuditLog> BuildQuery(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        string? userName = null,
+        AuditActionType? actionType = null)
+    {
         var query = _freeSql.Select<AuditLog>();
 
         if (startTime.HasValue)
@@ -56,9 +79,7 @@ public class AuditService : IAuditService
         if (actionType.HasValue)
             query = query.Where(a => a.ActionType == actionType.Value);
 
-        var logs = await query.OrderByDescending(a => a.Timestamp).Page(skip / take + 1, take).ToListAsync(ct);
-
-        return logs.Select(MapToEntry).ToList();
+        return query;
     }
 
     private static AuditLogEntry MapToEntry(AuditLog log)

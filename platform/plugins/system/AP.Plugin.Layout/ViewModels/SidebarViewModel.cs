@@ -39,6 +39,7 @@ public partial class SidebarViewModel : ViewModelBase
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
         var canManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
         var canManageRoles = securityEnabled && _identityService.HasPermission("role.manage");
+        var canViewAudit = securityEnabled && _identityService.HasPermission("audit.view");
 
         NavigationItems = new ObservableCollection<NavigationItem>
         {
@@ -67,8 +68,8 @@ public partial class SidebarViewModel : ViewModelBase
             {
                 IconKind = PackIconKind.ClipboardTextClock,
                 Label = "审计日志",
-                NavigationTarget = "",
-                IsVisible = false
+                NavigationTarget = "AuditLogListView",
+                IsVisible = canViewAudit
             }
         };
 
@@ -91,6 +92,8 @@ public partial class SidebarViewModel : ViewModelBase
         if (value.NavigationTarget == "UserListView" && !_identityService.HasPermission("user.manage"))
             return;
         if (value.NavigationTarget == "RoleListView" && !_identityService.HasPermission("role.manage"))
+            return;
+        if (value.NavigationTarget == "AuditLogListView" && !_identityService.HasPermission("audit.view"))
             return;
 
         _regionManager.RequestNavigate(

@@ -19,4 +19,12 @@ public class NullAuditService : IAuditService
         int take = 100,
         CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<AuditLogEntry>>(new List<AuditLogEntry>());
+
+    public Task<int> CountAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        string? userName = null,
+        AuditActionType? actionType = null,
+        CancellationToken ct = default)
+        => Task.FromResult(0);
 }

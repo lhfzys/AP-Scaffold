@@ -3,4 +3,5 @@
                     xmlns:converters="clr-namespace:AP.Shared.UI.Converters">
     <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
     <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+    <converters:BoolToStatusConverter x:Key="BoolToStatusConverter" />
 </ResourceDictionary>
