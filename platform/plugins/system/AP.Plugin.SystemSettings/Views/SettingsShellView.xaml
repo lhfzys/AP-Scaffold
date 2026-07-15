@@ -4,137 +4,62 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:vm="clr-namespace:AP.Plugin.SystemSettings.ViewModels"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="900"
-             Background="{DynamicResource MaterialDesignPaper}">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- 左侧分类导航 -->
-        <Border Grid.Column="0"
-                BorderBrush="{DynamicResource MaterialDesignDivider}"
-                BorderThickness="0,0,1,0"
-                Background="{DynamicResource MaterialDesignCardBackground}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16">
-                    <TextBlock Text="配置中心"
-                               FontSize="18"
-                               FontWeight="Bold"
-                               Foreground="White"/>
-                </md:ColorZone>
-
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ListBox ItemsSource="{Binding NavigationItems}"
-                             SelectedItem="{Binding SelectedContributor}"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             Margin="8,8,8,8">
-                        <ListBox.Resources>
-                            <DataTemplate DataType="{x:Type vm:SettingsCategoryHeaderItem}">
-                                <TextBlock Text="{Binding Category}"
-                                           FontWeight="SemiBold"
-                                           FontSize="12"
-                                           Opacity="0.6"
-                                           Margin="12,16,12,6"/>
-                            </DataTemplate>
-                            <DataTemplate DataType="{x:Type vm:SettingsContributorItem}">
-                                <Border Padding="8,6" CornerRadius="4">
-                                    <StackPanel Orientation="Horizontal">
-                                        <md:PackIcon Kind="{Binding IconKind}"
-                                                     Width="20" Height="20"
-                                                     VerticalAlignment="Center"
-                                                     Margin="0,0,10,0"
-                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="14"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.Resources>
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
-                                <Setter Property="IsEnabled" Value="{Binding IsSelectable}"/>
-                                <Setter Property="Focusable" Value="{Binding IsSelectable}"/>
-                                <Setter Property="Padding" Value="4"/>
-                                <Setter Property="Margin" Value="0,2"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryHueLightBrush}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                    </ListBox>
-                </ScrollViewer>
-            </Grid>
-        </Border>
-
-        <!-- 右侧内容区 -->
-        <Grid Grid.Column="1">
+             d:DesignHeight="600"
+             d:DesignWidth="900"
+             Margin="16"
+             Background="Transparent">
+    <md:Card Padding="0"
+             md:ElevationAssist.Elevation="Dp2">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding SelectedContributor.Title}"
-                               FontSize="18"
-                               FontWeight="Bold"
-                               Foreground="White"
-                               VerticalAlignment="Center"/>
-                    <md:PackIcon Grid.Column="1"
-                                 Kind="InformationCircle"
-                                 Width="20" Height="20"
-                                 Foreground="White"
-                                 Opacity="0.8"
-                                 VerticalAlignment="Center"
-                                 ToolTip="部分配置修改后需要重启应用或重新连接设备后才能生效"/>
-                </Grid>
-            </md:ColorZone>
-
-            <Border Grid.Row="1" Background="{DynamicResource MaterialDesignBackground}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
-                    <ContentControl Content="{Binding SelectedContributor.Editor}"/>
-                </ScrollViewer>
-            </Border>
+            <!-- 顶部 Tab 切换 -->
+            <TabControl Grid.Row="0"
+                        Grid.RowSpan="2"
+                        ItemsSource="{Binding Contributors}"
+                        SelectedItem="{Binding SelectedContributor, Mode=TwoWay}"
+                        Style="{StaticResource MaterialDesignTabControl}"
+                        HorizontalAlignment="Left"
+                        Margin="16,8,16,0">
+                <TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="14"/>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Padding="24">
+                            <ContentControl Content="{Binding Editor}"/>
+                        </ScrollViewer>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
 
             <!-- 底部操作栏 -->
             <Border Grid.Row="2"
                     BorderBrush="{DynamicResource MaterialDesignDivider}"
                     BorderThickness="0,1,0,0"
-                    Background="{DynamicResource MaterialDesignCardBackground}"
+                    Background="{DynamicResource Brush.Surface}"
                     Padding="24,16">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="取消"
                             Style="{StaticResource MaterialDesignPaperButton}"
                             Command="{Binding CancelChangesCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"
                             Margin="0,0,12,0"/>
                     <Button Content="保存配置"
                             Style="{StaticResource MaterialDesignRaisedButton}"
-                            Command="{Binding SaveSettingsCommand}"/>
+                            Command="{Binding SaveSettingsCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"/>
                 </StackPanel>
             </Border>
         </Grid>
-    </Grid>
+    </md:Card>
 </UserControl>

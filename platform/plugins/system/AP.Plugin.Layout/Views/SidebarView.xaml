@@ -5,74 +5,82 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="220"
-             Background="{DynamicResource MaterialDesignCardBackground}">
+             d:DesignHeight="600"
+             d:DesignWidth="220"
+             Background="{DynamicResource Brush.Surface}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="16">
-            <TextBlock Text="系统导航"
-                       FontSize="16"
-                       FontWeight="Bold"
-                       Foreground="White"/>
-        </md:ColorZone>
+        <TextBlock Grid.Row="0"
+                   Text="系统导航"
+                   Style="{DynamicResource TextStyle.Label}"
+                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                   Margin="16,20,16,8"/>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="8,12">
-                <Button Style="{StaticResource MaterialDesignPaperButton}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        Command="{Binding OpenSettingsCommand}"
-                        Height="40"
-                        Margin="0,4">
-                    <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="Cog" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                        <TextBlock Text="系统配置" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    </StackPanel>
-                </Button>
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding NavigationItems}"
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 Padding="0">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="8,4"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="RootBorder"
+                                        Background="Transparent"
+                                        BorderThickness="4,0,0,0"
+                                        BorderBrush="Transparent"
+                                        CornerRadius="{DynamicResource Layout.CornerRadius.Medium}"
+                                        Padding="12,10"
+                                        SnapsToDevicePixels="True">
+                                    <ContentPresenter HorizontalAlignment="Stretch"
+                                                      VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.SurfaceVariant}"/>
+                                        <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.SurfaceVariant}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
 
-                <Button Style="{StaticResource MaterialDesignPaperButton}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        Command="{Binding OpenUserManagementCommand}"
-                        Visibility="{Binding CanManageUsers, Converter={StaticResource BoolToVis}}"
-                        Height="40"
-                        Margin="0,4">
-                    <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="AccountMultiple" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                        <TextBlock Text="用户管理" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Style="{StaticResource MaterialDesignPaperButton}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        IsEnabled="False"
-                        Opacity="0.5"
-                        Height="40"
-                        Margin="0,4">
-                    <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="ShieldAccount" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                        <TextBlock Text="角色管理（待实现）" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Style="{StaticResource MaterialDesignPaperButton}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        IsEnabled="False"
-                        Opacity="0.5"
-                        Height="40"
-                        Margin="0,4">
-                    <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="ClipboardTextClock" Width="22" Height="22" Margin="0,0,12,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                        <TextBlock Text="审计日志（待实现）" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </ScrollViewer>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <md:PackIcon Kind="{Binding IconKind}"
+                                         Width="22"
+                                         Height="22"
+                                         Margin="0,0,12,0"
+                                         VerticalAlignment="Center"
+                                         Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            <TextBlock Text="{Binding Label}"
+                                       VerticalAlignment="Center"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource Brush.OnSurface}"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </UserControl>

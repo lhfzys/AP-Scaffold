@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             prism:ViewModelLocator.AutoWireViewModel="True">
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             Background="{DynamicResource MaterialDesign.Brush.Background}">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -17,8 +18,8 @@ Margin="0,0,0,4"
 HorizontalAlignment="Center">
             <ItemsControl.Resources>
                 <LinearGradientBrush x:Key="CurrentStepGradient" StartPoint="0,0.5" EndPoint="1,0.5">
-                    <GradientStop Color="#009688" Offset="0.0" />
-                    <GradientStop Color="#FFA500" Offset="1.0" />
+                    <GradientStop Color="{DynamicResource Color.Primary}" Offset="0.0" />
+                    <GradientStop Color="{DynamicResource Color.Warning}" Offset="1.0" />
                 </LinearGradientBrush>
             </ItemsControl.Resources>
             <ItemsControl.ItemsPanel>
@@ -178,14 +179,14 @@ HorizontalAlignment="Center">
         Command="{Binding PrevStepCommand}"
         Style="{StaticResource MaterialDesignOutlinedButton}"
         Width="120"
-        Height="40"
+        Height="{DynamicResource Button.StandardHeight}"
         Margin="0,0,16,0"/>
 
             <Button Content="下一步"
         Command="{Binding NextStepCommand}"
         Style="{StaticResource MaterialDesignRaisedButton}"
         Width="120"
-        Height="40"/>
+        Height="{DynamicResource Button.StandardHeight}"/>
         </StackPanel>
     </Grid>
 </UserControl>

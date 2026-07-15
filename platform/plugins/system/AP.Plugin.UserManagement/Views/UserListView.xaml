@@ -6,89 +6,101 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:prism="http://prismlibrary.com/"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="900"
+             d:DesignHeight="600"
+             d:DesignWidth="900"
              prism:ViewModelLocator.AutoWireViewModel="True"
-             Background="{DynamicResource MaterialDesignBackground}">
-    <Grid>
+             Background="{DynamicResource MaterialDesign.Brush.Background}">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 标题栏 -->
-        <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16">
+        <!-- 工具栏卡片 -->
+        <md:Card Grid.Row="0"
+                 Padding="16"
+                 md:ElevationAssist.Elevation="Dp2"
+                 Margin="0,0,0,16">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="用户管理"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="White"
-                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1"
-                        Style="{StaticResource MaterialDesignToolForegroundButton}"
-                        Command="{Binding LoadUsersCommand}"
-                        ToolTip="刷新">
-                    <md:PackIcon Kind="Refresh" Width="22" Height="22" Foreground="White"/>
-                </Button>
-            </Grid>
-        </md:ColorZone>
-
-        <!-- 工具栏 -->
-        <Border Grid.Row="1" Background="{DynamicResource MaterialDesignCardBackground}" Padding="16">
-            <Grid>
-                <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBox Grid.Column="0"
+                <TextBlock Grid.Column="0"
+                           Text="用户管理"
+                           Style="{DynamicResource TextStyle.Title}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,24,0"/>
+
+                <TextBox Grid.Column="1"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          md:HintAssist.Hint="搜索用户名或显示名"
                          md:TextFieldAssist.HasLeadingIcon="True"
                          md:TextFieldAssist.LeadingIcon="Magnify"
-                         Width="300"
-                         HorizontalAlignment="Left"/>
+                         Width="320"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Center"/>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="新增用户"
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button Style="{StaticResource MaterialDesignToolButton}"
+                            Command="{Binding LoadUsersCommand}"
+                            ToolTip="刷新"
+                            Margin="0,0,8,0">
+                        <md:PackIcon Kind="Refresh" Width="22" Height="22"/>
+                    </Button>
+                    <Button Content="新增"
                             Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding AddUserCommand}"
-                            Margin="0,0,12,0"/>
+                            Height="{DynamicResource Button.StandardHeight}"
+                            Margin="0,0,8,0"/>
                     <Button Content="编辑"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding EditUserCommand}"
-                            Margin="0,0,12,0"/>
+                            Height="{DynamicResource Button.StandardHeight}"
+                            Margin="0,0,8,0"/>
                     <Button Content="重置密码"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding ResetPasswordCommand}"
-                            Margin="0,0,12,0"/>
+                            Height="{DynamicResource Button.StandardHeight}"
+                            Margin="0,0,8,0"/>
                     <Button Content="删除"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Command="{Binding DeleteUserCommand}"/>
+                            Command="{Binding DeleteUserCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"/>
                 </StackPanel>
             </Grid>
-        </Border>
+        </md:Card>
 
-        <!-- 数据表格 -->
-        <Border Grid.Row="2" Padding="16">
+        <!-- 数据表格卡片 -->
+        <md:Card Grid.Row="1"
+                 Padding="0"
+                 md:ElevationAssist.Elevation="Dp2">
             <DataGrid ItemsSource="{Binding Users}"
                       SelectedItem="{Binding SelectedUser}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       GridLinesVisibility="Horizontal"
                       BorderThickness="0"
-                      Background="{DynamicResource MaterialDesignPaper}">
+                      Background="{DynamicResource Brush.Surface}"
+                      Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"
+                      Style="{StaticResource MaterialDesignDataGrid}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="用户名" Binding="{Binding UserName}" Width="150"/>
-                    <DataGridTextColumn Header="显示名" Binding="{Binding DisplayName}" Width="200"/>
+                    <DataGridTextColumn Header="用户名"
+                                        Binding="{Binding UserName}"
+                                        Width="150"/>
+                    <DataGridTextColumn Header="显示名"
+                                        Binding="{Binding DisplayName}"
+                                        Width="200"/>
                     <DataGridTemplateColumn Header="角色" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ItemsControl ItemsSource="{Binding Roles}" Margin="0,4">
+                                <ItemsControl ItemsSource="{Binding Roles}"
+                                              Margin="0,4"
+                                              VerticalAlignment="Center">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel />
@@ -97,10 +109,14 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Background="{DynamicResource PrimaryHueLightBrush}"
-                                                    CornerRadius="4"
+                                                    CornerRadius="{DynamicResource Layout.CornerRadius.Small}"
                                                     Padding="6,2"
-                                                    Margin="0,0,6,0">
-                                                <TextBlock Text="{Binding}" FontSize="12" Foreground="White"/>
+                                                    Margin="0,0,6,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding}"
+                                                           FontSize="12"
+                                                           Foreground="White"
+                                                           VerticalAlignment="Center"/>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -108,24 +124,32 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="80"/>
-                    <DataGridCheckBoxColumn Header="需改密" Binding="{Binding MustChangePassword}" Width="90"/>
+                    <DataGridCheckBoxColumn Header="启用"
+                                            Binding="{Binding IsEnabled}"
+                                            Width="80"/>
+                    <DataGridCheckBoxColumn Header="需改密"
+                                            Binding="{Binding MustChangePassword}"
+                                            Width="90"/>
                 </DataGrid.Columns>
             </DataGrid>
-        </Border>
+        </md:Card>
 
         <!-- 加载遮罩 -->
-        <Grid Grid.Row="0" Grid.RowSpan="3"
-              Background="#AAFFFFFF"
+        <Grid Grid.Row="0"
+              Grid.RowSpan="2"
+              Background="{DynamicResource Brush.Surface}"
+              Opacity="0.85"
               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
                              Value="0"
                              IsIndeterminate="True"
-                             Width="50" Height="50"/>
+                             Width="50"
+                             Height="50"/>
                 <TextBlock Text="{Binding BusyText}"
                            Margin="0,16,0,0"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center"
+                           Style="{DynamicResource TextStyle.Body}"/>
             </StackPanel>
         </Grid>
     </Grid>

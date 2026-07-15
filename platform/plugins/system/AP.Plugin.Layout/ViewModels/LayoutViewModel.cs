@@ -18,7 +18,6 @@ namespace AP.Plugin.Layout.ViewModels;
 
 public partial class LayoutViewModel : ViewModelBase
 {
-    private readonly ISettingsDialogService _settingsDialogService;
     private readonly IIdentityService _identityService;
     private readonly IAuditService _auditService;
     private readonly ILoginService _loginService;
@@ -34,13 +33,11 @@ public partial class LayoutViewModel : ViewModelBase
 
     public LayoutViewModel(
         IConfiguration configuration,
-        ISettingsDialogService settingsDialogService,
         IIdentityService identityService,
         IAuditService auditService,
         ILoginService loginService,
         IServiceProvider serviceProvider)
     {
-        _settingsDialogService = settingsDialogService;
         _identityService = identityService;
         _auditService = auditService;
         _loginService = loginService;
@@ -61,7 +58,10 @@ public partial class LayoutViewModel : ViewModelBase
     [RelayCommand]
     private void OpenSettings()
     {
-        _settingsDialogService.ShowSettingsDialog();
+        var regionManager = _serviceProvider.GetRequiredService<IRegionManager>();
+        regionManager.RequestNavigate(
+            AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+            "SettingsShellView");
     }
 
     [RelayCommand]

@@ -29,6 +29,9 @@ public partial class SettingsShellViewModel : ViewModelBase
     private ObservableCollection<INavigationItem> _navigationItems = new();
 
     [ObservableProperty]
+    private ObservableCollection<SettingsContributorItem> _contributors = new();
+
+    [ObservableProperty]
     private SettingsContributorItem? _selectedContributor;
 
     [ObservableProperty]
@@ -93,10 +96,12 @@ public partial class SettingsShellViewModel : ViewModelBase
 
         NavigationItems = navigationItems;
 
+        // 构建扁平贡献者列表，供 TabControl 使用
+        Contributors = new ObservableCollection<SettingsContributorItem>(
+            Categories.SelectMany(c => c.Contributors));
+
         // 默认选中第一个
-        SelectedContributor = Categories
-            .SelectMany(c => c.Contributors)
-            .FirstOrDefault();
+        SelectedContributor = Contributors.FirstOrDefault();
     }
 
     [RelayCommand]
