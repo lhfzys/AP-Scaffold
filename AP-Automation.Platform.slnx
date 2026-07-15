@@ -11,6 +11,7 @@
     <Project Path="platform/contracts/AP.Contracts.System/AP.Contracts.System.csproj" Id="df15cdf6-cee2-4df1-8d30-3066076393d9" />
     <Project Path="platform/contracts/AP.Contracts.Security/AP.Contracts.Security.csproj" Id="e3b8a7c2-1d4f-4a6b-9c5e-2f8d3a1b0c4d" />
     <Project Path="platform/contracts/AP.Contracts.Recipe/AP.Contracts.Recipe.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567891" />
+    <Project Path="platform/contracts/AP.Contracts.Report/AP.Contracts.Report.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567895" />
   </Folder>
   <Folder Name="/platform/core/">
     <Project Path="platform/core/AP.Core/AP.Core.csproj" />
@@ -44,6 +45,7 @@
     <Project Path="platform/plugins/system/AP.Plugin.RoleManagement/AP.Plugin.RoleManagement.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567892" />
     <Project Path="platform/plugins/system/AP.Plugin.AuditLog/AP.Plugin.AuditLog.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567893" />
     <Project Path="platform/plugins/system/AP.Plugin.RecipeManagement/AP.Plugin.RecipeManagement.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567894" />
+    <Project Path="platform/plugins/system/AP.Plugin.ReportCenter/AP.Plugin.ReportCenter.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567896" />
   </Folder>
   <Folder Name="/platform/shared/">
     <Project Path="platform/shared/AP.Shared.PluginSDK/AP.Shared.PluginSDK.csproj" Id="a99b2cb9-5c4e-489c-9750-eb342f2f1dfe" />
