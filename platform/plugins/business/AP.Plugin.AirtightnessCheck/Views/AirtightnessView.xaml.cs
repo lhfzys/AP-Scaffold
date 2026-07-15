@@ -1,28 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using AP.Plugin.AirtightnessCheck.ViewModels;
 
-namespace AP.Plugin.AirtightnessCheck.Views
+namespace AP.Plugin.AirtightnessCheck.Views;
+
+/// <summary>
+/// 气密性检测业务视图
+/// </summary>
+public partial class AirtightnessView : UserControl
 {
-    /// <summary>
-    /// Interaction logic for AirtightnessView.xaml
-    /// </summary>
-    public partial class AirtightnessView : UserControl
+    public AirtightnessView(AirtightnessViewModel viewModel)
     {
-        public AirtightnessView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+        DataContext = viewModel;
     }
 }

@@ -4,12 +4,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:prism="http://prismlibrary.com/"
              xmlns:ui="clr-namespace:AP.Shared.UI.Behaviors;assembly=AP.Shared.UI"
              mc:Ignorable="d"
              d:DesignHeight="600"
              d:DesignWidth="900"
-             prism:ViewModelLocator.AutoWireViewModel="True"
              Background="{DynamicResource MaterialDesign.Brush.Background}">
     <Grid Margin="16">
         <Grid.RowDefinitions>
