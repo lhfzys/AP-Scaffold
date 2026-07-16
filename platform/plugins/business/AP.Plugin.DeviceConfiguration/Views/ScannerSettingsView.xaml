@@ -5,7 +5,8 @@
     xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:prism="http://prismlibrary.com/"
     xmlns:system="clr-namespace:System;assembly=mscorlib"
-    xmlns:ui="clr-namespace:AP.Shared.UI.Behaviors;assembly=AP.Shared.UI">
+    xmlns:ui="clr-namespace:AP.Shared.UI.Behaviors;assembly=AP.Shared.UI"
+>
 
     <Grid ui:PermissionBehavior.Permission="device.config"
           ui:PermissionBehavior.HideWhenUnauthorized="False">
@@ -101,7 +102,13 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="换行符"/>
-            <TextBox Grid.Column="1" Text="{Binding NewLine, UpdateSourceTrigger=PropertyChanged}"/>
+            <ComboBox Grid.Column="1"
+                      SelectedValue="{Binding NewLine}"
+                      SelectedValuePath="Tag">
+                <ComboBoxItem Tag="\r" Content="CR (\r)"/>
+                <ComboBoxItem Tag="\n" Content="LF (\n)"/>
+                <ComboBoxItem Tag="\r\n" Content="CRLF (\r\n)"/>
+            </ComboBox>
         </Grid>
 
         <TextBlock Grid.Row="6"

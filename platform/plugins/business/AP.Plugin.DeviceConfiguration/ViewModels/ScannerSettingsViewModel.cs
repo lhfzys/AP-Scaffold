@@ -41,7 +41,7 @@ public partial class ScannerSettingsViewModel : ViewModelBase, ISettingsEditorVi
         DataBits = options.DataBits > 0 ? options.DataBits : 8;
         Parity = options.Parity.ToString();
         StopBits = options.StopBits.ToString();
-        NewLine = options.NewLine ?? "\r";
+        NewLine = string.IsNullOrWhiteSpace(options.NewLine) ? "\r" : options.NewLine;
     }
 
     public IEnumerable<string> Validate()
