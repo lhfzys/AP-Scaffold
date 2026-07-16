@@ -68,6 +68,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | `AP.Infra.Security` | 安全模块实现：用户/角色/权限 Repository、密码哈希、身份服务、审计日志服务、数据库初始化 `SecurityDbInitializer` |
 | `AP.Infra.Recipe` | 配方管理实现：配方服务、数据库初始化 `RecipeDbInitializer` |
 | `AP.Infra.Report` | 报表框架：`ReportService`、`ReportCenterService`、Excel 导出、报表存储、归档/清理后台服务、数据库初始化 `ReportDatabaseInitializer` |
+| `AP.Infra.Hardware` | PLC 驱动注册表 `PlcDriverRegistry` 与统一激活服务 `ActivePlcService` |
 
 ### 4. 共享库 `platform/shared`
 
@@ -102,6 +103,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | 插件 | 功能 |
 |------|------|
 | `AP.Plugin.Plc.Mitsubishi` | 三菱 PLC MC 协议驱动、读写 bool/short/int/float、批量操作、看门狗心跳、自动重连 |
+| `AP.Plugin.Plc.Siemens` | 西门子 PLC S7 协议驱动（S7_200/300/400/1200/1500/Smart）、读写、批量操作、看门狗心跳、自动重连 |
 | `AP.Plugin.Scanner` | 串口扫码枪数据接收 |
 
 ### 8. 启动宿主 `platform/hosts/AP.Host.Desktop`
@@ -147,7 +149,8 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | AP.Infra.Recipe / AP.Plugin.RecipeManagement | 骨架 | 配方 CRUD、版本、默认配方 UI 已有 |
 | AP.Infra.Report / AP.Plugin.ReportCenter | 骨架 | 报表归档查询/生成/导出 UI 已有，报表数据提供者为示例实现 |
 | AP.Plugin.AirtightnessCheck / DeviceConfiguration | 骨架 | 业务插件界面已有，部分流程待补全 |
-| AP.Plugin.Plc.Mitsubishi / Scanner | 可用 | 硬件驱动实现较完整 |
+| AP.Plugin.Plc.Mitsubishi / Siemens | 可用 | 硬件驱动实现较完整，通过 `IPlcDriverFactory` 统一切换 |
+| AP.Plugin.Scanner | 可用 | 硬件驱动实现较完整 |
 | gRPC Server/Client | 可用 | 已实现，但现场大规模验证不足 |
 
 ---
@@ -187,28 +190,33 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ## 已知问题与注意事项
 
-1. **IHostedService 不会自动启动**
+1. **PLC 品牌切换机制**
+   - 当前通过 `Plc:DriverType` 配置切换三菱/西门子/欧姆龙。
+   - 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，无需修改业务代码。
+   - 三菱插件不再直接注册 `IPlcService`，而是注册 `IPlcDriverFactory`。
+
+2. **IHostedService 不会自动启动**
    - `AP.Host.Desktop` 使用 `PrismBootstrapper` 手动构建容器，不会调用 `IHost.StartAsync()`，因此 `IHostedService` 实现不会自动运行。
    - 当前安全/配方/报表模块的数据库初始化器均已在 `Bootstrapper.OnInitialized` 中手动调用。
    - 若未来新增 `IHostedService`，需在 `Bootstrapper.OnInitialized` 中显式解析并调用。
 
-2. **契约程序集必须被 Host 直接引用**
+3. **契约程序集必须被 Host 直接引用**
    - 插件通过 `PluginLoadContext` 隔离加载，但共享契约程序集（如 `AP.Contracts.Report`）必须能被主程序默认上下文加载。
    - 否则 MediatR 扫描类型时会抛出 `ReflectionTypeLoadException`。
    - 解决方案：在 `AP.Host.Desktop.csproj` 中直接引用相关 Contracts / Infra 项目。
 
-3. **数据库自动建表已关闭**
+4. **数据库自动建表已关闭**
    - `AddPlatformDatabase` 设置了 `.UseAutoSyncStructure(false)`，所有表必须通过初始化器显式 `SyncStructure` 创建。
    - 新增实体时，记得在对应模块的初始化器中调用 `SyncStructure`。
 
-4. **安全模块可关闭**
+5. **安全模块可关闭**
    - `Security:Enabled=false` 时会跳过登录窗口，注入匿名身份实现。开发/测试环境可关闭。
 
-5. **插件输出目录**
+6. **插件输出目录**
    - `Directory.Build.props` 将所有 `AP.Plugin.*` 项目输出到 `bin/$(Configuration)/plugins/{PluginName}/`。
    - 构建后会自动清理插件目录中与 Host 重复的共享库（Core、Shared、Contracts、Prism、Polly、DryIoc、MediatR、CommunityToolkit 等）。
 
-6. **权限字符串约定**
+7. **权限字符串约定**
    - 当前已使用的权限字符串：`user.manage`、`role.manage`、`audit.view`、`recipe.view`、`recipe.edit`、`recipe.switch`、`report.view`。
    - 新增系统功能插件时，应在 `SidebarViewModel` 和插件 `InitializeAsync` 中按权限条件注册视图。
 

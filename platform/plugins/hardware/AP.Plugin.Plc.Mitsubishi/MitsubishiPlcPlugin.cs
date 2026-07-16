@@ -34,34 +34,13 @@ public class MitsubishiPlcPlugin : PluginBase
     {
         base.ConfigureServices(services, configuration);
 
-        // 1. 绑定配置 (Plugins:Configuration:AP.Plugin.Plc.Mitsubishi)
-        // 约定：插件配置都在 Plugins:Configuration:{PluginId} 下
-        var configSection = configuration.GetSection(MitsubishiPlcOptions.SectionName);
-        services.Configure<MitsubishiPlcOptions>(configSection);
+        // 1. 注册三菱 PLC 驱动工厂
+        // 统一的 IPlcService 由 AP.Infra.Hardware.ActivePlcService 根据 Plc:DriverType 转发
+        services.AddSingleton<IPlcDriverFactory, MitsubishiPlcDriverFactory>();
 
-        // 2. 注册配置编辑器
+        // 2. 保留品牌特定的配置编辑器（可选，统一配置界面也可覆盖）
         services.AddTransient<MitsubishiPlcConfigurationEditorViewModel>();
         services.AddSingleton<ISettingsContributor, MitsubishiPlcConfigurationContributor>();
-
-        // 3. 注册服务 (单例，因为我们要维护长连接)
-        services.AddSingleton<IPlcService>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<MitsubishiPlcService>>();
-            var options = sp.GetRequiredService<IOptions<MitsubishiPlcOptions>>();
-
-            // 获取 Polly 策略工厂
-            var resilienceFactory = sp.GetRequiredService<ResiliencePipelineFactory>();
-            // 获取名为 "PLC-Retry" 的策略
-            var pipeline = resilienceFactory.GetPipeline(ResiliencePipelineFactory.Keys.Plc);
-
-            var mediator = sp.GetRequiredService<IMediator>();
-
-            return new MitsubishiPlcService(options, pipeline, logger, mediator);
-        });
-
-        // 注册批量读写接口 (转发给同一个实例)
-        services.AddSingleton<IPlcBatchReadWrite>(sp =>
-            (IPlcBatchReadWrite)sp.GetRequiredService<IPlcService>());
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)

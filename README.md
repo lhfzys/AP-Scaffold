@@ -102,6 +102,7 @@ AP-Scaffold/
 │   ├── plugins/                       # 插件集 (可插拔的业务/硬件模块)
 │   │   ├── hardware/                  # 硬件驱动插件
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi/ # 三菱 PLC (MC协议 + 看门狗)
+│   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC (S7协议)
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
 │   │   │   ├── AP.Plugin.AirtightnessCheck/   # 气密性检测

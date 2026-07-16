@@ -13,6 +13,7 @@ using AP.Host.Desktop.Views;
 using AP.Infra.Database.Configuration;
 using AP.Infra.Grpc.Client;
 using AP.Infra.Grpc.Server;
+using AP.Infra.Hardware.Extensions;
 using AP.Infra.Logging.Configuration;
 using AP.Infra.Logging.Helpers;
 using AP.Infra.Report.Extensions;
@@ -153,6 +154,7 @@ public class Bootstrapper : PrismBootstrapper
         services.AddPlatformResilience(_configuration);
         services.AddPlatformSecurity(_configuration);
         services.AddPlatformRecipe(_configuration);
+        services.AddPlcHardware(_configuration);
         services.AddReportFramework(_configuration);
 
         // --- 添加 gRPC 服务 (根据角色) ---

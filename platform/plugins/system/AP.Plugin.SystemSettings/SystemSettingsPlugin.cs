@@ -28,9 +28,11 @@ public class SystemSettingsPlugin : PluginBase
 
         // 注册配置编辑器
         services.AddTransient<AppConfigurationEditorViewModel>();
+        services.AddTransient<PlcConfigurationEditorViewModel>();
 
         // 注册配置贡献者
         services.AddSingleton<ISettingsContributor, AppConfigurationContributor>();
+        services.AddSingleton<ISettingsContributor, PlcConfigurationContributor>();
 
         // 注册配置框架视图和 ViewModel
         services.AddTransient<SettingsShellView>();
@@ -70,6 +72,7 @@ public class SystemSettingsPlugin : PluginBase
     private static void RegisterEditorDataTemplates()
     {
         RegisterDataTemplate<AppConfigurationEditorViewModel, AppConfigurationEditorView>();
+        RegisterDataTemplate<PlcConfigurationEditorViewModel, PlcConfigurationEditorView>();
     }
 
     private static void RegisterDataTemplate<TViewModel, TView>()

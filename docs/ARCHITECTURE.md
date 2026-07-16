@@ -431,6 +431,16 @@ Server 端                    Client 端
 
 所有硬件操作自动受策略保护，开发者无需手动处理重试逻辑。
 
+### AP.Infra.Hardware — PLC 硬件抽象
+
+提供统一的 PLC 驱动注册表与当前激活服务代理：
+
+- `PlcDriverRegistry`：收集各品牌插件注册的 `IPlcDriverFactory`（三菱/西门子/欧姆龙）。
+- `ActivePlcService`：实现 `IPlcService` / `IPlcBatchReadWrite`，根据 `Plc:DriverType` 配置选择真实驱动并转发调用。
+- `AddPlcHardware`：在 `AP.Host.Desktop` 中统一注册 `IPlcService`。
+
+业务代码只依赖 `IPlcService`，切换 PLC 品牌只需修改 `Plc:DriverType` 配置。
+
 ### AP.Infra.Report — 报表框架
 
 完整的报表生成、归档、清理机制。详见 [报表框架使用](GETTING_STARTED.md#报表框架使用)。
@@ -527,7 +537,7 @@ public abstract class PluginBase : IPlugin
 2. 根据 AppRole 加载对应的专属配置（appsettings.Server.json 等）
 3. 配置 Serilog 日志
 4. 配置 Prism + DryIoc DI 容器
-5. 注册框架服务（Database、gRPC、EventBus、Resilience 等）
+5. 注册框架服务（Database、gRPC、EventBus、Resilience、PlcHardware 等）
 6. 注册报表框架
 7. 启动插件加载器：
    a. 扫描 plugins/ 目录
@@ -551,6 +561,7 @@ public abstract class PluginBase : IPlugin
 | 插件 | 协议 | 功能 |
 |------|------|------|
 | `AP.Plugin.Plc.Mitsubishi` | MC 协议 (Qna_3E) | 读写 bool/short/int/float，批量操作，看门狗心跳，自动重连 |
+| `AP.Plugin.Plc.Siemens` | S7 协议 (S7_200/300/400/1200/1500/Smart) | 读写 bool/short/int/float/string，批量操作，看门狗心跳，自动重连 |
 | `AP.Plugin.Scanner` | 串口协议 | 扫码枪数据接收 |
 
 ### 业务功能插件

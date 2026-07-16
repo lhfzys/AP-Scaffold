@@ -32,7 +32,8 @@
 ### 2.2 已完成功能
 
 - 插件化核心框架（加载、生命周期、状态机、事件总线）
-- 三菱 PLC / 串口扫码枪硬件驱动
+- 三菱 / 西门子 PLC 驱动与统一切换机制
+- 串口扫码枪硬件驱动
 - gRPC Server/Client 分布式通信
 - 安全模块：本地用户/角色/权限、登录、改密、审计日志
 - 用户管理、角色管理（按 `user.manage` / `role.manage` 权限条件加载）
@@ -45,7 +46,8 @@
 - [ ] 报表中心接入真实业务数据提供者
 - [ ] 配方管理完善校验与版本历史
 - [ ] 审计日志更多业务事件接入
-- [ ] 更多 PLC 协议支持
+- [x] 西门子 PLC 协议支持
+- [ ] 欧姆龙 PLC 协议支持
 - [ ] OpenTelemetry 可观测性
 
 ---
@@ -67,6 +69,7 @@ AP-Scaffold/
 │   ├── infra/                            # 基础设施实现
 │   │   ├── AP.Infra.Database             # FreeSql (SQLite/PostgreSQL)
 │   │   ├── AP.Infra.Grpc                 # gRPC Server/Client
+│   │   ├── AP.Infra.Hardware             # PLC 驱动注册表与统一激活服务
 │   │   ├── AP.Infra.Logging              # Serilog
 │   │   ├── AP.Infra.Resilience           # Polly
 │   │   ├── AP.Infra.Security             # 安全/权限实现
@@ -79,6 +82,7 @@ AP-Scaffold/
 │   ├── plugins/                          # 插件
 │   │   ├── hardware/
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi
+│   │   │   ├── AP.Plugin.Plc.Siemens
 │   │   │   └── AP.Plugin.Scanner
 │   │   ├── business/
 │   │   │   ├── AP.Plugin.AirtightnessCheck
@@ -147,18 +151,25 @@ bin/Release/AP.Host.Desktop.exe
   - `RecipeDbInitializer`（`IRecipeDbInitializer`）
   - `ReportDatabaseInitializer`（在 `Bootstrapper.OnInitialized` 中直接解析调用）
 
-### 5.3 IHostedService 不自动启动
+### 5.3 PLC 品牌切换
+
+- 通过 `Plc:DriverType` 配置切换三菱/西门子/欧姆龙。
+- 各 PLC 插件注册 `IPlcDriverFactory`，`AP.Infra.Hardware.ActivePlcService` 根据配置转发到真实驱动。
+- 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改。
+- 西门子地址格式与三菱不同，业务插件中的地址应通过配置或参数传入，避免硬编码。
+
+### 5.4 IHostedService 不自动启动
 
 - `AP.Host.Desktop` 不启动 `IHost`，因此 `AddHostedService<T>()` 注册的服务**不会自动运行**。
 - 若需要在启动时执行，必须在 `Bootstrapper.OnInitialized` 中显式解析并调用。
 
-### 5.4 契约程序集必须被 Host 直接引用
+### 5.5 契约程序集必须被 Host 直接引用
 
 - 插件隔离加载，但共享契约 DLL 必须出现在 Host 输出目录。
 - 若 MediatR 扫描时报告 `ReflectionTypeLoadException: Could not load file or assembly 'AP.Contracts.Xxx'`，请在 `AP.Host.Desktop.csproj` 中直接引用该项目。
 - 参考：已添加 `AP.Infra.Report` 和 `AP.Contracts.Report` 到 Host 引用。
 
-### 5.5 权限字符串
+### 5.6 权限字符串
 
 当前已使用的权限字符串（新增功能时请保持统一）：
 

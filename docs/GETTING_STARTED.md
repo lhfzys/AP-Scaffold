@@ -353,16 +353,19 @@ Configuration/
     }
   },
 
+  // PLC 配置（统一配置，切换 DriverType 即可更换品牌）
+  "Plc": {
+    "DriverType": "Mitsubishi",
+    "IpAddress": "192.168.1.10",
+    "Port": 6000,
+    "Timeout": 3000,
+    "Model": "Qna_3E",
+    "HeartbeatAddress": "M0"
+  },
+
   // 插件配置
   "Plugins": {
     "Configuration": {
-      "AP.Plugin.Plc.Mitsubishi": {
-        "IpAddress": "192.168.1.10",
-        "Port": 6000,
-        "Version": "Qna_3E",
-        "HeartbeatAddress": "M0",
-        "Timeout": 3000
-      },
       "AP.Plugin.Scanner": {
         "PortName": "COM3",
         "BaudRate": 9600
@@ -516,16 +519,28 @@ reports/
 
 ```json
 {
-  "Plugins": {
-    "Configuration": {
-      "AP.Plugin.Plc.Mitsubishi": {
-        "IpAddress": "192.168.1.10",
-        "Port": 6000,
-        "Version": "Qna_3E",
-        "HeartbeatAddress": "M0",
-        "Timeout": 3000
-      }
-    }
+  "Plc": {
+    "DriverType": "Mitsubishi",
+    "IpAddress": "192.168.1.10",
+    "Port": 6000,
+    "Timeout": 3000,
+    "Model": "Qna_3E",
+    "HeartbeatAddress": "M0"
+  }
+}
+```
+
+切换到西门子 PLC 时，只需修改配置：
+
+```json
+{
+  "Plc": {
+    "DriverType": "Siemens",
+    "IpAddress": "192.168.1.10",
+    "Port": 102,
+    "Timeout": 3000,
+    "Model": "S7_1200",
+    "HeartbeatAddress": "DB1.0.0"
   }
 }
 ```
@@ -673,11 +688,16 @@ AP-Scaffold/
 │   ├── contracts/                     # 接口契约层
 │   │   ├── AP.Contracts.Core/         # 核心事件、错误模型
 │   │   ├── AP.Contracts.Hardware/     # 硬件服务接口
-│   │   └── AP.Contracts.Communication/ # gRPC 契约
+│   │   ├── AP.Contracts.Communication/ # gRPC 契约
+│   │   ├── AP.Contracts.System/       # 系统服务接口
+│   │   ├── AP.Contracts.Security/     # 安全/权限/审计日志契约
+│   │   ├── AP.Contracts.Recipe/       # 配方管理契约
+│   │   └── AP.Contracts.Report/       # 报表中心契约
 │   │
 │   ├── infra/                         # 基础设施层
 │   │   ├── AP.Infra.Database/         # 数据访问（FreeSql）
 │   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端
+│   │   ├── AP.Infra.Hardware/         # PLC 驱动注册表与统一激活服务
 │   │   ├── AP.Infra.Logging/          # Serilog 日志
 │   │   ├── AP.Infra.Report/           # 报表框架
 │   │   ├── AP.Infra.Resilience/       # Polly 容错策略
@@ -686,8 +706,9 @@ AP-Scaffold/
 │   │
 │   ├── plugins/                       # 插件集
 │   │   ├── hardware/                  # 硬件驱动插件
-│   │   │   ├── AP.Plugin.Plc.Mitsubishi/
-│   │   │   └── AP.Plugin.Scanner/
+│   │   │   ├── AP.Plugin.Plc.Mitsubishi/ # 三菱 PLC
+│   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC
+│   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
 │   │   │   ├── AP.Plugin.AirtightnessCheck/
 │   │   │   └── AP.Plugin.DeviceConfiguration/

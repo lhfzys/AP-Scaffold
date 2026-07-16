@@ -1,0 +1,114 @@
+using AP.Contracts.Hardware.Models;
+using AP.Shared.PluginSDK.Configuration;
+using AP.Shared.UI.Base;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.Configuration;
+using System.Net;
+
+namespace AP.Plugin.SystemSettings.Editors;
+
+/// <summary>
+/// PLC 统一配置编辑器。
+/// 支持三菱 / 西门子 / 欧姆龙（预留）驱动切换。
+/// </summary>
+public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsEditorViewModel
+{
+    [ObservableProperty] private string _driverType = "Mitsubishi";
+    [ObservableProperty] private string _ipAddress = "127.0.0.1";
+    [ObservableProperty] private int _port = 6000;
+    [ObservableProperty] private int _timeout = 1000;
+    [ObservableProperty] private string _model = "Qna_3E";
+    [ObservableProperty] private string _heartbeatAddress = "D0.0";
+
+    public IReadOnlyList<string> DriverTypes { get; } = new[] { "Mitsubishi", "Siemens", "Omron" };
+
+    public bool RequiresRestart => true;
+
+    partial void OnDriverTypeChanged(string value)
+    {
+        ApplyDriverDefaults(value);
+    }
+
+    public PlcConfigurationEditorViewModel()
+    {
+        ApplyDriverDefaults(DriverType);
+    }
+
+    public void LoadFromConfiguration(IConfiguration configuration)
+    {
+        var options = configuration.GetSection(PlcOptions.SectionName).Get<PlcOptions>() ?? new PlcOptions();
+
+        DriverType = options.DriverType;
+        IpAddress = options.IpAddress;
+        Port = options.Port;
+        Timeout = options.Timeout;
+        Model = options.Model;
+        HeartbeatAddress = options.HeartbeatAddress;
+
+        ApplyDriverDefaults(DriverType);
+    }
+
+    private void ApplyDriverDefaults(string driverType)
+    {
+        switch (driverType)
+        {
+            case "Mitsubishi":
+                if (Port == 102) Port = 6000;
+                if (string.IsNullOrWhiteSpace(Model)) Model = "Qna_3E";
+                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "D0.0";
+                break;
+            case "Siemens":
+                if (Port == 6000) Port = 102;
+                if (string.IsNullOrWhiteSpace(Model)) Model = "S7_1200";
+                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "DB1.0.0";
+                break;
+            case "Omron":
+                if (Port == 102 || Port == 6000) Port = 9600;
+                if (string.IsNullOrWhiteSpace(Model)) Model = "FinsTcp";
+                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "D0";
+                break;
+        }
+    }
+
+    public IEnumerable<string> Validate()
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(DriverType))
+            errors.Add("PLC 驱动类型不能为空");
+        else if (!DriverTypes.Contains(DriverType, StringComparer.OrdinalIgnoreCase))
+            errors.Add($"不支持的 PLC 驱动类型: {DriverType}");
+
+        if (string.IsNullOrWhiteSpace(IpAddress))
+            errors.Add("IP 地址不能为空");
+        else if (!IPAddress.TryParse(IpAddress, out _))
+            errors.Add("IP 地址格式不正确");
+
+        if (Port is <= 0 or > 65535)
+            errors.Add("端口号必须在 1-65535 之间");
+
+        if (Timeout <= 0)
+            errors.Add("超时时间必须大于 0 毫秒");
+
+        if (string.IsNullOrWhiteSpace(Model))
+            errors.Add("PLC 型号不能为空");
+
+        if (string.IsNullOrWhiteSpace(HeartbeatAddress))
+            errors.Add("心跳地址不能为空");
+
+        return errors;
+    }
+
+    public object GetConfigurationValue()
+    {
+        return new PlcOptions
+        {
+            DriverType = DriverType,
+            IpAddress = IpAddress,
+            Port = Port,
+            Timeout = Timeout,
+            Model = Model,
+            HeartbeatAddress = HeartbeatAddress
+        };
+    }
+}
