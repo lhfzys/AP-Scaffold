@@ -1,18 +1,12 @@
-﻿using System.Windows;
 using AP.Contracts.Hardware.Services;
 using AP.Core.Capability;
 using AP.Core.Enums;
 using AP.Core.PluginFramework.Attributes;
-using AP.Infra.Resilience.Factories;
-using AP.Plugin.Plc.Mitsubishi.Configuration;
 using AP.Plugin.Plc.Mitsubishi.Services;
 using AP.Shared.PluginSDK.Base;
-using AP.Shared.PluginSDK.Configuration;
-using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AP.Plugin.Plc.Mitsubishi;
 
@@ -34,34 +28,9 @@ public class MitsubishiPlcPlugin : PluginBase
     {
         base.ConfigureServices(services, configuration);
 
-        // 1. 注册三菱 PLC 驱动工厂
+        // 注册三菱 PLC 驱动工厂
         // 统一的 IPlcService 由 AP.Infra.Hardware.ActivePlcService 根据 Plc:DriverType 转发
         services.AddSingleton<IPlcDriverFactory, MitsubishiPlcDriverFactory>();
-
-        // 2. 保留品牌特定的配置编辑器（可选，统一配置界面也可覆盖）
-        services.AddTransient<MitsubishiPlcConfigurationEditorViewModel>();
-        services.AddSingleton<ISettingsContributor, MitsubishiPlcConfigurationContributor>();
-    }
-
-    public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
-    {
-        await base.InitializeAsync(serviceProvider, ct);
-
-        // 注册 PLC 配置编辑器的 ViewModel -> View 数据模板
-        RegisterEditorDataTemplate();
-
-        //_logger.LogInformation("三菱PLC 插件初始化完成 (等待启动)");
-        // // 初始化时自动连接
-        // try
-        // {
-        //     var plcService = serviceProvider.GetRequiredService<IPlcService>();
-        //     await plcService.ConnectAsync(ct);
-        // }
-        // catch (Exception ex)
-        // {
-        //     Logger.LogError(ex, "PLC 初始化连接失败 (将在后台自动重试)");
-        //     // 不抛出异常，允许程序继续启动，依靠 Polly 和自动重连机制
-        // }
     }
 
     public override async Task StartAsync(CancellationToken ct = default)
@@ -87,15 +56,5 @@ public class MitsubishiPlcPlugin : PluginBase
         var plcService = ServiceProvider.GetService<IPlcService>();
         if (plcService != null) await plcService.DisconnectAsync();
         await base.StopAsync(ct);
-    }
-
-    private static void RegisterEditorDataTemplate()
-    {
-        var template = new DataTemplate { DataType = typeof(MitsubishiPlcConfigurationEditorViewModel) };
-        template.VisualTree = new FrameworkElementFactory(typeof(MitsubishiPlcConfigurationEditorView));
-
-        var key = new DataTemplateKey(typeof(MitsubishiPlcConfigurationEditorViewModel));
-        if (!Application.Current.Resources.Contains(key))
-            Application.Current.Resources.Add(key, template);
     }
 }

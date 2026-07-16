@@ -73,6 +73,7 @@
   - `AP.Host.Desktop` 通过 `AddPlcHardware` 统一注册 `IPlcService`
   - 业务代码通过统一 `IPlcService` 无感知切换三菱/西门子/欧姆龙
   - 新增 `AP.Plugin.SystemSettings` 统一 PLC 配置编辑器
+  - 移除三菱插件专用的 `MitsubishiPlcConfigurationContributor`，统一由系统设置中的 PLC 配置管理
   - `appsettings.json` 新增 `Plc` 配置节
 - **用户/角色管理视图修复**
   - `RoleListView` 改为构造函数注入 `RoleListViewModel`，移除 `AutoWireViewModel`
