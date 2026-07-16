@@ -28,9 +28,11 @@ public class LayoutPlugin : PluginBase
         services.AddTransient<SinglePageLayoutView>();
         services.AddTransient<HeaderView>();
         services.AddTransient<SidebarView>();
+        services.AddTransient<DashboardView>();
 
         services.AddTransient<LayoutViewModel>();
         services.AddTransient<SidebarViewModel>();
+        services.AddTransient<DashboardViewModel>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
@@ -40,6 +42,7 @@ public class LayoutPlugin : PluginBase
         ViewModelLocationProvider.Register(typeof(StandardLayoutView).ToString(), typeof(LayoutViewModel));
         ViewModelLocationProvider.Register(typeof(SinglePageLayoutView).ToString(), typeof(LayoutViewModel));
         ViewModelLocationProvider.Register(typeof(SidebarView).ToString(), typeof(SidebarViewModel));
+        ViewModelLocationProvider.Register(typeof(DashboardView).ToString(), typeof(DashboardViewModel));
 
         var config = serviceProvider.GetRequiredService<IConfiguration>();
         var regionManager = serviceProvider.GetRequiredService<IRegionManager>();
@@ -52,6 +55,11 @@ public class LayoutPlugin : PluginBase
                 layoutMode.Equals("SinglePage", StringComparison.OrdinalIgnoreCase)
                     ? typeof(SinglePageLayoutView)
                     : typeof(StandardLayoutView));
+
+            // 注册仪表板视图为默认首页
+            regionManager.RegisterViewWithRegion(
+                AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+                typeof(DashboardView));
         });
 
         Logger.LogInformation("布局引擎已加载，当前模式: {Mode}", layoutMode);

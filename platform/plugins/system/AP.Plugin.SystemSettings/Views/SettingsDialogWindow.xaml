@@ -22,7 +22,11 @@
         </Grid.RowDefinitions>
 
         <!-- 标题栏 -->
-        <md:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16">
+        <Border Grid.Row="0"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="0,0,0,1"
+                Padding="20,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -31,23 +35,23 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <md:PackIcon Kind="Cog"
                                  Width="28" Height="28"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary}"
                                  VerticalAlignment="Center"
                                  Margin="0,0,12,0"/>
                     <TextBlock Text="系统配置"
                                FontSize="20"
-                               FontWeight="Bold"
-                               Foreground="White"
+                               FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Style="{StaticResource MaterialDesignToolForegroundButton}"
                         Click="CloseButton_Click"
                         ToolTip="关闭">
-                    <md:PackIcon Kind="Close" Width="24" Height="24" Foreground="White"/>
+                    <md:PackIcon Kind="Close" Width="24" Height="24"
+                                 Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"/>
                 </Button>
             </Grid>
-        </md:ColorZone>
+        </Border>
 
         <!-- 内容区 -->
         <ContentControl Grid.Row="1"

@@ -3,17 +3,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:system="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- 语义颜色：状态/反馈 -->
-    <Color x:Key="Color.Success">#4CAF50</Color>
+    <!-- ============================================================
+         语义颜色：状态 / 反馈
+         ============================================================ -->
+    <Color x:Key="Color.Success">#16A34A</Color>
     <Color x:Key="Color.OnSuccess">#FFFFFF</Color>
 
-    <Color x:Key="Color.Warning">#FF9800</Color>
-    <Color x:Key="Color.OnWarning">#000000</Color>
+    <Color x:Key="Color.Warning">#D97706</Color>
+    <Color x:Key="Color.OnWarning">#FFFFFF</Color>
 
-    <Color x:Key="Color.Error">#F44336</Color>
+    <Color x:Key="Color.Error">#DC2626</Color>
     <Color x:Key="Color.OnError">#FFFFFF</Color>
 
-    <Color x:Key="Color.Info">#2196F3</Color>
+    <Color x:Key="Color.Info">#2563EB</Color>
     <Color x:Key="Color.OnInfo">#FFFFFF</Color>
 
     <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}"/>
@@ -28,25 +30,52 @@
     <SolidColorBrush x:Key="Brush.Info" Color="{StaticResource Color.Info}"/>
     <SolidColorBrush x:Key="Brush.OnInfo" Color="{StaticResource Color.OnInfo}"/>
 
-    <Color x:Key="Color.Inactive">#BDBDBD</Color>
+    <Color x:Key="Color.Inactive">#D1D5DB</Color>
     <SolidColorBrush x:Key="Brush.Inactive" Color="{StaticResource Color.Inactive}"/>
 
-    <!-- 主色/次色（与 App.xaml 中 BundledTheme 保持一致） -->
-    <Color x:Key="Color.Primary">#009688</Color>
-    <Color x:Key="Color.Secondary">#FF5722</Color>
+    <!-- ============================================================
+         主色 / 次色 — 深蓝工业风 + 青蓝点缀
+         ============================================================ -->
+    <Color x:Key="Color.Primary">#1E3A5F</Color>
+    <Color x:Key="Color.PrimaryLight">#2D5F8A</Color>
+    <Color x:Key="Color.PrimaryDark">#0F2440</Color>
 
-    <!-- 表面颜色（用于卡片、侧边栏、 elevated 容器） -->
+    <Color x:Key="Color.Accent">#0891B2</Color>
+    <Color x:Key="Color.AccentLight">#22D3EE</Color>
+
+    <SolidColorBrush x:Key="Brush.Primary" Color="{StaticResource Color.Primary}"/>
+    <SolidColorBrush x:Key="Brush.PrimaryLight" Color="{StaticResource Color.PrimaryLight}"/>
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}"/>
+    <SolidColorBrush x:Key="Brush.AccentLight" Color="{StaticResource Color.AccentLight}"/>
+
+    <!-- ============================================================
+         表面颜色 — 全浅色系统
+         Surface         = 内容区纯白底
+         SurfaceVariant  = 卡片 / 表格交替行浅灰
+         SurfaceDark     = 侧边栏浅蓝灰底  ← 关键：不再是暗色
+         ============================================================ -->
     <Color x:Key="Color.Surface">#FFFFFF</Color>
-    <Color x:Key="Color.SurfaceVariant">#F5F5F5</Color>
-    <Color x:Key="Color.OnSurface">#1C1B1F</Color>
-    <Color x:Key="Color.OnSurfaceVariant">#49454F</Color>
+    <Color x:Key="Color.SurfaceVariant">#F3F4F6</Color>
+    <Color x:Key="Color.SurfaceDark">#E8EDF2</Color>
+    <Color x:Key="Color.OnSurface">#111827</Color>
+    <Color x:Key="Color.OnSurfaceVariant">#6B7280</Color>
+    <Color x:Key="Color.OnSurfaceDark">#374151</Color>
 
     <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}"/>
     <SolidColorBrush x:Key="Brush.SurfaceVariant" Color="{StaticResource Color.SurfaceVariant}"/>
+    <SolidColorBrush x:Key="Brush.SurfaceDark" Color="{StaticResource Color.SurfaceDark}"/>
     <SolidColorBrush x:Key="Brush.OnSurface" Color="{StaticResource Color.OnSurface}"/>
     <SolidColorBrush x:Key="Brush.OnSurfaceVariant" Color="{StaticResource Color.OnSurfaceVariant}"/>
+    <SolidColorBrush x:Key="Brush.OnSurfaceDark" Color="{StaticResource Color.OnSurfaceDark}"/>
 
-    <!-- 间距规模 -->
+    <!-- 侧边栏选中态背景（浅蓝底 + 白字） -->
+    <SolidColorBrush x:Key="Brush.Sidebar.Selected.Background" Color="#1E3A5F"/>
+    <SolidColorBrush x:Key="Brush.Sidebar.Selected.Foreground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Sidebar.Hover.Background" Color="#D1DDE8"/>
+
+    <!-- ============================================================
+         间距规模
+         ============================================================ -->
     <system:Double x:Key="Layout.Spacing.Small">8</system:Double>
     <system:Double x:Key="Layout.Spacing.Medium">16</system:Double>
     <system:Double x:Key="Layout.Spacing.Large">24</system:Double>
@@ -55,18 +84,24 @@
     <GridLength x:Key="Layout.GridSpacing.Medium">16</GridLength>
     <GridLength x:Key="Layout.GridSpacing.Large">24</GridLength>
 
-    <!-- 圆角规模 -->
-    <CornerRadius x:Key="Layout.CornerRadius.Small">4</CornerRadius>
-    <CornerRadius x:Key="Layout.CornerRadius.Medium">8</CornerRadius>
+    <!-- ============================================================
+         圆角规模
+         ============================================================ -->
+    <CornerRadius x:Key="Layout.CornerRadius.Small">6</CornerRadius>
+    <CornerRadius x:Key="Layout.CornerRadius.Medium">10</CornerRadius>
     <CornerRadius x:Key="Layout.CornerRadius.Large">16</CornerRadius>
 
-    <!-- 阴影/海拔（ElevationAssist 使用 DpN 字符串，这里仅作语义参考） -->
+    <!-- ============================================================
+         阴影 / 海拔
+         ============================================================ -->
     <system:Double x:Key="Layout.Elevation.Dp0">0</system:Double>
     <system:Double x:Key="Layout.Elevation.Dp1">1</system:Double>
     <system:Double x:Key="Layout.Elevation.Dp2">2</system:Double>
     <system:Double x:Key="Layout.Elevation.Dp4">4</system:Double>
 
-    <!-- 字体规模（TextBlock 样式） -->
+    <!-- ============================================================
+         字体规模（TextBlock 样式）
+         ============================================================ -->
     <Style x:Key="TextStyle.Display" TargetType="TextBlock">
         <Setter Property="FontSize" Value="32"/>
         <Setter Property="FontWeight" Value="Bold"/>
@@ -83,6 +118,28 @@
         <Setter Property="FontSize" Value="20"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="LineHeight" Value="28"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}"/>
+    </Style>
+
+    <Style x:Key="TextStyle.H6" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="24"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}"/>
+    </Style>
+
+    <Style x:Key="TextStyle.H5" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="26"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}"/>
+    </Style>
+
+    <Style x:Key="TextStyle.H4" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="LineHeight" Value="36"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}"/>
     </Style>
 
     <Style x:Key="TextStyle.Body" TargetType="TextBlock">
@@ -100,14 +157,23 @@
     <Style x:Key="TextStyle.Caption" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11"/>
         <Setter Property="FontWeight" Value="Regular"/>
-        <Setter Property="Opacity" Value="0.7"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurfaceVariant}"/>
     </Style>
 
-    <!-- 通用按钮高度 -->
-    <system:Double x:Key="Button.StandardHeight">40</system:Double>
-    <system:Double x:Key="Button.SmallHeight">32</system:Double>
+    <!-- ============================================================
+         通用尺寸
+         ============================================================ -->
+    <system:Double x:Key="Button.StandardHeight">38</system:Double>
+    <system:Double x:Key="Button.SmallHeight">30</system:Double>
+    <system:Double x:Key="TextBox.StandardHeight">38</system:Double>
 
-    <!-- 通用输入框高度 -->
-    <system:Double x:Key="TextBox.StandardHeight">40</system:Double>
+    <!-- ============================================================
+         DataGrid 行样式覆写
+         ============================================================ -->
+    <Style x:Key="MaterialDesignDataGridRow" TargetType="DataGridRow"
+           BasedOn="{StaticResource {x:Type DataGridRow}}">
+        <Setter Property="Height" Value="44"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
 
 </ResourceDictionary>

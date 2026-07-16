@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              d:DesignHeight="600"
              d:DesignWidth="900"
-             Background="{DynamicResource MaterialDesign.Brush.Background}">
+              Background="Transparent">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,7 +18,7 @@
         <!-- 工具栏卡片 -->
         <md:Card Grid.Row="0"
                  Padding="16"
-                 md:ElevationAssist.Elevation="Dp2"
+                 md:ElevationAssist.Elevation="Dp1"
                  Margin="0,0,0,16">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -97,7 +97,8 @@
                     <DataGridTemplateColumn Header="操作" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
                                     <Button Content="编辑"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
                                             Command="{Binding DataContext.EditRecipeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"

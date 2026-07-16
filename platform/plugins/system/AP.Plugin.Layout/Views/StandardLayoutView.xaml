@@ -13,16 +13,16 @@
 
         <local:HeaderView Grid.Row="0"/>
 
-        <Grid Grid.Row="1"
-              Background="{DynamicResource MaterialDesign.Brush.Background}">
+         <Grid Grid.Row="1"
+               Background="{DynamicResource Brush.Surface}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0"
-                    Background="{DynamicResource Brush.Surface}"
-                    BorderBrush="{DynamicResource MaterialDesignDivider}"
+             <Border Grid.Column="0"
+                    Background="{DynamicResource Brush.SurfaceDark}"
+                    BorderBrush="#DDE2E8"
                     BorderThickness="0,0,1,0">
                 <ContentControl x:Name="SidebarContainer" />
             </Border>

@@ -28,6 +28,12 @@ public partial class SidebarViewModel : ViewModelBase
     [ObservableProperty]
     private NavigationItem? _selectedItem;
 
+    [ObservableProperty]
+    private string _currentUserName = string.Empty;
+
+    [ObservableProperty]
+    private string _currentUserRole = string.Empty;
+
     public SidebarViewModel(
         IRegionManager regionManager,
         IIdentityService identityService,
@@ -36,6 +42,10 @@ public partial class SidebarViewModel : ViewModelBase
         _regionManager = regionManager;
         _identityService = identityService;
 
+        var currentUser = _identityService.CurrentUser;
+        CurrentUserName = currentUser?.DisplayName ?? currentUser?.UserName ?? "未登录";
+        CurrentUserRole = currentUser?.Roles?.FirstOrDefault() ?? "—";
+
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
         var canManageUsers = securityEnabled && _identityService.HasPermission("user.manage");
         var canManageRoles = securityEnabled && _identityService.HasPermission("role.manage");
@@ -43,15 +53,21 @@ public partial class SidebarViewModel : ViewModelBase
         var canViewRecipe = securityEnabled && _identityService.HasPermission("recipe.view");
         var canViewReport = securityEnabled && _identityService.HasPermission("report.view");
 
-        NavigationItems = new ObservableCollection<NavigationItem>
-        {
-            new()
+            NavigationItems = new ObservableCollection<NavigationItem>
             {
-                IconKind = PackIconKind.Cog,
-                Label = "系统配置",
-                NavigationTarget = "SettingsShellView",
-                IsSelected = true
-            },
+                new()
+                {
+                    IconKind = PackIconKind.ViewDashboard,
+                    Label = "仪表板",
+                    NavigationTarget = "DashboardView",
+                    IsSelected = true
+                },
+                new()
+                {
+                    IconKind = PackIconKind.Cog,
+                    Label = "系统配置",
+                    NavigationTarget = "SettingsShellView"
+                },
             new()
             {
                 IconKind = PackIconKind.FlaskOutline,
