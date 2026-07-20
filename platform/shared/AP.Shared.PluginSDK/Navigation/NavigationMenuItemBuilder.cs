@@ -12,11 +12,13 @@ public static class NavigationMenuItemBuilder
     /// <param name="contributors">导航贡献者集合</param>
     /// <param name="hasPermission">权限检查委托；返回 true 表示有权访问</param>
     /// <param name="defaultTarget">可选的默认导航目标</param>
+    /// <param name="visibilityFilter">可选的额外可见性过滤器；返回 false 则过滤掉该项</param>
     /// <returns>已排序、去重、过滤后的菜单项列表</returns>
     public static IReadOnlyList<NavigationMenuItem> Build(
         IEnumerable<INavigationContributor> contributors,
         Func<string, bool> hasPermission,
-        string? defaultTarget = null)
+        string? defaultTarget = null,
+        Func<NavigationMenuItem, bool>? visibilityFilter = null)
     {
         if (contributors == null) throw new ArgumentNullException(nameof(contributors));
         if (hasPermission == null) throw new ArgumentNullException(nameof(hasPermission));
@@ -45,11 +47,17 @@ public static class NavigationMenuItemBuilder
             })
             .ToList();
 
-        // 标记 IsDefault 后过滤权限；没有权限的项不应被默认选中
+        // 权限过滤
         var visibleItems = result
             .Where(item => string.IsNullOrWhiteSpace(item.Permission)
                            || hasPermission(item.Permission))
             .ToList();
+
+        // 额外可见性过滤（例如 Security 禁用时只显示白名单中的菜单）
+        if (visibilityFilter != null)
+        {
+            visibleItems = visibleItems.Where(visibilityFilter).ToList();
+        }
 
         // 如果没有任何默认项，选中第一个可见项
         if (visibleItems.Count > 0 && visibleItems.All(i => !i.IsDefault))
@@ -57,6 +65,6 @@ public static class NavigationMenuItemBuilder
             visibleItems[0].IsDefault = true;
         }
 
-        return result;
+        return visibleItems;
     }
 }

@@ -50,7 +50,23 @@ public partial class SidebarViewModel : ViewModelBase
         CurrentUserRole = currentUser?.Roles?.FirstOrDefault() ?? "—";
 
         var defaultTarget = configuration["AppConfiguration:DefaultNavigationTarget"];
-        var menuItems = NavigationMenuItemBuilder.Build(navigationContributors, identityService.HasPermission, defaultTarget);
+        var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        var allowedWhenSecurityDisabled = configuration
+            .GetSection("AppConfiguration:NavigationWhenSecurityDisabled")
+            .Get<string[]>() ?? Array.Empty<string>();
+
+        Func<NavigationMenuItem, bool>? visibilityFilter = null;
+        if (!securityEnabled)
+        {
+            // 未启用安全模块时，只显示白名单中的菜单（默认回退到仪表盘）
+            visibilityFilter = item => allowedWhenSecurityDisabled.Contains(item.NavigationTarget, StringComparer.OrdinalIgnoreCase);
+        }
+
+        var menuItems = NavigationMenuItemBuilder.Build(
+            navigationContributors,
+            identityService.HasPermission,
+            defaultTarget,
+            visibilityFilter);
 
         NavigationItems = new ObservableCollection<NavigationItem>(
             menuItems.Select(item => new NavigationItem

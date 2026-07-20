@@ -51,9 +51,25 @@ public class NavigationMenuItemBuilderTests
 
         var result = NavigationMenuItemBuilder.Build(contributors, p => p == "allowed");
 
-        result.Should().HaveCount(2);
-        result[0].IsDefault.Should().BeTrue("第一个可见项应被设为默认");
-        result.Single(i => i.NavigationTarget == "DeniedView").IsDefault.Should().BeFalse();
+        result.Should().HaveCount(1);
+        result[0].NavigationTarget.Should().Be("AllowedView");
+        result[0].IsDefault.Should().BeTrue("唯一可见项应被设为默认");
+    }
+
+    [Fact]
+    public void Build_ShouldApplyVisibilityFilter()
+    {
+        var contributors = new INavigationContributor[]
+        {
+            new TestContributor(
+                new NavigationMenuItem { Label = "Show", NavigationTarget = "ShowView", Order = 100 },
+                new NavigationMenuItem { Label = "Hide", NavigationTarget = "HideView", Order = 200 })
+        };
+
+        var result = NavigationMenuItemBuilder.Build(contributors, _ => true, visibilityFilter: i => i.NavigationTarget == "ShowView");
+
+        result.Should().HaveCount(1);
+        result[0].NavigationTarget.Should().Be("ShowView");
     }
 
     [Fact]

@@ -37,6 +37,14 @@ public class RoleManagementPlugin : PluginBase, INavigationContributor
     {
         await base.InitializeAsync(serviceProvider, ct);
 
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        if (!securityEnabled)
+        {
+            Logger.LogInformation("安全模块已禁用，跳过角色管理视图注册");
+            return;
+        }
+
         var identityService = serviceProvider.GetRequiredService<IIdentityService>();
         if (!identityService.HasPermission("role.manage"))
         {
