@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Diagnostics;
 using System.IO;
@@ -247,8 +247,13 @@ public class Bootstrapper : PrismBootstrapper
         dryIocContainer.Populate(services);
 
         // 将最终插件实例注册到 DryIoc，便于通过 IEnumerable<IPlugin> 解析
+        // 同时注册 INavigationContributor，供布局插件收集菜单项
         foreach (var instance in finalInstances)
+        {
             containerRegistry.RegisterInstance(typeof(IPlugin), instance);
+            if (instance is AP.Shared.PluginSDK.Navigation.INavigationContributor navigationContributor)
+                containerRegistry.RegisterInstance(typeof(AP.Shared.PluginSDK.Navigation.INavigationContributor), navigationContributor);
+        }
 
         // --- 注册生命周期管理器 ---
         _lifecycleManager = new PluginLifecycleManager(
