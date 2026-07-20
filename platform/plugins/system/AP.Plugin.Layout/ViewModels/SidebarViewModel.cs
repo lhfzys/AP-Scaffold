@@ -65,6 +65,10 @@ public partial class SidebarViewModel : ViewModelBase
         {
             item.Command = new RelayCommand<NavigationItem?>(OnNavigate);
         }
+
+        // 默认选中首个可见的默认项（通常是仪表盘），并触发导航
+        SelectedItem = NavigationItems.FirstOrDefault(i => i.IsSelected && i.IsVisible)
+                       ?? NavigationItems.FirstOrDefault(i => i.IsVisible);
     }
 
     partial void OnSelectedItemChanged(NavigationItem? value)
