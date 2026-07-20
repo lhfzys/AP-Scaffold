@@ -1,10 +1,11 @@
-﻿#region
+#region
 
 using System.Windows;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.Layout.ViewModels;
 using AP.Plugin.Layout.Views;
 using AP.Shared.PluginSDK.Base;
+using AP.Shared.PluginSDK.Navigation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace AP.Plugin.Layout;
 
 [PluginMetadata("AP.Plugin.Layout", Name = "系统布局驱动", Version = "1.0.0", Priority = 10)]
-public class LayoutPlugin : PluginBase
+public class LayoutPlugin : PluginBase, INavigationContributor
 {
     public LayoutPlugin(ILogger logger) : base(logger)
     {
@@ -63,5 +64,20 @@ public class LayoutPlugin : PluginBase
         });
 
         Logger.LogInformation("布局引擎已加载，当前模式: {Mode}", layoutMode);
+    }
+
+    public IEnumerable<NavigationMenuItem> GetMenuItems()
+    {
+        return new[]
+        {
+            new NavigationMenuItem
+            {
+                Label = "仪表板",
+                IconKind = "ViewDashboard",
+                NavigationTarget = "DashboardView",
+                Order = 100,
+                IsDefault = true
+            }
+        };
     }
 }

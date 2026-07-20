@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Windows;
 using AP.Contracts.Security.Abstractions;
@@ -6,6 +6,7 @@ using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.ReportCenter.ViewModels;
 using AP.Plugin.ReportCenter.Views;
 using AP.Shared.PluginSDK.Base;
+using AP.Shared.PluginSDK.Navigation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ namespace AP.Plugin.ReportCenter;
 /// 报表中心插件
 /// </summary>
 [PluginMetadata("AP.Plugin.ReportCenter", Name = "报表中心", Version = "1.0.0", Priority = 9)]
-public class ReportCenterPlugin : PluginBase
+public class ReportCenterPlugin : PluginBase, INavigationContributor
 {
     public ReportCenterPlugin(ILogger logger) : base(logger)
     {
@@ -36,14 +37,6 @@ public class ReportCenterPlugin : PluginBase
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
     {
         await base.InitializeAsync(serviceProvider, ct);
-
-        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-        var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
-        if (!securityEnabled)
-        {
-            Logger.LogInformation("安全模块已禁用，跳过报表中心视图注册");
-            return;
-        }
 
         var identityService = serviceProvider.GetRequiredService<IIdentityService>();
         if (!identityService.HasPermission("report.view"))
@@ -63,5 +56,20 @@ public class ReportCenterPlugin : PluginBase
         });
 
         Logger.LogInformation("报表中心插件已加载");
+    }
+
+    public IEnumerable<NavigationMenuItem> GetMenuItems()
+    {
+        return new[]
+        {
+            new NavigationMenuItem
+            {
+                Label = "报表中心",
+                IconKind = "FileChartOutline",
+                NavigationTarget = "ReportListView",
+                Order = 3000,
+                Permission = "report.view"
+            }
+        };
     }
 }

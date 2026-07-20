@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using AP.Contracts.System.Services;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.SystemSettings.Configuration;
@@ -8,6 +8,7 @@ using AP.Plugin.SystemSettings.ViewModels;
 using AP.Plugin.SystemSettings.Views;
 using AP.Shared.PluginSDK.Base;
 using AP.Shared.PluginSDK.Configuration;
+using AP.Shared.PluginSDK.Navigation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ using Prism.Navigation.Regions;
 namespace AP.Plugin.SystemSettings;
 
 [PluginMetadata("AP.Plugin.SystemSettings", Name = "系统配置中心", Version = "1.0.0", Priority = 5)]
-public class SystemSettingsPlugin : PluginBase
+public class SystemSettingsPlugin : PluginBase, INavigationContributor
 {
     public SystemSettingsPlugin(ILogger logger) : base(logger)
     {
@@ -67,6 +68,21 @@ public class SystemSettingsPlugin : PluginBase
         });
 
         Logger.LogInformation("系统配置中心已加载");
+    }
+
+    public IEnumerable<NavigationMenuItem> GetMenuItems()
+    {
+        return new[]
+        {
+            new NavigationMenuItem
+            {
+                Label = "系统配置",
+                IconKind = "Cog",
+                NavigationTarget = "SettingsShellView",
+                Order = 1000,
+                Permission = "system.settings"
+            }
+        };
     }
 
     private static void RegisterEditorDataTemplates()

@@ -1,6 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MaterialDesignThemes.Wpf;
 
 namespace AP.Plugin.Layout.Models;
 
@@ -10,7 +9,7 @@ namespace AP.Plugin.Layout.Models;
 public partial class NavigationItem : ObservableObject
 {
     [ObservableProperty]
-    private PackIconKind _iconKind;
+    private string _iconKind = string.Empty;
 
     [ObservableProperty]
     private string _label = string.Empty;
