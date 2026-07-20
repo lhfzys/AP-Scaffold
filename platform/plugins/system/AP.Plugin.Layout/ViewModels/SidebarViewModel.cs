@@ -1,6 +1,8 @@
 #region
 
 using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Threading;
 using AP.Contracts.Security.Abstractions;
 using AP.Plugin.Layout.Models;
 using AP.Shared.PluginSDK.Navigation;
@@ -66,9 +68,12 @@ public partial class SidebarViewModel : ViewModelBase
             item.Command = new RelayCommand<NavigationItem?>(OnNavigate);
         }
 
-        // 默认选中首个可见的默认项（通常是仪表盘），并触发导航
-        SelectedItem = NavigationItems.FirstOrDefault(i => i.IsSelected && i.IsVisible)
-                       ?? NavigationItems.FirstOrDefault(i => i.IsVisible);
+        // 延迟到 UI 线程就绪后再设置默认选中项，确保 Region 已附加并可导航
+        Application.Current.Dispatcher?.BeginInvoke(() =>
+        {
+            SelectedItem = NavigationItems.FirstOrDefault(i => i.IsSelected && i.IsVisible)
+                           ?? NavigationItems.FirstOrDefault(i => i.IsVisible);
+        }, DispatcherPriority.Background);
     }
 
     partial void OnSelectedItemChanged(NavigationItem? value)
@@ -89,7 +94,14 @@ public partial class SidebarViewModel : ViewModelBase
 
         _regionManager.RequestNavigate(
             AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
-            value.NavigationTarget);
+            value.NavigationTarget,
+            navigationResult =>
+            {
+                if (!navigationResult.Success)
+                {
+                    System.Diagnostics.Debug.WriteLine($"导航到 {value.NavigationTarget} 失败");
+                }
+            });
     }
 
     private void OnNavigate(NavigationItem? item)
