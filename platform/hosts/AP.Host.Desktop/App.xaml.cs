@@ -1,4 +1,4 @@
-﻿using AP.Host.Desktop.Bootstrapping;
+using AP.Host.Desktop.Bootstrapping;
 using AP.Host.Desktop.Services;
 using AP.Host.Desktop.Views;
 using Serilog;
@@ -11,6 +11,7 @@ public partial class App : System.Windows.Application
     private Bootstrapper? _bootstrapper;
     private SplashWindow? _splashWindow;
     private TrayIconManager? _trayIconManager;
+    private Mutex? _appMutex;
 
     public App()
     {
@@ -20,6 +21,9 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // 0. 持有命名互斥体（供安装程序 Inno Setup AppMutex 检测应用正在运行，防止运行中覆盖安装）
+        _appMutex = new Mutex(false, "AP.SCAFFOLD.PLATFORM.RUNNING");
 
         // 1. 解析运行角色 (默认为 Standalone)
         var appRole = RoleResolver.Resolve(e.Args);
@@ -60,6 +64,7 @@ public partial class App : System.Windows.Application
         finally
         {
             _trayIconManager?.Dispose();
+            _appMutex?.Dispose();
             Log.CloseAndFlush();
         }
 
