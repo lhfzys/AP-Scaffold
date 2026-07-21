@@ -142,43 +142,61 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | AP.Plugin.DeviceConfiguration | 可用 | 扫码枪设置页完整（校验 + 写回配置） |
 | AP.Plugin.Plc.Mitsubishi / Siemens | 可用 | 硬件驱动实现较完整，通过 `IPlcDriverFactory` 统一切换 |
 | AP.Plugin.Scanner | 可用 | 硬件驱动实现较完整 |
-| gRPC Server/Client | 可用 | 已实现，但现场大规模验证不足 |
+| gRPC Server/Client | ❄ 冻结 | 已实现但范围外（Standalone 不启用）；不再投入验证与改进 |
 | Dashboard 仪表盘 | 骨架 | 欢迎页 UI 完整，统计数据为硬编码占位 |
 
 ---
 
 ## 当前工作计划
 
+> **范围决策（2026-07-21）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**；Server/Client（gRPC）与 PostgreSQL/SQL Server 支持冻结（代码保留，不维护不验证）。详细差距分析与三阶段改进计划见 **[docs/IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md)**。
+
 ### 近期（当前 Sprint）
+
+按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
 1. **报表中心完善**
    - [ ] 接入真实业务报表数据提供者（如气密性检测日报）
-   - [ ] 确认 `ReportScheduler` / `ReportCleanupService`（IHostedService）在宿主中的启动方式
+   - [ ] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理
    - [ ] 报表模板化支持验证、手动生成/补档端到端测试
 
-2. **配方管理完善**
+2. **排雷修复**（详见 IMPROVEMENT_PLAN 阶段一）
+   - [ ] 主题补齐 `Brush.Overlay.Background` 键
+   - [ ] 启动异常兜底关闭 Splash
+   - [ ] 配置写回失败不再静默 + 原子化
+   - [ ] 安装包升级不覆盖现场配置 + .NET 主版本检测
+   - [ ] `Required`/`Dependencies`/重复插件 ID 语义落地
+   - [ ] 业务残留清理（标题/示例插件/占位数据）
+   - [ ] 构建警告清零
+
+3. **配方管理完善**
    - [ ] 配方参数校验规则
    - [ ] 配方切换与业务插件联动（`SwitchAsync` 事件发布）
    - [ ] 配方版本历史查看
 
-3. **审计日志增强**
-   - [ ] 更多业务操作记录审计日志
+4. **审计日志增强**
+   - [ ] 更多业务操作记录审计日志（重点：PLC 写操作）
    - [ ] 导出审计日志
 
-### 中期
+### 中期（对应 IMPROVEMENT_PLAN 阶段二/三）
 
 - [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
+- [ ] 登录失败锁定 + 密码复杂度策略
+- [ ] 服务层权限校验 + 审计拦截器化
+- [ ] `IReportDataProvider` 移至契约层
+- [ ] `AP.Infra.Security` 单元测试 + CI 最小流水线
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 已预留 "Omron"）
+- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持）
 - [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
 - [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
-- [ ] 集成测试与端到端测试补充
 
 ### 长期
 
-- [ ] 插件市场/热更新机制（隔离上下文已为热卸载预留）
+- [ ] 插件市场/启用禁用机制（隔离上下文已为热卸载预留，但热卸载本身不做）
 - [ ] `RequiresCapabilitiesAttribute` 能力声明的运行时强制执行
 - [ ] 多语言/国际化支持
 - [ ] 完善的安装包与自动更新
+- [ ] ❄（冻结，需求出现时再议）Server/Client 分布式模式、PostgreSQL/SQL Server 支持
 
 ---
 

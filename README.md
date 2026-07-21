@@ -807,6 +807,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 | **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备、配置步骤与插件开发示例 |
 | **[docs/TESTING.md](docs/TESTING.md)** | 测试编写规范与运行指南 |
 | **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** | 项目状态与工作计划 |
+| **[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md)** | 五维度差距分析与改进计划（稳定/复用/安全/可持续/通用） |
 
 ---
 

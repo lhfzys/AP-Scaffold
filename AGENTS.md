@@ -40,6 +40,8 @@
 
 ### 2.3 活跃问题 / 待办
 
+> **范围决策（2026-07-21）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**。Server/Client（gRPC 技术栈）与 PostgreSQL/SQL Server 支持**冻结**——代码保留但不维护、不验证、不投入改进；`AppRole.Server`/`AppRole.Client` 保留但视为"未支持"。除非用户明确要求解冻，不要在这些方向做改动。详见 `docs/IMPROVEMENT_PLAN.md` 1.3 节与第八章末「冻结事项清单」。
+
 - [ ] 报表中心接入真实业务数据提供者（目前仅 `SampleReportDataProvider` 示例）
 - [ ] 配方管理完善校验与版本历史；`IRecipeManager.SwitchAsync` 的事件发布仍是 TODO
 - [ ] 审计日志更多业务事件接入与导出
@@ -243,6 +245,7 @@ bin/Release/AP.Host.Desktop.exe
 | `docs/GETTING_STARTED.md` | 环境准备、配置、插件开发示例 |
 | `docs/TESTING.md` | 测试规范与运行方式 |
 | `docs/PROJECT_STATUS.md` | 项目状态与工作计划 |
+| `docs/IMPROVEMENT_PLAN.md` | 五维度差距分析与改进计划（稳定/复用/安全/可持续/通用） |
 | `CHANGELOG.md` | 版本变更日志 |
 
 ---
