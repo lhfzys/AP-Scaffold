@@ -100,4 +100,44 @@ public class ConfigurationHelperTests
             ConfigurationHelper.UpdateAppSetting("ConnectionString", "Server=localhost;Database=test"));
         exception.Should().BeNull();
     }
+
+    [Fact]
+    public void UpdateAppSetting_Throws_WhenJsonMalformed()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var filePath = Path.Combine(configDir, "malformed_test.json");
+        File.WriteAllText(filePath, "{ not valid json");
+
+        try
+        {
+            Assert.ThrowsAny<System.Text.Json.JsonException>(() =>
+                ConfigurationHelper.UpdateAppSetting("Test", new TestConfig(), "malformed_test.json"));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void UpdateAppSetting_WritesAtomically_WithoutLeavingTempFile()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var filePath = Path.Combine(configDir, "atomic_test.json");
+        File.WriteAllText(filePath, "{}");
+
+        try
+        {
+            ConfigurationHelper.UpdateAppSetting("Atomic:Key", "value", "atomic_test.json");
+
+            File.Exists(filePath + ".tmp").Should().BeFalse();
+            File.ReadAllText(filePath).Should().Contain("\"Key\": \"value\"");
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
 }
