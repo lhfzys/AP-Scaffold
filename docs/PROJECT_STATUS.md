@@ -95,7 +95,6 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 | 插件 | Priority | 功能 |
 |------|---------|------|
-| `AP.Plugin.AirtightnessCheck` | 30 | 气密性检测 UI 骨架（4 步步进条，未接 PLC、未实现报表 Provider） |
 | `AP.Plugin.DeviceConfiguration` | 100 | 通过 `ISettingsContributor` 提供"扫码枪配置"设置页（硬件类，含校验，需重启生效） |
 
 ### 7. 硬件插件 `platform/plugins/hardware`
@@ -138,7 +137,6 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | AP.Plugin.AuditLog | 可用 | 查询/筛选/分页 UI 已有，数据来自真实审计日志 |
 | AP.Infra.Recipe / AP.Plugin.RecipeManagement | 骨架 | 配方 CRUD、版本、默认配方 UI 已有；切换联动业务待补 |
 | AP.Infra.Report / AP.Plugin.ReportCenter | 骨架 | 报表归档查询/生成/导出 UI 已有，数据提供者仅示例实现 |
-| AP.Plugin.AirtightnessCheck | 骨架 | 4 步流程 UI 骨架，未接 PLC、无业务判定 |
 | AP.Plugin.DeviceConfiguration | 可用 | 扫码枪设置页完整（校验 + 写回配置） |
 | AP.Plugin.Plc.Mitsubishi / Siemens | 可用 | 硬件驱动实现较完整，通过 `IPlcDriverFactory` 统一切换 |
 | AP.Plugin.Scanner | 可用 | 硬件驱动实现较完整 |
@@ -156,7 +154,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
 1. **报表中心完善**
-   - [ ] 接入真实业务报表数据提供者（如气密性检测日报）
+   - [ ] 接入真实业务报表数据提供者（如设备运行日报）
    - [ ] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理
    - [ ] 报表模板化支持验证、手动生成/补档端到端测试
 

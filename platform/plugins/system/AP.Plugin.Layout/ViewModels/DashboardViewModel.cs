@@ -73,6 +73,7 @@ public partial class DashboardViewModel : ViewModelBase
             : $"{elapsed.Minutes} 分钟";
     }
 
+    // TODO(sample): 仪表盘统计数据为硬编码占位演示数据，接入真实业务统计后移除此方法
     private void LoadPlaceholderData()
     {
         ActiveUsers = "5";

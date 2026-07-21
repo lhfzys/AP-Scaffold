@@ -1,4 +1,4 @@
-﻿using AP.Contracts.Core.Events;
+using AP.Contracts.Core.Events;
 using AP.Shared.Utilities.Configuration;
 using AP.Shared.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,8 +20,8 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _canClose = false;
 
     // 头部显示的信息
-    [ObservableProperty] private string _companyName = "气密检测监控系统"; // 公司名
-    [ObservableProperty] private string _softwareName = "气密检测监控系统"; // 软件名
+    [ObservableProperty] private string _companyName = "自动化系统"; // 公司名
+    [ObservableProperty] private string _softwareName = "自动化监控系统"; // 软件名
     [ObservableProperty] private string _windowTitle;
     [ObservableProperty] private string _currentTime; // 实时时间
     public IRelayCommand<CancelEventArgs> OnClosingCommand { get; }

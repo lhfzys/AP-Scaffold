@@ -80,13 +80,12 @@ AP-Scaffold/
 │   │   ├── AP.Shared.PluginSDK           # PluginBase、INavigationContributor、ISettingsContributor
 │   │   ├── AP.Shared.UI                  # LoadingSpinner、对话框服务、PermissionBehavior、浅色主题
 │   │   └── AP.Shared.Utilities           # ConfigurationHelper、SerializationHelper、常量
-│   ├── plugins/                          # 插件（13 个）
+│   ├── plugins/                          # 插件（12 个）
 │   │   ├── hardware/
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi  # Priority=20，Server|Standalone
 │   │   │   ├── AP.Plugin.Plc.Siemens     # Priority=21，Server|Standalone
 │   │   │   └── AP.Plugin.Scanner         # Priority=20，Client|Standalone
 │   │   ├── business/
-│   │   │   ├── AP.Plugin.AirtightnessCheck    # Priority=30，UI 骨架（4 步步进条）
 │   │   │   └── AP.Plugin.DeviceConfiguration  # Priority=100，ISettingsContributor（扫码枪配置）
 │   │   └── system/
 │   │       ├── AP.Plugin.Layout          # Priority=10，布局/Sidebar/仪表盘

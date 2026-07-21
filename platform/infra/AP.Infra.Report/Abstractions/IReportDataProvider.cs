@@ -9,12 +9,12 @@ namespace AP.Infra.Report.Abstractions;
 public interface IReportDataProvider
 {
     /// <summary>
-    /// 报表类型标识（如 "Airtightness"）
+    /// 报表类型标识（如 "DeviceRun"）
     /// </summary>
     string ReportType { get; }
 
     /// <summary>
-    /// 报表显示名称（如 "气密性检测日报"）
+    /// 报表显示名称（如 "设备运行日报"）
     /// </summary>
     string ReportName { get; }
 

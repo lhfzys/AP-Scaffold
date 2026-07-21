@@ -114,7 +114,6 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC (S7协议 + 看门狗)
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
-│   │   │   ├── AP.Plugin.AirtightnessCheck/   # 气密性检测（UI 骨架）
 │   │   │   └── AP.Plugin.DeviceConfiguration/ # 设备参数配置（设置贡献者）
 │   │   └── system/                    # 系统功能插件
 │   │       ├── AP.Plugin.Layout/      # 布局管理/Sidebar/仪表盘
@@ -148,7 +147,7 @@ AP-Scaffold/
 │  Plugins (插件层)                              │
 │  ┌────────── ─────────── ──────────────┐      │
 │  │ Hardware │ Business  │  System     │      │
-│  │(PLC/串口)│ (气密/配置) │(布局/登录等)│      │
+│  │(PLC/串口)│ (设备配置)  │(布局/登录等)│      │
 │  └────────── ─────────── ──────────────┘      │
 ├──────────────┬───────────────────────────────┤
 │  Contracts   │  Infra (基础设施)              │
@@ -328,7 +327,7 @@ await pipeline.ExecuteAsync(async token => {
                                  └─────────────────────┘
                                            │
                                            ▼
-                                 reports/2026/01/2026-01-12_Airtightness.xlsx
+                                 reports/2026/01/2026-01-12_DeviceRun.xlsx
 ```
 
 > 注意：`IReportDataProvider` 定义在 `AP.Infra.Report`（非契约层）；`ReportScheduler` / `ReportCleanupService` 以 `IHostedService` 注册，而宿主不会自动启动 `IHostedService`（详见 `AGENTS.md` 5.6）。
@@ -421,7 +420,7 @@ Configuration/
     "MachineId": "Station-01",
     "MachineName": "一号工位电脑",
     "CompanyName": "自动化系统",
-    "SoftwareName": "气密检测监控系统",
+    "SoftwareName": "自动化监控系统",
     "LayoutMode": "Standard",
     "DefaultNavigationTarget": "DashboardView",
     "NavigationWhenSecurityDisabled": ["DashboardView", "SettingsShellView", "RecipeListView", "ReportListView"]

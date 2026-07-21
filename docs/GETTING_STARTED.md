@@ -316,7 +316,7 @@ Configuration/
     "MachineId": "Station-01",
     "MachineName": "一号工位电脑",
     "CompanyName": "自动化系统",
-    "SoftwareName": "气密检测监控系统",
+    "SoftwareName": "自动化监控系统",
     "LayoutMode": "Standard",
     "DefaultNavigationTarget": "DashboardView",
     "NavigationWhenSecurityDisabled": ["DashboardView", "SettingsShellView", "RecipeListView", "ReportListView"]
@@ -780,7 +780,6 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
-│   │   │   ├── AP.Plugin.AirtightnessCheck/
 │   │   │   └── AP.Plugin.DeviceConfiguration/
 │   │   └── system/                    # 系统功能插件
 │   │       ├── AP.Plugin.Layout/      # 布局/Sidebar/仪表盘
