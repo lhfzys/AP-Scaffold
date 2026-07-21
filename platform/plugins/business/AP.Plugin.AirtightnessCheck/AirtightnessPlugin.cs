@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Windows;
 using AP.Core.PluginFramework.Attributes;
@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AP.Plugin.AirtightnessCheck;
 
-[PluginMetadata("AP.Plugin.AirtightnessCheck", Name = "气密性检测业务", Version = "1.0.0", Priority = 30)]
+[PluginMetadata("AP.Plugin.AirtightnessCheck", Name = "气密性检测业务", Version = "1.0.0", Priority = 30, Required = false)]
 public class AirtightnessPlugin : PluginBase
 {
     private const string TargetRegion = "ContentRegion";

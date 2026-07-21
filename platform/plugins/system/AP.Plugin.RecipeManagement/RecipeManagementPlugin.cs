@@ -19,7 +19,7 @@ namespace AP.Plugin.RecipeManagement;
 /// <summary>
 /// 配方管理插件
 /// </summary>
-[PluginMetadata("AP.Plugin.RecipeManagement", Name = "配方管理", Version = "1.0.0", Priority = 8)]
+[PluginMetadata("AP.Plugin.RecipeManagement", Name = "配方管理", Version = "1.0.0", Priority = 8, Required = false)]
 public class RecipeManagementPlugin : PluginBase, INavigationContributor
 {
     public RecipeManagementPlugin(ILogger logger) : base(logger)

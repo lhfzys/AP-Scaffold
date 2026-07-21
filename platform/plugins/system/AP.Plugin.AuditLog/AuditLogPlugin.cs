@@ -19,7 +19,7 @@ namespace AP.Plugin.AuditLog;
 /// <summary>
 /// 审计日志插件
 /// </summary>
-[PluginMetadata("AP.Plugin.AuditLog", Name = "审计日志", Version = "1.0.0", Priority = 7)]
+[PluginMetadata("AP.Plugin.AuditLog", Name = "审计日志", Version = "1.0.0", Priority = 7, Required = false)]
 public class AuditLogPlugin : PluginBase, INavigationContributor
 {
     public AuditLogPlugin(ILogger logger) : base(logger)

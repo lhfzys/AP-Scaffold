@@ -1,4 +1,4 @@
-﻿using AP.Core.Enums;
+using AP.Core.Enums;
 using AP.Shared.Utilities.Constants;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
@@ -17,6 +17,11 @@ public class PluginLoader
     {
         _logger = logger;
     }
+
+    /// <summary>
+    /// 最近一次 <see cref="DiscoverPlugins"/> 校验发现的问题（重复 ID / 依赖缺失）
+    /// </summary>
+    public IReadOnlyList<PluginGraphIssue> Issues { get; private set; } = Array.Empty<PluginGraphIssue>();
 
     /// <summary>
     /// 发现并加载指定目录下的所有插件
@@ -48,8 +53,19 @@ public class PluginLoader
                 _logger.LogError(ex, "加载插件目录失败: {Dir}", dir);
             }
 
+        // 校验插件图：重复 ID（致命）与依赖完整性（级联剔除）
+        var validated = PluginGraphValidator.Validate(descriptors, out var issues);
+        Issues = issues;
+        foreach (var issue in issues)
+        {
+            if (issue.IsFatal)
+                _logger.LogError("{Message}", issue.Message);
+            else
+                _logger.LogWarning("{Message}", issue.Message);
+        }
+
         // 按优先级排序 (数值越小越优先)
-        return descriptors.OrderBy(d => d.Metadata.Priority).ToList();
+        return validated.OrderBy(d => d.Metadata.Priority).ToList();
     }
 
     private PluginDescriptor? LoadPluginFromDirectory(string pluginDir, AppRole currentRole)

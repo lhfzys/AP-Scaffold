@@ -16,7 +16,7 @@ using Prism.Navigation.Regions;
 
 namespace AP.Plugin.SystemSettings;
 
-[PluginMetadata("AP.Plugin.SystemSettings", Name = "系统配置中心", Version = "1.0.0", Priority = 5)]
+[PluginMetadata("AP.Plugin.SystemSettings", Name = "系统配置中心", Version = "1.0.0", Priority = 5, Required = false)]
 public class SystemSettingsPlugin : PluginBase, INavigationContributor
 {
     public SystemSettingsPlugin(ILogger logger) : base(logger)

@@ -15,7 +15,7 @@ namespace AP.Plugin.UserManagement;
 /// <summary>
 /// 用户管理插件
 /// </summary>
-[PluginMetadata("AP.Plugin.UserManagement", Name = "用户管理", Version = "1.0.0", Priority = 5)]
+[PluginMetadata("AP.Plugin.UserManagement", Name = "用户管理", Version = "1.0.0", Priority = 5, Required = false)]
 public class UserManagementPlugin : PluginBase, INavigationContributor
 {
     public UserManagementPlugin(ILogger logger) : base(logger)

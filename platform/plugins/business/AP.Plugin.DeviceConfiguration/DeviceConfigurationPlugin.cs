@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using AP.Core.PluginFramework.Attributes;
 using AP.Plugin.DeviceConfiguration.Configuration;
 using AP.Plugin.DeviceConfiguration.Models;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AP.Plugin.DeviceConfiguration;
 
-[PluginMetadata("AP.Plugin.DeviceConfiguration", Version = "1.0.0", Name = "设备参数配置", Priority = 100)]
+[PluginMetadata("AP.Plugin.DeviceConfiguration", Version = "1.0.0", Name = "设备参数配置", Priority = 100, Required = false)]
 public class DeviceConfigurationPlugin : PluginBase
 {
     public DeviceConfigurationPlugin(ILogger logger) : base(logger)

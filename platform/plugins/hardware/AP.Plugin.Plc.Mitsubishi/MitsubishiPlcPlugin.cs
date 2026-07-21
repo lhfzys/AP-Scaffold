@@ -15,7 +15,8 @@ namespace AP.Plugin.Plc.Mitsubishi;
     Name = "三菱PLC驱动",
     Version = "1.0.0",
     SupportedRoles = AppRole.Server | AppRole.Standalone,
-    Priority = 20
+    Priority = 20,
+    Required = false
 )]
 [RequiresCapabilities(PluginCapabilities.Hardware)]
 public class MitsubishiPlcPlugin : PluginBase

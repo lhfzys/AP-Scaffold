@@ -44,6 +44,8 @@ public class Bootstrapper : PrismBootstrapper
     private readonly PluginLoader _pluginLoader;
     private List<PluginDescriptor> _loadedPlugins = new();
     private readonly List<(string PluginName, string Error)> _failedPlugins = new();
+    // 致命插件错误（Required 插件失败 / 插件图致命问题），非空时中止启动
+    private readonly List<string> _fatalPluginErrors = new();
     private WebApplication? _grpcApp;
     private PluginLifecycleManager? _lifecycleManager;
 
@@ -123,6 +125,29 @@ public class Bootstrapper : PrismBootstrapper
     }
 
     /// <summary>
+    ///     致命错误中止启动：记录日志、提示操作员并退出进程
+    /// </summary>
+    private void AbortStartup(string title, IReadOnlyList<string> errors)
+    {
+        var detail = string.Join("\n", errors.Select(e => $"  • {e}"));
+        Log.Fatal("{Title}:\n{Detail}", title, detail);
+
+        try
+        {
+            CloseSplashWindow();
+            System.Windows.MessageBox.Show(
+                $"{title}：\n{detail}",
+                "启动失败",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+        finally
+        {
+            Environment.Exit(1);
+        }
+    }
+
+    /// <summary>
     ///     注册所有服务 (DI 容器配置)
     /// </summary>
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -171,6 +196,10 @@ public class Bootstrapper : PrismBootstrapper
         _loadedPlugins = _pluginLoader.DiscoverPlugins(_appRole);
         Log.Information("已发现 {Count} 个适用插件", _loadedPlugins.Count);
 
+        // 插件图致命问题（重复 ID / Required 插件依赖缺失）直接进入致命错误列表
+        foreach (var issue in _pluginLoader.Issues.Where(i => i.IsFatal))
+            _fatalPluginErrors.Add(issue.Message);
+
         // 创建 logger 工厂用于传递给插件构造函数
         using var pluginLoggerFactory = LoggerFactory.Create(b => b.AddSerilog());
 
@@ -210,6 +239,8 @@ public class Bootstrapper : PrismBootstrapper
                 // 捕获异常，防止一个插件崩溃导致整个程序启动失败
                 Log.Error(ex, "插件 {Name} 服务配置失败", descriptor.Metadata.Name);
                 _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
+                if (descriptor.Metadata.Required)
+                    _fatalPluginErrors.Add($"必需插件 {descriptor.Metadata.Name} 服务配置失败: {ex.Message}");
                 descriptor.IsLoaded = false;
             }
 
@@ -239,6 +270,8 @@ public class Bootstrapper : PrismBootstrapper
             {
                 Log.Error(ex, "插件 {Name} 最终实例化失败", descriptor.Metadata.Name);
                 _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
+                if (descriptor.Metadata.Required)
+                    _fatalPluginErrors.Add($"必需插件 {descriptor.Metadata.Name} 实例化失败: {ex.Message}");
                 descriptor.IsLoaded = false;
             }
 
@@ -280,6 +313,10 @@ public class Bootstrapper : PrismBootstrapper
             {
                 // 获取容器的新 Scope (也就是当前的根容器)
                 var container = Container.GetContainer();
+
+                // --- 必需插件校验：存在致命错误时中止启动（重复 ID / Required 插件失败） ---
+                if (_fatalPluginErrors.Count > 0)
+                    AbortStartup("必需插件加载失败，系统无法启动", _fatalPluginErrors);
 
                 UpdateSplashStatus("正在清理过期日志...", 5);
 
@@ -347,6 +384,14 @@ public class Bootstrapper : PrismBootstrapper
                 // --- 1. 初始化并启动插件（通过生命周期管理器，带状态机跟踪） ---
                 await _lifecycleManager!.InitializePluginsAsync(container);
                 await _lifecycleManager.StartPluginsAsync();
+
+                // --- 1.1 Required 插件初始化/启动失败时中止启动 ---
+                var requiredFailed = _lifecycleManager.GetFailedPlugins()
+                    .Where(p => p.Metadata.Required)
+                    .Select(p => $"必需插件 {p.Metadata.Name} 初始化/启动失败")
+                    .ToList();
+                if (requiredFailed.Count > 0)
+                    AbortStartup("必需插件启动失败，系统无法启动", requiredFailed);
 
                 UpdateSplashStatus("正在启动服务...", 75);
 

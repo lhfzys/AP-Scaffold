@@ -19,7 +19,7 @@ namespace AP.Plugin.ReportCenter;
 /// <summary>
 /// 报表中心插件
 /// </summary>
-[PluginMetadata("AP.Plugin.ReportCenter", Name = "报表中心", Version = "1.0.0", Priority = 9)]
+[PluginMetadata("AP.Plugin.ReportCenter", Name = "报表中心", Version = "1.0.0", Priority = 9, Required = false)]
 public class ReportCenterPlugin : PluginBase, INavigationContributor
 {
     public ReportCenterPlugin(ILogger logger) : base(logger)

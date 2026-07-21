@@ -1,4 +1,4 @@
-﻿using AP.Contracts.Hardware.Services;
+using AP.Contracts.Hardware.Services;
 using AP.Core.Capability;
 using AP.Core.Enums;
 using AP.Core.PluginFramework.Attributes;
@@ -17,7 +17,8 @@ namespace AP.Plugin.Scanner;
     Name = "串口扫码枪驱动",
     Version = "1.0.0",
     SupportedRoles = AppRole.Client | AppRole.Standalone,
-    Priority = 20
+    Priority = 20,
+    Required = false
 )]
 [RequiresCapabilities(PluginCapabilities.AccessSerialPort | PluginCapabilities.PublishEvents)]
 public class ScannerPlugin : PluginBase

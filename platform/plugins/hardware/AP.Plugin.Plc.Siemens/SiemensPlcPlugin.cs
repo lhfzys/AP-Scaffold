@@ -16,7 +16,8 @@ namespace AP.Plugin.Plc.Siemens;
     Name = "西门子PLC驱动",
     Version = "1.0.0",
     SupportedRoles = AppRole.Server | AppRole.Standalone,
-    Priority = 21
+    Priority = 21,
+    Required = false
 )]
 public class SiemensPlcPlugin : PluginBase
 {

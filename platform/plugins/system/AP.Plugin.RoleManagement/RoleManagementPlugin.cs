@@ -16,7 +16,7 @@ using Prism.Navigation.Regions;
 
 namespace AP.Plugin.RoleManagement;
 
-[PluginMetadata("AP.Plugin.RoleManagement", Name = "角色权限管理", Version = "1.0.0", Priority = 6)]
+[PluginMetadata("AP.Plugin.RoleManagement", Name = "角色权限管理", Version = "1.0.0", Priority = 6, Required = false)]
 public class RoleManagementPlugin : PluginBase, INavigationContributor
 {
     public RoleManagementPlugin(ILogger logger) : base(logger)
