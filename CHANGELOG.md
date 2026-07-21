@@ -37,7 +37,7 @@
   - 测试运行命令、CI/CD 集成示例、覆盖率目标
 
 - **状态机增强**：新增 `Frozen`（已冻结）和 `Deprecated`（已废弃）状态
-  - 完整的状态枚举定义（13 个状态）
+  - 完整的状态枚举定义（14 个状态，值 0-13）
   - 对应更新 `StateTransitionValidator` 转换规则
 - **登录认证插件**：新增 `AP.Plugin.Login`
   - 启动时弹出登录窗口（`Security:Enabled=true`）
@@ -82,12 +82,25 @@
 - **报表初始化修复**
   - 在 `AP.Host.Desktop` 中直接引用 `AP.Infra.Report` 和 `AP.Contracts.Report`，解决启动时 `ReflectionTypeLoadException`
   - 在 `Bootstrapper.OnInitialized` 中手动调用 `ReportDatabaseInitializer.StartAsync`，解决 `report_archives` 表缺失
-- **UI 修复**
+- **声明式导航贡献者模式**
+  - 新增 `AP.Shared.PluginSDK/Navigation/`：`INavigationContributor`、`NavigationMenuItem`、`NavigationMenuItemBuilder`
+  - 插件实现接口即出现在 Sidebar，菜单统一去重/排序/按权限过滤
+  - `Bootstrapper` 桥接 DryIoc 时自动注册插件实例的 `INavigationContributor` 接口
+  - 支持 `AppConfiguration:DefaultNavigationTarget` 指定默认页，默认选中延迟到 UI 就绪后导航
+  - `Security:Enabled=false` 时按 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单过滤菜单，安全类插件跳过视图注册
+- **设置贡献者模式**
+  - 新增 `ISettingsContributor` / `ISettingsEditorViewModel`（`AP.Shared.PluginSDK/Configuration/`）
+  - 系统配置中心自动收集贡献者按分类分组，统一校验/备份/写回
+  - `AP.Plugin.DeviceConfiguration` 通过该模式提供"扫码枪配置"设置页
+- **UI 主题与修复**
+  - `Industrial.Teal.MD3.xaml` 重构为全浅色 Material Design 3 主题（主色深蓝 `#1E3A5F`、强调色青蓝 `#0891B2`）
   - 用户管理“角色”列、角色管理“权限”列的 Chip 文字颜色由白色改为 `MaterialDesign.Brush.OnSurface`，解决浅色背景下看不清的问题
+  - 修复扫码枪"换行符"默认值在设置页显示为空的问题
 - **文档更新**
   - 新增 `AGENTS.md`（AI 交接文档）
   - 新增 `docs/PROJECT_STATUS.md`（项目状态与工作计划）
-  - 更新 `README.md`、`docs/ARCHITECTURE.md`、`docs/GETTING_STARTED.md`、`docs/TESTING.md` 以匹配当前实际代码
+  - 2026-07-21：全面核对实际代码（36 个项目），重写 `AGENTS.md`、`README.md`、`docs/ARCHITECTURE.md`、`docs/GETTING_STARTED.md`、`docs/PROJECT_STATUS.md`、`docs/TESTING.md`
+  - 修正：权限清单（12 个种子权限）、导航/设置贡献者模式、统一 `Plc` 配置节、`Resilience` 扁平配置键、gRPC `ServerUrl` 配置键、数据库嵌套配置结构、测试数量（17 文件 / 213 测试）、状态机 14 态、移除不存在的 Toast 组件说明
 
 ### 变更
 
@@ -176,4 +189,4 @@
 
 ---
 
-**最后更新**: 2026-07-13
+**最后更新**: 2026-07-21

@@ -34,19 +34,22 @@
 
 ```
 platform/tests/
-├── AP.Core.Tests/       # 核心框架单元测试
+├── AP.Core.Tests/       # 核心框架单元测试（8 个文件 / 123 个测试）
 │   ├── StateMachine/    # 状态机相关测试
 │   ├── Capability/      # 能力声明相关测试
 │   ├── EventBus/        # 事件总线测试
 │   ├── Lifecycle/       # 生命周期管理器测试
 │   └── PluginFramework/ # 插件框架测试（Metadata、Capabilities、接口）
-├── AP.Shared.Tests/     # 共享库测试
-│   ├── PluginSDK/       # PluginBase 测试
+├── AP.Shared.Tests/     # 共享库测试（4 个文件 / 46 个测试）
+│   ├── PluginSDK/       # PluginBase、导航菜单构建器测试
 │   └── Utilities/       # 工具类测试
-└── AP.Infra.Tests/      # 基础设施层测试
+└── AP.Infra.Tests/      # 基础设施层测试（5 个文件 / 44 个测试）
+    ├── Hardware/        # PLC 驱动注册表 / 统一激活服务测试
     ├── Report/          # 报表框架测试
     └── Resilience/      # 容错策略测试
 ```
+
+合计 **17 个测试文件 / 213 个测试**（`dotnet test` 实测，全部通过）。
 
 ### 分层测试策略
 
@@ -64,22 +67,22 @@ platform/tests/
 
 | 工具 | 用途 | 版本约束 |
 |------|------|---------|
-| **xUnit** | 测试框架 | v2.9.0+ |
-| **NSubstitute** | Mock 框架 | v5.0.0+ |
-| **FluentAssertions** | 断言库 | v6.0.0+ |
-| **Microsoft.NET.Test.Sdk** | 测试 SDK | v17.0.0+ |
-| **xunit.runner.visualstudio** | VS 测试运行器 | v2.0.0+ |
-| **coverlet.collector** | 代码覆盖率收集 | v6.0.0+ |
+| **xUnit** | 测试框架 | v2.9.2 |
+| **NSubstitute** | Mock 框架 | v5.3.0 |
+| **FluentAssertions** | 断言库 | v6.12.1 |
+| **Microsoft.NET.Test.Sdk** | 测试 SDK | v17.11.1 |
+| **xunit.runner.visualstudio** | VS 测试运行器 | v2.8.2 |
+| **coverlet.collector** | 代码覆盖率收集 | v6.0.2 |
 
 ## 测试项目结构
 
-每个测试项目对应一个被测试项目：
+每个测试项目对应一组被测试项目：
 
 | 测试项目 | 被测试项目 |
 |----------|-----------|
-| `AP.Core.Tests` | `AP.Core` |
-| `AP.Shared.Tests` | `AP.Shared` |
-| `AP.Infra.Tests` | `AP.Infra` |
+| `AP.Core.Tests` | `AP.Core`、`AP.Shared.Utilities` |
+| `AP.Shared.Tests` | `AP.Shared.PluginSDK`、`AP.Shared.Utilities` |
+| `AP.Infra.Tests` | `AP.Infra.Report`、`AP.Infra.Resilience`、`AP.Infra.Hardware` |
 
 测试项目目录结构与源项目保持一致，方便定位：
 
@@ -98,6 +101,24 @@ AP.Core.Tests/
     ├── PluginMetadataAttributeTests.cs
     ├── RequiresCapabilitiesAttributeTests.cs
     └── PluginInterfaceTests.cs
+
+AP.Shared.Tests/
+├── PluginSDK/
+│   ├── PluginBaseTests.cs
+│   └── NavigationMenuItemBuilderTests.cs   # 导航菜单构建器（去重/排序/权限过滤/默认项）
+└── Utilities/
+    ├── ConfigurationHelperTests.cs
+    └── SerializationHelperTests.cs
+
+AP.Infra.Tests/
+├── Hardware/
+│   ├── ActivePlcServiceTests.cs            # PLC 统一激活服务（按 DriverType 转发）
+│   └── PlcDriverRegistryTests.cs           # PLC 驱动注册表
+├── Report/
+│   ├── ReportArchiveEntityTests.cs
+│   └── ReportOptionsTests.cs
+└── Resilience/
+    └── ResilienceOptionsTests.cs
 ```
 
 ---
@@ -326,6 +347,23 @@ Attribute 测试位于 `AP.Core.Tests/PluginFramework/`，主要验证：
 - 位运算组合验证
 - 空值/默认值检查
 
+### 导航菜单构建器测试
+
+导航构建器测试位于 `AP.Shared.Tests/PluginSDK/NavigationMenuItemBuilderTests.cs`，主要验证 `NavigationMenuItemBuilder.Build` 的行为：
+
+1. **合并与去重**：多个 Contributor 的菜单项按 `NavigationTarget` 去重（取 Order 最小者）
+2. **排序**：按 Order 升序
+3. **默认项**：`IsDefault` 与 `defaultTarget` 匹配；无默认项时取第一个可见项
+4. **权限过滤**：`Permission` 非空时经 `hasPermission` 委托过滤
+5. **白名单过滤**：`visibilityFilter`（Security 禁用场景）生效
+
+### PLC 驱动注册与激活测试
+
+位于 `AP.Infra.Tests/Hardware/`，主要验证：
+
+1. `PlcDriverRegistry`：工厂注册、按 DriverType 大小写不敏感查找、未注册时抛出异常并列出已注册驱动
+2. `ActivePlcService`：按 `PlcOptions.DriverType` 懒加载真实驱动并转发调用
+
 ---
 
 ## 运行测试
@@ -415,7 +453,9 @@ reportgenerator -reports:platform/tests/AP.Core.Tests/coverage.cobertura.xml -ta
 | AP.Core.Lifecycle | ≥90% | ≥85% | ✅ |
 | AP.Core.EventBus | ≥85% | ≥80% | ✅ |
 | AP.Core.PluginFramework | ≥90% | ≥85% | ✅ |
+| AP.Shared.PluginSDK（导航构建器） | ≥80% | ≥75% | ✅ |
 | AP.Shared.Utilities | ≥80% | ≥75% | ✅ |
+| AP.Infra.Hardware（注册表/激活服务） | ≥80% | ≥75% | ✅ |
 | AP.Infra.Report | ≥80% | ≥75% | ✅ |
 | AP.Infra.Resilience | ≥80% | ≥75% | ✅ |
 
@@ -456,4 +496,4 @@ reportgenerator -reports:platform/tests/AP.Core.Tests/coverage.cobertura.xml -ta
 
 ---
 
-**最后更新**: 2026-07-14
+**最后更新**: 2026-07-21

@@ -1,6 +1,6 @@
 # AP-Scaffold 使用指南
 
-本文档介绍如何使用 AP-Scaffold 框架快速开发工业上位机应用。
+本文档介绍如何使用 AP-Scaffold 框架快速开发工业上位机应用。内容以当前实际代码为准。
 
 ---
 
@@ -13,6 +13,7 @@
 - [报表框架使用](#报表框架使用)
 - [PLC 通信使用](#plc-通信使用)
 - [常见问题](#常见问题)
+- [项目结构说明](#项目结构说明)
 
 ---
 
@@ -21,7 +22,7 @@
 ### 必需工具
 
 - **Visual Studio 2022**（任意版本，推荐 Professional 或 Enterprise）
-- **.NET 8 SDK**（[下载地址](https://dotnet.microsoft.com/download/dotnet/8.0)）
+- **.NET 10 SDK**（构建 SDK，目标框架仍为 .NET 8；`global.json` 指定 10.0.102，[下载地址](https://dotnet.microsoft.com/download)）
 - **Windows 10/11**（WPF 应用仅支持 Windows）
 
 ### 验证安装
@@ -29,7 +30,7 @@
 ```bash
 # 检查 .NET SDK 版本
 dotnet --version
-# 应输出 8.0.x
+# 应输出 10.0.x（rollForward: latestMinor）
 ```
 
 ---
@@ -62,22 +63,30 @@ cd AP-Scaffold
 - `Server` - 服务端模式（仅连接 PLC，提供 gRPC 服务）
 - `Client` - 客户端模式（仅 UI，通过 gRPC 连接服务端）
 
+也可以用命令行参数覆盖：`AP.Host.Desktop.exe --role=Server`
+
 ### 4. 配置数据库
 
-默认使用 SQLite，无需额外配置。如需使用 PostgreSQL：
+默认使用 SQLite，无需额外配置（`appsettings.Standalone.json` 中为 `local_data.db`）。如需使用 PostgreSQL：
 
 ```json
 {
   "Database": {
     "Provider": "PostgreSQL",
-    "PostgreSqlConnection": "Host=localhost;Port=5432;Database=ap_platform;Username=postgres;Password=your_password"
+    "PostgreSQL": {
+      "ConnectionString": "Host=localhost;Port=5432;Database=automation_db;Username=postgres;Password=your_password"
+    }
   }
 }
 ```
 
+> 数据库表不会自动创建（`UseAutoSyncStructure` 已关闭），由各模块初始化器在启动时显式建表并写入种子数据。
+
 ### 5. 运行项目
 
 将 `AP.Host.Desktop` 设为启动项目，按 F5 运行。
+
+默认 `Security:Enabled=true`，会弹出登录窗口：使用 `admin / admin123` 登录，**首次登录强制修改密码**。开发时可将 `Security:Enabled` 设为 `false` 跳过登录（此时注入匿名身份，拥有全部权限，菜单按白名单过滤）。
 
 ---
 
@@ -92,6 +101,8 @@ cd platform/plugins/business
 dotnet new classlib -n AP.Plugin.YourFeature
 cd AP.Plugin.YourFeature
 ```
+
+> `Directory.Build.props` 约定：项目名以 `AP.Plugin` 开头即视为插件项目，构建输出自动定向到 `bin/$(Configuration)/plugins/{插件名}/`，并自动清理与宿主重复的共享 DLL。**无需配置任何构建后事件。**
 
 ### 2. 添加项目引用
 
@@ -112,7 +123,7 @@ cd AP.Plugin.YourFeature
     <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
     <!-- 如需报表功能，添加以下引用 -->
-    <ProjectReference Include="..\..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
+    <!-- <ProjectReference Include="..\..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" /> -->
   </ItemGroup>
 
 </Project>
@@ -120,16 +131,16 @@ cd AP.Plugin.YourFeature
 
 ### 3. 创建插件主类
 
-创建 `YourFeaturePlugin.cs`：
+创建 `YourFeaturePlugin.cs`。如需出现在侧边栏菜单，同时实现 `INavigationContributor`：
 
 ```csharp
 using AP.Core.Enums;
 using AP.Core.PluginFramework.Attributes;
 using AP.Shared.PluginSDK.Base;
+using AP.Shared.PluginSDK.Navigation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Windows;
 using Prism.Navigation.Regions;
 
 namespace AP.Plugin.YourFeature;
@@ -141,7 +152,7 @@ namespace AP.Plugin.YourFeature;
     SupportedRoles = AppRole.Standalone | AppRole.Server,  // 支持的角色
     Priority = 100                      // 加载优先级（数值越小越先加载）
 )]
-public class YourFeaturePlugin : PluginBase
+public class YourFeaturePlugin : PluginBase, INavigationContributor
 {
     public YourFeaturePlugin(ILogger<YourFeaturePlugin> logger) : base(logger)
     {
@@ -150,7 +161,7 @@ public class YourFeaturePlugin : PluginBase
     public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         base.ConfigureServices(services, configuration);
-        
+
         // 注册你的服务
         services.AddTransient<YourFeatureView>();
         services.AddTransient<YourFeatureViewModel>();
@@ -159,22 +170,23 @@ public class YourFeaturePlugin : PluginBase
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
     {
         await base.InitializeAsync(serviceProvider, ct);
-        
-        // 注册 ViewModel 映射
-        ViewModelLocationProvider.Register(typeof(YourFeatureView).ToString(), typeof(YourFeatureViewModel));
-        
-        // 将视图挂载到主窗口的内容区域
+
+        // 将视图挂载到主窗口的内容区域（可按权限条件门控）
         var regionManager = serviceProvider.GetRequiredService<IRegionManager>();
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            regionManager.RegisterViewWithRegion("ContentRegion", typeof(YourFeatureView));
-        });
+        regionManager.RegisterViewWithRegion("ContentRegion", typeof(YourFeatureView));
     }
 
-    public override async Task StartAsync(CancellationToken ct = default)
+    // 声明式菜单：Sidebar 自动收集、排序、按权限过滤
+    public IEnumerable<NavigationMenuItem> GetMenuItems()
     {
-        await base.StartAsync(ct);
-        Logger.LogInformation("我的功能插件已启动");
+        yield return new NavigationMenuItem
+        {
+            Label = "我的功能",
+            IconKind = "Puzzle",                 // Material Design 图标名
+            NavigationTarget = "YourFeatureView",
+            Order = 1500,                        // 参考现有菜单 Order 选择位置
+            Permission = null                    // 需要权限时填权限码，如 "yourfeature.view"
+        };
     }
 
     public override async Task StopAsync(CancellationToken ct = default)
@@ -185,9 +197,11 @@ public class YourFeaturePlugin : PluginBase
 }
 ```
 
+> 菜单 Order 参考值：仪表板 100、系统配置 1000、配方管理 2000、报表中心 3000、用户管理 4000、角色管理 4100、审计日志 4200。插件之间留出间隔便于插入。
+
 ### 4. 创建 View 和 ViewModel
 
-**YourFeatureView.xaml**:
+**YourFeatureView.xaml**（普通 UserControl，无需 `AutoWireViewModel`）:
 
 ```xml
 <UserControl x:Class="AP.Plugin.YourFeature.YourFeatureView"
@@ -198,12 +212,29 @@ public class YourFeaturePlugin : PluginBase
              mc:Ignorable="d">
     <Grid Margin="20">
         <StackPanel>
-            <TextBlock Text="我的功能插件" FontSize="24" FontWeight="Bold" />
+            <TextBlock Text="我的功能插件" Style="{StaticResource TextStyle.Headline}" />
             <Button Content="执行操作" Command="{Binding ExecuteCommand}" Margin="0,20,0,0" />
             <TextBlock Text="{Binding StatusText}" Margin="0,10,0,0" />
         </StackPanel>
     </Grid>
 </UserControl>
+```
+
+**YourFeatureView.xaml.cs**（全仓库约定：构造函数注入 ViewModel）:
+
+```csharp
+using System.Windows.Controls;
+
+namespace AP.Plugin.YourFeature;
+
+public partial class YourFeatureView : UserControl
+{
+    public YourFeatureView(YourFeatureViewModel viewModel)
+    {
+        InitializeComponent();
+        DataContext = viewModel;
+    }
+}
 ```
 
 **YourFeatureViewModel.cs**:
@@ -237,27 +268,28 @@ public partial class YourFeatureViewModel : ViewModelBase
 }
 ```
 
-### 5. 配置构建后事件
-
-在 `.csproj` 中添加构建后事件，自动复制插件到输出目录：
-
-```xml
-<Target Name="CopyPluginToOutput" AfterTargets="Build">
-  <PropertyGroup>
-    <PluginOutputPath>$(SolutionDir)bin\$(Configuration)\plugins\$(TargetName)\</PluginOutputPath>
-  </PropertyGroup>
-  <MakeDir Directories="$(PluginOutputPath)" />
-  <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginOutputPath)" SkipUnchangedFiles="true" />
-  <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginOutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
-</Target>
-```
-
-### 6. 添加到解决方案
+### 5. 添加到解决方案
 
 ```bash
 cd ../../..
 dotnet sln add platform/plugins/business/AP.Plugin.YourFeature/AP.Plugin.YourFeature.csproj
 ```
+
+构建并运行宿主，插件会被自动发现、加载并出现在侧边栏。
+
+### 6. 可选：为插件添加配置页
+
+如需在"系统配置"中提供配置页，实现 `ISettingsContributor`（参考 `AP.Plugin.DeviceConfiguration` 的 `ScannerSettingsContributor`）：
+
+```csharp
+public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+{
+    base.ConfigureServices(services, configuration);
+    services.AddSingleton<ISettingsContributor, YourSettingsContributor>();
+}
+```
+
+编辑器 ViewModel 实现 `ISettingsEditorViewModel`（`LoadFromConfiguration` / `Validate` / `GetConfigurationValue` / `RequiresRestart`），并在 `InitializeAsync` 中把 `编辑器VM → 编辑器View` 的 DataTemplate 注册到 `Application.Current.Resources`。保存时框架统一校验、备份 appsettings 并写回。
 
 ---
 
@@ -271,7 +303,7 @@ dotnet sln add platform/plugins/business/AP.Plugin.YourFeature/AP.Plugin.YourFea
 Configuration/
 ├── appsettings.json              # 基础配置（所有模式共用）
 ├── appsettings.Standalone.json   # 单机模式专属配置
-├── appsettings.Server.json       # 服务端模式专属配置
+├── appsettings.server.json       # 服务端模式专属配置（注意：文件名小写）
 └── appsettings.Client.json       # 客户端模式专属配置
 ```
 
@@ -282,7 +314,12 @@ Configuration/
   // 应用基础配置
   "AppConfiguration": {
     "MachineId": "Station-01",
-    "MachineName": "一号工位电脑"
+    "MachineName": "一号工位电脑",
+    "CompanyName": "自动化系统",
+    "SoftwareName": "气密检测监控系统",
+    "LayoutMode": "Standard",
+    "DefaultNavigationTarget": "DashboardView",
+    "NavigationWhenSecurityDisabled": ["DashboardView", "SettingsShellView", "RecipeListView", "ReportListView"]
   },
 
   // 运行角色
@@ -309,27 +346,36 @@ Configuration/
     }
   },
 
-  // 数据库配置
+  // 数据库配置（注意是嵌套结构）
   "Database": {
-    "Provider": "SQLite",       // 或 "PostgreSQL"
-    "SqliteConnection": "Data Source=data.db;Version=3;",
-    "PostgreSqlConnection": "Host=localhost;Database=ap_platform;Username=postgres;Password=your_password"
+    "Provider": "SQLite",
+    "SQLite": {
+      "ConnectionString": "Data Source=local_data.db;Version=3;"
+    },
+    "PostgreSQL": {
+      "ConnectionString": "Host=localhost;Database=automation_db;Username=postgres;Password=your_password"
+    }
   },
 
-  // gRPC 配置
+  // 安全模块
+  "Security": {
+    "Enabled": true,
+    "Audit": { "Enabled": true }
+  },
+
+  // gRPC 配置（服务端用 ServerPort；客户端用 ServerUrl/ClientName）
   "Grpc": {
     "ServerPort": 5000,
-    "ClientAddress": "https://192.168.1.100:5000"
+    "ServerUrl": "http://192.168.1.100:5000",
+    "ClientName": "Station-01"
   },
 
-  // 容错策略配置
+  // 容错策略配置（扁平键）
   "Resilience": {
-    "Pipelines": {
-      "PLC-Retry": {
-        "MaxRetryAttempts": 5,
-        "RetryDelaySeconds": 3
-      }
-    }
+    "DatabaseRetryCount": 3,
+    "PlcRetryCount": 5,
+    "GrpcCircuitBreakerThreshold": 5,
+    "CircuitBreakerDurationSeconds": 30
   },
 
   // 报表配置
@@ -340,11 +386,11 @@ Configuration/
     },
     "Archive": {
       "Enabled": true,
-      "Time": "02:00"           // 每天凌晨 2 点归档
+      "Time": "02:00"
     },
     "Retention": {
       "Enabled": true,
-      "Days": 180,              // 保留 180 天
+      "Days": 180,
       "DeleteFiles": true
     },
     "Cleanup": {
@@ -353,22 +399,26 @@ Configuration/
     }
   },
 
-  // PLC 配置（统一配置，切换 DriverType 即可更换品牌）
+  // PLC 配置（统一节，切换 DriverType 即可更换品牌）
   "Plc": {
     "DriverType": "Mitsubishi",
     "IpAddress": "192.168.1.10",
     "Port": 6000,
-    "Timeout": 3000,
+    "Timeout": 1000,
     "Model": "Qna_3E",
-    "HeartbeatAddress": "M0"
+    "HeartbeatAddress": "D0.0"
   },
 
   // 插件配置
   "Plugins": {
     "Configuration": {
       "AP.Plugin.Scanner": {
-        "PortName": "COM3",
-        "BaudRate": 9600
+        "PortName": "COM10",
+        "BaudRate": 9600,
+        "DataBits": 8,
+        "Parity": "None",
+        "StopBits": "One",
+        "NewLine": "\r"
       }
     }
   }
@@ -379,18 +429,15 @@ Configuration/
 
 ## 报表框架使用
 
-### 1. 在插件中注册报表框架
+### 1. 注册报表数据提供者
 
-在插件的 `ConfigureServices` 方法中：
+报表框架由宿主统一注册（`AddReportFramework`），业务插件只需注册自己的 Provider：
 
 ```csharp
 public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
     base.ConfigureServices(services, configuration);
-    
-    // 注册报表框架（如果宿主未注册）
-    services.AddReportFramework(configuration);
-    
+
     // 注册本插件的报表数据提供者
     services.AddReportDataProvider<YourReportProvider>();
 }
@@ -398,7 +445,7 @@ public override void ConfigureServices(IServiceCollection services, IConfigurati
 
 ### 2. 实现报表数据提供者
 
-创建 `YourReportProvider.cs`：
+创建 `YourReportProvider.cs`（`IReportDataProvider` 定义在 `AP.Infra.Report`）：
 
 ```csharp
 using AP.Infra.Report.Abstractions;
@@ -478,9 +525,9 @@ public partial class ReportViewModel : ViewModelBase
         {
             var path = await _reportService.GenerateReportAsync("YourReport", DateTime.Today);
             MessageBox.Show($"报表已导出到: {path}");
-            
+
             // 打开文件所在目录
-            Process.Start("explorer.exe", Path.GetDirectoryName(path));
+            Process.Start("explorer.exe", Path.GetDirectoryName(path)!);
         }
         catch (Exception ex)
         {
@@ -498,6 +545,8 @@ public partial class ReportViewModel : ViewModelBase
 }
 ```
 
+> 报表中心插件（`AP.Plugin.ReportCenter`）已提供归档查询/生成/打开/导出的完整 UI，通常无需自己写导出界面。
+
 ### 4. 报表文件输出示例
 
 ```
@@ -509,13 +558,15 @@ reports/
         └── 2026-01-12_YourReport.xlsx
 ```
 
+> 注意：`ReportScheduler` / `ReportCleanupService` 以 `IHostedService` 注册，宿主默认不会自动启动它们（详见 `AGENTS.md` 5.6）。接入定时归档前请先确认宿主的启动方式。
+
 ---
 
 ## PLC 通信使用
 
 ### 1. 配置 PLC 连接
 
-在 `appsettings.json` 中配置：
+在 `appsettings.json` 的统一 `Plc` 节中配置：
 
 ```json
 {
@@ -523,14 +574,14 @@ reports/
     "DriverType": "Mitsubishi",
     "IpAddress": "192.168.1.10",
     "Port": 6000,
-    "Timeout": 3000,
+    "Timeout": 1000,
     "Model": "Qna_3E",
-    "HeartbeatAddress": "M0"
+    "HeartbeatAddress": "D0.0"
   }
 }
 ```
 
-切换到西门子 PLC 时，只需修改配置：
+切换到西门子 PLC 时，只需修改配置（或在应用的 系统配置 → 硬件 → PLC 配置 中修改，保存后重启）：
 
 ```json
 {
@@ -538,7 +589,7 @@ reports/
     "DriverType": "Siemens",
     "IpAddress": "192.168.1.10",
     "Port": 102,
-    "Timeout": 3000,
+    "Timeout": 1000,
     "Model": "S7_1200",
     "HeartbeatAddress": "DB1.0.0"
   }
@@ -546,6 +597,8 @@ reports/
 ```
 
 ### 2. 在 ViewModel 中使用 PLC 服务
+
+业务代码只依赖统一的 `IPlcService`（由 `ActivePlcService` 按 `DriverType` 转发到真实驱动）：
 
 ```csharp
 public partial class PlcViewModel : ViewModelBase
@@ -598,6 +651,8 @@ public partial class PlcViewModel : ViewModelBase
 }
 ```
 
+> 注意：三菱与西门子的地址格式不同（如三菱 `D100` / 西门子 `DB1.DBW0`），业务插件中的地址应通过配置传入，不要硬编码。
+
 ### 3. 订阅 PLC 连接事件
 
 ```csharp
@@ -618,6 +673,8 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 }
 ```
 
+事件处理器所在的程序集会被 MediatR 自动扫描注册，无需手动注册 Handler。
+
 ---
 
 ## 常见问题
@@ -625,26 +682,35 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 ### Q: 插件没有被加载
 
 **检查项**:
-1. 插件 DLL 是否在 `plugins/AP.Plugin.YourFeature/` 目录下
+1. 插件 DLL 是否在 `plugins/AP.Plugin.YourFeature/` 目录下（构建后自动输出，检查项目名是否以 `AP.Plugin` 开头）
 2. `[PluginMetadata]` 的 ID 是否与目录名一致
 3. `SupportedRoles` 是否包含当前运行角色
 4. 查看日志文件 `logs/log-*.txt` 中的错误信息
 
+### Q: 菜单里没有我的页面
+
+**检查项**:
+1. 插件主类是否实现了 `INavigationContributor` 并返回正确的 `NavigationTarget`
+2. `NavigationTarget` 是否与 `RegisterViewWithRegion("ContentRegion", ...)` 注册的视图名一致
+3. 若设置了 `Permission`，当前用户是否拥有该权限（admin 默认拥有全部权限）
+4. `Security:Enabled=false` 时，Target 是否在 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单中
+
 ### Q: 报表没有生成
 
 **检查项**:
-1. 是否调用了 `services.AddReportFramework(configuration)`
-2. 是否注册了 `IReportDataProvider` 实现
-3. 检查 `Report` 配置节中的 `Archive.Enabled` 是否为 `true`
+1. 是否注册了 `IReportDataProvider` 实现（`services.AddReportDataProvider<T>()`）
+2. 检查 `Report` 配置节中的 `Archive.Enabled` 是否为 `true`
+3. 定时归档依赖 `ReportScheduler`（IHostedService），确认宿主已显式启动
 4. 查看日志中是否有报表相关的错误
 
 ### Q: PLC 连接失败
 
 **检查项**:
-1. PLC IP 地址和端口是否正确
-2. 网络是否可达（`ping 192.168.1.10`）
-3. PLC 是否已开机并处于运行状态
-4. 查看日志中的连接错误信息
+1. `Plc:DriverType` 是否与现场 PLC 品牌匹配，对应品牌的插件是否在加载
+2. PLC IP 地址和端口是否正确（三菱默认 6000，西门子默认 102）
+3. 网络是否可达（`ping 192.168.1.10`）
+4. PLC 是否已开机并处于运行状态
+5. 查看日志中的连接错误信息（看门狗会自动重连）
 
 ### Q: 数据库备份失败
 
@@ -655,14 +721,18 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 
 **解决方案**:
 - 备份失败不会阻断启动，仅记录警告日志
-- 确保应用有写入 `data.db.bak` 的权限
+- 确保应用有写入 `local_data.db.bak` 的权限
 
 ### Q: 日志文件占用磁盘空间过大
 
 **解决方案**:
 1. 在 `appsettings.json` 中调整 `Logging:RetainedFileCount`（默认 90 天）
 2. 调整 `Logging:MaxFileSizeMb`（默认 50MB）
-3. 启动时会自动清理过期日志
+3. 启动时会自动清理过期日志（`LogCleanupHelper`）
+
+### Q: 应用崩溃没有任何提示
+
+崩溃信息会写入 `logs/crash-yyyyMMdd.log`（全局异常处理器，不弹窗）。致命异常会 `Environment.Exit(1)`。
 
 ---
 
@@ -676,7 +746,7 @@ AP-Scaffold/
 │   │       ├── Bootstrapping/         # 启动器（插件加载、gRPC 启动）
 │   │       ├── Configuration/         # 配置文件
 │   │       ├── ViewModels/            # 主窗口 ViewModel
-│   │       └── Views/                 # 主窗口 XAML
+│   │       └── Views/                 # 主窗口/Splash XAML
 │   │
 │   ├── core/                          # 核心框架
 │   │   └── AP.Core/
@@ -686,9 +756,9 @@ AP-Scaffold/
 │   │       └── EventBus/              # MediatR 事件总线
 │   │
 │   ├── contracts/                     # 接口契约层
-│   │   ├── AP.Contracts.Core/         # 核心事件、错误模型
-│   │   ├── AP.Contracts.Hardware/     # 硬件服务接口
-│   │   ├── AP.Contracts.Communication/ # gRPC 契约
+│   │   ├── AP.Contracts.Core/         # OperationResult、错误模型、应用事件
+│   │   ├── AP.Contracts.Hardware/     # 硬件服务接口、设备事件
+│   │   ├── AP.Contracts.Communication/ # gRPC proto 契约
 │   │   ├── AP.Contracts.System/       # 系统服务接口
 │   │   ├── AP.Contracts.Security/     # 安全/权限/审计日志契约
 │   │   ├── AP.Contracts.Recipe/       # 配方管理契约
@@ -713,7 +783,7 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.AirtightnessCheck/
 │   │   │   └── AP.Plugin.DeviceConfiguration/
 │   │   └── system/                    # 系统功能插件
-│   │       ├── AP.Plugin.Layout/      # 布局/Sidebar
+│   │       ├── AP.Plugin.Layout/      # 布局/Sidebar/仪表盘
 │   │       ├── AP.Plugin.Login/       # 登录认证
 │   │       ├── AP.Plugin.SystemSettings/ # 系统配置中心
 │   │       ├── AP.Plugin.UserManagement/ # 用户管理
@@ -723,11 +793,13 @@ AP-Scaffold/
 │   │       └── AP.Plugin.ReportCenter/ # 报表中心
 │   │
 │   └── shared/                        # 共享库
-│       ├── AP.Shared.PluginSDK/       # 插件开发 SDK
-│       ├── AP.Shared.UI/              # UI 控件库
+│       ├── AP.Shared.PluginSDK/       # 插件 SDK（PluginBase/导航/设置贡献者）
+│       ├── AP.Shared.UI/              # UI 控件库（浅色主题/对话框/权限行为）
 │       └── AP.Shared.Utilities/       # 通用工具
 │
-├── Directory.Build.props              # 全局编译属性
+├── installer/                         # Inno Setup 安装包脚本
+├── docs/                              # 文档
+├── Directory.Build.props              # 全局编译属性（含插件输出规则）
 ├── Directory.Packages.props           # 中央包版本管理
 └── AP-Automation.Platform.slnx        # 解决方案文件
 ```
@@ -740,4 +812,4 @@ AP-Scaffold/
 
 ---
 
-**最后更新**: 2026-07-14
+**最后更新**: 2026-07-21

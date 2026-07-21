@@ -1,6 +1,12 @@
 # AP-Scaffold 架构设计文档
 
-本文档详细描述 AP-Scaffold 的架构设计、分层职责、核心机制与关键设计模式。
+本文档详细描述 AP-Scaffold 的架构设计、分层职责、核心机制与关键设计模式。内容以当前实际代码为准。
+
+脚手架的三大设计目标贯穿全文：
+
+- **可快速复用**：插件化 + 契约层 + 声明式贡献者模式，新业务以最小成本接入
+- **安全可靠**：安全/权限/审计体系、Polly 容错、看门狗自愈、崩溃日志
+- **统一视觉**：全浅色 Material Design 3 主题、统一 UI 资源与权限行为
 
 ---
 
@@ -15,11 +21,12 @@
   - [事件总线 (EventBus)](#事件总线-eventbus)
 - [契约层 (AP.Contracts)](#契约层-apcontracts)
 - [基础设施层 (AP.Infra)](#基础设施层-apinfra)
-- [共享库 (AP.Shared)](#共享库-apshotshared)
+- [共享库 (AP.Shared)](#共享库-apshared)
 - [启动宿主 (AP.Host.Desktop)](#启动宿主-aphostdesktop)
 - [插件集 (Plugins)](#插件集-plugins)
 - [关键设计模式](#关键设计模式)
 - [数据流与交互图](#数据流与交互图)
+- [扩展点](#扩展点)
 
 ---
 
@@ -28,38 +35,32 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AP.Host.Desktop (启动宿主)                 │
-│  角色识别 → 插件扫描 → 服务注册 → 初始化 → 启动 gRPC → 显示 UI  │
+│  角色识别 → 插件扫描 → 服务注册 → 登录 → 初始化 → gRPC → UI   │
 ├─────────────────────────────────────────────────────────────┤
 │                     Plugins (插件层)                          │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐     │
 │  │  Hardware     │ │  Business     │ │  System          │     │
-│  │  PLC / 串口   │ │  气密性/配置   │ │  布局管理         │     │
+│  │  PLC×2 / 串口 │ │  气密/设备配置 │ │  布局/登录/设置/  │     │
+│  │              │ │              │ │  用户/角色/审计/  │     │
+│  │              │ │              │ │  配方/报表        │     │
 │  └──────┬───────┘ └──────┬───────┘ └────────┬─────────┘     │
 │         │                │                   │              │
 │         └────────────────┼───────────────────┘              │
-│                          │ 依赖 IReportDataProvider 等       │
+│                          │ 依赖 Contracts 接口 / 贡献者模式   │
 ├──────────────────────────┼──────────────────────────────────┤
 │        Contracts (契约层) │                                   │
-│  ┌──────────────────┐   │   ┌────────────────────────────┐  │
-│  │ AP.Contracts.Core │   │   │   AP.Contracts.Hardware   │  │
-│  │ 核心事件/错误模型  │   │   │   硬件服务接口/设备事件    │  │
-│  ├──────────────────┤   │   ├────────────────────────────┤  │
-│  │ AP.Contracts.Comm│   │   │   AP.Contracts.System     │  │
-│  │ gRPC 契约        │   │   │   系统服务接口             │  │
-│  └──────────────────┘   │   └────────────────────────────┘  │
+│  Core │ Hardware │ Communication(proto) │ System │           │
+│  Security │ Recipe │ Report                                 │
 ├──────────────────────────┼──────────────────────────────────┤
 │      Infra (基础设施层)   │                                   │
-│  ┌──────────┐ ┌─────────┐ ┌────────┐ ┌───────────────────┐ │
-│  │ Database  │ │  gRPC   │ │ Logging│ │ Report / Resilience│ │
-│  │ FreeSql   │ │ Server/ │ │Serilog │ │ 报表框架 / Polly  │ │
-│  │ Repository│ │ Client  │ │  配置   │ │                   │ │
-│  └──────────┘ └─────────┘ └────────┘ └───────────────────┘ │
+│  Database │ Grpc │ Hardware │ Logging │ Report │             │
+│  Resilience │ Security │ Recipe                              │
 ├─────────────────────────────────────────────────────────────┤
 │                    AP.Core (核心框架)                         │
 │  PluginFramework │ EventBus │ StateMachine │ Lifecycle      │
 ├─────────────────────────────────────────────────────────────┤
 │           AP.Shared (共享库)                                  │
-│  PluginSDK │ UI Controls │ Utilities                        │
+│  PluginSDK(导航/设置贡献者) │ UI │ Utilities                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,51 +86,63 @@
 
 ```
 PluginFramework/
-├── Abstractions/          # 插件接口定义
-│   └── IPlugin.cs         # InitializeAsync / StartAsync / StopAsync
-├── Attributes/            # 插件特性标注
+├── Abstractions/              # 插件接口定义
+│   ├── IPlugin.cs             # InitializeAsync / StartAsync / StopAsync
+│   ├── IConfigurablePlugin.cs # ConfigureServices(services, configuration)
+│   └── IApplicationLifecycle.cs # 应用生命周期（插件可注入，停止应用）
+├── Attributes/                # 插件特性标注
 │   ├── PluginMetadataAttribute.cs    # 插件元数据（ID、名称、版本、角色、依赖等）
 │   └── RequiresCapabilitiesAttribute.cs  # 能力依赖声明
-└── Loading/               # 插件加载机制
-    ├── PluginLoader.cs           # 扫描目录 → 加载 DLL → 创建实例
-    ├── PluginDescriptor.cs       # 插件描述符（元数据 + 实例引用）
-    └── PluginAssemblyLoadContext.cs  # 隔离的 AssemblyLoadContext
+└── Loading/                   # 插件加载机制
+    ├── PluginLoader.cs            # 扫描目录 → 加载 DLL → 发现描述符
+    ├── PluginDescriptor.cs        # 插件描述符（元数据 + 实例引用）
+    ├── PluginAssemblyLoadContext.cs  # 隔离的 AssemblyLoadContext
+    └── AssemblyScanner.cs         # 反射扫描 IPlugin 实现与特性
 ```
 
 #### 插件加载流程
 
 ```
 Step 1: 目录扫描
-  └─→ 遍历 plugins/*/ 目录，收集所有 .dll 文件路径
+  └─→ 遍历 plugins/{插件名}/ 目录，定位与目录同名的 .dll
 
 Step 2: 创建隔离上下文
-  └─→ 为每个插件创建独立的 AssemblyLoadContext（支持热卸载）
-       └─→ 设置依赖解析回调，解决共享库冲突
+  └─→ 为每个插件创建独立的 PluginLoadContext（AssemblyLoadContext）
+       └─→ 设置依赖解析回调，共享程序集回落到默认上下文
 
 Step 3: 加载程序集
   └─→ AssemblyLoadContext.LoadFromAssemblyPath(dllPath)
 
 Step 4: 扫描 IPlugin 实现
-  └─→ 反射扫描所有类型，寻找实现 IPlugin 接口的类
-       └─→ 读取 [PluginMetadata] 特性
-       └─→ 读取 [RequiresCapabilities] 特性
+  └─→ AssemblyScanner 反射扫描，寻找实现 IPlugin 的类
+       └─→ 读取 [PluginMetadata] 与 [RequiresCapabilities] 特性
 
 Step 5: 角色校验
-  └─→ 对比 PluginMetadata.SupportedRoles 与当前 AppRole
-       └─→ 不匹配则跳过该插件
+  └─→ (PluginMetadata.SupportedRoles & 当前 AppRole) == 0 则卸载跳过
 
-Step 6: 依赖校验
-  └─→ 检查 PluginMetadata.Dependencies 中声明的依赖插件是否存在
-       └─→ 缺失则跳过或报错（取决于 Required 属性）
+Step 6: 排序
+  └─→ 按 Priority 升序（数值越小越先加载）
 
-Step 7: 实例化
-  └─→ 调用 Activator.CreateInstance 创建插件实例
-       └─→ 构造函数注入 ILogger
+Step 7: 两阶段实例化（由 Bootstrapper 执行）
+  └─→ 阶段一：临时 ServiceProvider 实例化插件 → 调 ConfigureServices 收集服务注册
+       → 收集插件程序集供 MediatR 扫描；失败插件记入 failedPlugins
+  └─→ 阶段二：用最终 ServiceProvider 重新实例化插件存入 descriptor.Instance
 
 Step 8: 注册到生命周期管理器
-  └─→ 创建 PluginDescriptor（元数据 + 实例）
-       └─→ 传递给 PluginLifecycleManager.RegisterPlugins()
+  └─→ PluginLifecycleManager.RegisterPlugins(descriptors)
 ```
+
+#### 插件元数据 (PluginMetadataAttribute)
+
+| 属性 | 默认值 | 说明 |
+|------|--------|------|
+| `Id` | （构造函数必传） | 插件 ID，必须与目录名及 DLL 名一致 |
+| `Name` | `""` | 显示名称 |
+| `Version` | `"1.0.0"` | 版本 |
+| `SupportedRoles` | `AppRole.All` | 支持的运行角色（位标志组合） |
+| `Dependencies` | `[]` | 依赖的其他插件 ID |
+| `Priority` | `100` | 加载优先级，越小越先加载 |
+| `Required` | `true` | 必需插件标记 |
 
 #### 隔离加载上下文 (AssemblyLoadContext)
 
@@ -141,7 +154,8 @@ Step 8: 注册到生命周期管理器
 //   3. 插件 DLL 不会污染宿主的加载上下文
 // 代价：
 //   1. 跨上下文类型传递需要序列化/接口
-//   2. 共享类型必须通过 Shared 程序集加载到默认上下文
+//   2. 共享类型必须通过 Shared/Contracts 程序集加载到默认上下文
+//      （因此契约程序集必须被 Host 直接引用，否则 MediatR 扫描失败）
 ```
 
 ### 插件生命周期管理 (Lifecycle)
@@ -211,7 +225,7 @@ StopPluginsAsync()           // 按 Priority 降序（后启动的先停止）
 - **初始化失败**：仅记录日志，不阻塞其他插件的初始化和启动
 - **启动失败**：仅记录日志，不影响其他插件
 - **停止失败**：仅记录日志，继续停止其他插件
-- **必需插件失败**（`Required = true`）：可配置是否导致应用退出
+- 宿主在全部启动后汇总失败插件并告警（`Bootstrapper`）
 
 ### 状态机 (StateMachine)
 
@@ -247,7 +261,7 @@ StopPluginsAsync()           // 按 Priority 降序（后启动的先停止）
 
 ### 能力声明 (Capability)
 
-`PluginCapabilities` 是一个 `[Flags]` 枚举，提供细粒度的能力控制，使用位运算组合：
+`PluginCapabilities` 是一个 `[Flags]` 枚举，提供细粒度的能力声明，使用位运算组合：
 
 ```csharp
 [Flags]
@@ -280,6 +294,8 @@ public enum PluginCapabilities
 | `Hardware` | Standard + AccessPLC, AccessSerialPort, AccessNetwork |
 | `FullAccess` | 所有能力 |
 
+> **现状**：`[RequiresCapabilities]` 目前只是元数据声明，加载器不做运行时强制检查（路线图项）。
+
 ### 事件总线 (EventBus)
 
 基于 MediatR 封装，实现插件间的解耦通信。
@@ -308,53 +324,37 @@ public interface IEventBus
 {
     /// <summary>发布事件（通知所有订阅者）</summary>
     Task PublishAsync<TEvent>(TEvent @event, CancellationToken ct = default) where TEvent : INotification;
-    
+
     /// <summary>发送命令（仅一个处理器接收）</summary>
     Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken ct = default);
 }
 ```
 
-#### 使用示例
+#### MediatR ↔ Prism 桥接
 
-```csharp
-// 发布事件（插件 A）
-await eventBus.PublishAsync(new DeviceConnectedEvent
-{
-    DeviceName = "PLC-01",
-    ConnectedAt = DateTime.UtcNow
-});
-
-// 订阅事件（插件 B）
-public class DeviceConnectionHandler : INotificationHandler<DeviceConnectedEvent>
-{
-    public Task Handle(DeviceConnectedEvent notification, CancellationToken ct)
-    {
-        // 处理连接事件
-        return Task.CompletedTask;
-    }
-}
-```
+宿主程序集中的 `MediatRToPrismBridge` 实现 `INotificationHandler<PlcDataChangedEvent>` / `INotificationHandler<ScanCompletedEvent>` / `INotificationHandler<DeviceDisconnectedEvent>`，把关键的 MediatR 事件转发到 Prism `IEventAggregator` 的 `PrismXxxEvent`，供习惯 Prism 事件机制的 UI 组件订阅。桥接器随 MediatR 扫描 Host 程序集自动注册，无显式注册代码。
 
 ---
 
 ## 契约层 (AP.Contracts)
 
-契约层定义了核心与业务之间的桥梁接口，主要包括：
+契约层定义了核心与业务之间的桥梁接口：
 
 | 项目 | 内容 |
 |------|------|
-| `AP.Contracts.Core` | 核心事件（设备连接/断开）、错误模型 |
-| `AP.Contracts.Hardware` | 硬件服务接口（IPlcService 等）、设备事件 |
-| `AP.Contracts.Communication` | gRPC 服务/消息协定 |
-| `AP.Contracts.System` | 系统服务接口（ILoginService、ISettingsDialogService 等） |
-| `AP.Contracts.Security` | 安全/权限/审计日志契约（IIdentityService、ISecurityDbInitializer、IAuditService 等） |
-| `AP.Contracts.Recipe` | 配方管理契约（IRecipeService、IRecipeDbInitializer 等） |
-| `AP.Contracts.Report` | 报表中心契约（IReportCenterService、报表归档模型等） |
+| `AP.Contracts.Core` | `OperationResult<T>`、`ErrorCode`、`PlatformException`、`AppInitializedEvent`（Prism PubSubEvent） |
+| `AP.Contracts.Hardware` | `IPlcService` / `IPlcBatchReadWrite` / `IScannerService` / `IPlcDriverFactory`、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR + Prism 双形式）、`ConnectDeviceCommand` |
+| `AP.Contracts.Communication` | gRPC proto 契约（`automation_gate.proto`：`AutomationGate` 服务，`StreamPlcData` 服务端流 + `Heartbeat`；`common.proto`） |
+| `AP.Contracts.System` | `ILoginService`、`ISettingsDialogService`、`ISystemMonitorService`、`SystemMetrics` |
+| `AP.Contracts.Security` | `IIdentityService`、`IUserRepository` / `IRoleRepository` / `IPermissionRepository` / `IPasswordHasher`、`ISecurityDbInitializer`、`IAuditService` / `AuditLogEntry` / `AuditActionType`、用户/角色/权限模型 |
+| `AP.Contracts.Recipe` | `IRecipeManager`（含 `CurrentRecipe`、`SwitchAsync`）、`IRecipeDbInitializer`、`RecipeInfo` / `RecipeParameter` |
+| `AP.Contracts.Report` | `IReportCenterService`、`ReportTypeInfo`、`ReportArchiveDto` |
 
 **设计原则**：
 - Contracts 只定义接口和模型，不包含实现
 - 插件引用 Contracts，Infra 实现 Contracts
 - 插件间通过 Contracts 定义的事件进行通信
+- 例外：`IReportDataProvider` 定义在 `AP.Infra.Report`（报表框架内部抽象），需要报表能力的业务插件直接引用该 Infra 项目
 
 ---
 
@@ -362,28 +362,35 @@ public class DeviceConnectionHandler : INotificationHandler<DeviceConnectedEvent
 
 ### AP.Infra.Database — 数据访问
 
-基于 FreeSql 的 Repository 模式：
+基于 FreeSql 的 Repository 模式，`AddPlatformDatabase(configuration, appRole)` 注册：
 
-```csharp
-// 基础仓库接口
-public interface IRepository<T> where T : class
-{
-    Task<T?> GetByIdAsync(object id);
-    Task<List<T>> GetAllAsync();
-    Task InsertAsync(T entity);
-    Task UpdateAsync(T entity);
-    Task DeleteAsync(T entity);
-}
-```
+- 按 `Database:Provider` 选择 SQLite / PostgreSQL
+- **SQLite**：启动前自动备份（`.db → .db.bak`，连同 `-wal`/`-shm`），启用 WAL 等 PRAGMA 优化
+- `UseAutoSyncStructure(false)`：**不自动建表**，各模块初始化器显式 `CodeFirst.SyncStructure<T>()`
+- `IRepository<T>` / `FreeSqlRepository<T>`（Scoped）：`GetAsync / GetListAsync / InsertAsync / UpdateAsync / DeleteAsync`
+- `BaseEntity`：`Id` 自增主键、`CreatedAt` / `UpdatedAt`
 
-支持 SQLite 和 PostgreSQL 两种数据库提供者，通过配置切换。
+### AP.Infra.Security — 安全模块
+
+- `AddPlatformSecurity(configuration)`，配置键 `Security:Enabled`（默认 true）、`Security:Audit:Enabled`（缺省回退）
+- 实体：`User`/`Role`/`Permission`/`UserRole`/`RolePermission`/`AuditLog`（表：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`）
+- `PasswordHasher`：PBKDF2-SHA256，16 字节盐 + 32 字节密钥 + 100,000 次迭代，定时间比较验证
+- `SecurityDbInitializer`：建表 + 种子数据（12 个权限、3 个角色、admin/admin123 强制改密）
+- `Security:Enabled=false` 时：`IIdentityService` 替换为 `AnonymousIdentityService`（全部权限），审计用 `NullAuditService`
+
+### AP.Infra.Recipe — 配方管理
+
+- `AddPlatformRecipe(configuration)`；`RecipeManager` 实现 `IRecipeManager`
+- 实体 `Recipe`（表 `recipes`）：`Code`/`Name`/`Version`/`IsDefault`/`ParametersJson`（JSON 序列化的参数列表）
+- `UpdateAsync` 自动 `Version+1`；`SetDefaultAsync` 先清除其他默认；`SwitchAsync` 设置内存 `CurrentRecipe`（事件发布留 TODO）
+- `RecipeDbInitializer`：建表 + 无 DEFAULT 配方时创建默认配方
 
 ### AP.Infra.Grpc — gRPC 通信
 
 | 角色 | 模式 | 行为 |
 |------|------|------|
-| Server | 服务端 | 启动 Kestrel + gRPC 服务，通过 `StreamBroadcaster` 广播消息 |
-| Client | 客户端 | 启动后台 Worker 连接到服务端，接收广播 |
+| Server | 服务端 | 内嵌 Kestrel（仅 HTTP/2）+ `GrpcGateService`，通过 `StreamBroadcaster` 广播消息 |
+| Client | 客户端 | `GrpcClientWorker` 连接服务端，接收数据流经 MediatR 转发 |
 | Standalone | 单机 | 不启动 gRPC，插件间通过 MediatR 通信 |
 
 **StreamBroadcaster 机制**：
@@ -397,49 +404,48 @@ Server 端                    Client 端
       ▼                          │
 ┌──────────────┐                │
 │ gRPC Service │────────────────┘
-│ Broadcaster  │  StreamResponse
+│ Broadcaster  │  StreamResponse（Channel 背压）
 └──────────────┘
 ```
 
-**LoggingInterceptor**：统一的 gRPC 请求/响应日志记录，自动记录每个请求的方法名、耗时和状态。
+- 契约 proto 位于 `AP.Contracts.Communication/Grpc/`，由 Grpc.Tools 生成代码
+- `LoggingInterceptor`：统一的 gRPC 请求/响应日志（方法名、耗时、状态）
+- 服务端与 WPF 共享同一个 `StreamBroadcaster` 单例（从 WPF 容器桥接给 ASP.NET Core）
+- 配置键：服务端 `Grpc:ServerPort`（默认 5000）；客户端 `Grpc:ServerUrl` / `Grpc:ClientId` / `Grpc:ClientName`
 
 ### AP.Infra.Logging — 结构化日志
 
-基于 Serilog 的配置：
+基于 Serilog：
 
-- 默认输出：控制台 + 滚动文件
-- 日志格式：JSON 结构化
-- 日志保留：可配置天数（默认 90 天）
-- 文件大小限制：可配置单文件最大 MB（默认 50MB）
+- 输出：控制台 + 滚动文件（`logs/log-yyyyMMdd.txt`）
+- 增强器：`MachineNameEnricher`、`ThreadIdEnricher`、ProcessId
+- 保留策略：`Logging:RetainedFileCount`（默认 90 天）、`Logging:MaxFileSizeMb`（默认 50MB，`rollOnFileSizeLimit`）
+- `LogCleanupHelper.CleanupIfNeeded`：启动时一次性删除过期日志文件，失败仅警告
 
 ### AP.Infra.Resilience — 容错策略
 
-基于 Polly 的策略工厂，通过配置驱动：
+基于 Polly 8 的 `ResiliencePipelineFactory`，构造时注册全部管道：
 
-```json
-{
-  "Resilience": {
-    "Pipelines": {
-      "PLC-Retry": {
-        "MaxRetryAttempts": 5,
-        "RetryDelaySeconds": 3
-      }
-    }
-  }
-}
-```
+| 管道 Key（`ResiliencePipelineFactory.Keys`） | 策略 |
+|------|------|
+| `Database-Retry` | 指数退避重试（1s 起），捕获所有异常 |
+| `PLC-Retry` | 固定 500ms 间隔重试 |
+| `Grpc-CircuitBreaker` | 熔断器（失败率 50%、采样窗 30s、熔断时长可配置） |
+
+配置为扁平键：`Resilience:DatabaseRetryCount` / `PlcRetryCount` / `GrpcCircuitBreakerThreshold` / `CircuitBreakerDurationSeconds`。
 
 所有硬件操作自动受策略保护，开发者无需手动处理重试逻辑。
 
 ### AP.Infra.Hardware — PLC 硬件抽象
 
-提供统一的 PLC 驱动注册表与当前激活服务代理：
+统一的 PLC 驱动注册与代理：
 
-- `PlcDriverRegistry`：收集各品牌插件注册的 `IPlcDriverFactory`（三菱/西门子/欧姆龙）。
-- `ActivePlcService`：实现 `IPlcService` / `IPlcBatchReadWrite`，根据 `Plc:DriverType` 配置选择真实驱动并转发调用。
-- `AddPlcHardware`：在 `AP.Host.Desktop` 中统一注册 `IPlcService`。
+- `IPlcDriverFactory`（契约层）：`DriverType`、`SupportedFeatures`、`CreateDriver(PlcOptions, IServiceProvider)`
+- `PlcDriverRegistry`：收集各品牌插件注册的工厂（按 DriverType 大小写不敏感索引）
+- `ActivePlcService`：懒加载代理（`Lazy<IPlcService>`），实现 `IPlcService` / `IPlcBatchReadWrite`，首次调用时按 `Plc:DriverType` 创建真实驱动并转发全部调用
+- `AddPlcHardware`：宿主统一注册 `IPlcService`
 
-业务代码只依赖 `IPlcService`，切换 PLC 品牌只需修改 `Plc:DriverType` 配置。
+业务代码只依赖 `IPlcService`，切换 PLC 品牌只需修改 `Plc:DriverType` 配置（或系统设置中的 PLC 配置页）。
 
 ### AP.Infra.Report — 报表框架
 
@@ -454,6 +460,7 @@ Server 端                    Client 端
 ┌──────────────────────────────────────┐
 │           ReportScheduler             │
 │  每天指定时间触发 ArchiveService       │
+│  （IHostedService，需宿主显式启动）     │
 └──────────────────┬───────────────────┘
                    │
                    ▼
@@ -467,25 +474,27 @@ Server 端                    Client 端
 │             ▼                        │
 │  ┌──────────────────────────────┐    │
 │  │  ExcelExporter                │    │
-│  │  → MiniExcel 写入文件         │    │
-│  │  → 应用模板（可选）            │    │
+│  │  → MiniExcel 写入临时文件      │    │
+│  │  → 原子重命名                 │    │
 │  └──────────┬───────────────────┘    │
 │             ▼                        │
 │  ┌──────────────────────────────┐    │
 │  │  ReportStorage                │    │
-│  │  → 保存到 reports/ 目录       │    │
-│  │  → 记录数据库归档记录          │    │
+│  │  → 按 PathFormat 保存         │    │
+│  │  → 记录 report_archives 归档   │    │
 │  └──────────────────────────────┘    │
 └──────────────────────────────────────┘
                    │
                    ▼
 ┌──────────────────────────────────────┐
 │       ReportCleanupService            │
-│  定期检查过期报表                      │
+│  定期检查过期报表（IHostedService）     │
 │  删除超过保留天数的文件                │
-│  DryRun 模式模拟运行                   │
+│  跳过 ProtectedTypes，支持 DryRun      │
 └──────────────────────────────────────┘
 ```
+
+归档实体 `ReportArchive`（表 `report_archives`）：`Id`（GUID 字符串）、`ReportDate`、`ReportType`、`ReportName`、`FilePath`、`RecordCount`、`FileSize`、`GeneratedAt`、`Status`（Success/Failed/Cleaned）、`FailureReason`。
 
 ---
 
@@ -493,12 +502,13 @@ Server 端                    Client 端
 
 ### AP.Shared.PluginSDK — 插件开发 SDK
 
-提供 `PluginBase` 基类，封装了生命周期方法和日志基础设施：
+**`PluginBase` 基类**（实现 `IConfigurablePlugin`）：
 
 ```csharp
-public abstract class PluginBase : IPlugin
+public abstract class PluginBase : IConfigurablePlugin
 {
     protected ILogger Logger { get; }
+    protected IServiceProvider ServiceProvider { get; }  // InitializeAsync 后可用
 
     public virtual void ConfigureServices(IServiceCollection services, IConfiguration configuration);
     public virtual Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct);
@@ -507,49 +517,123 @@ public abstract class PluginBase : IPlugin
 }
 ```
 
+**导航贡献者模式**（`Navigation/`）：
+
+```csharp
+public interface INavigationContributor
+{
+    IEnumerable<NavigationMenuItem> GetMenuItems();
+}
+
+public class NavigationMenuItem
+{
+    public string Label { get; set; }            // 显示文本
+    public string IconKind { get; set; }         // Material Design 图标名
+    public string NavigationTarget { get; set; } // 导航目标视图名（需注册到 ContentRegion）
+    public int Order { get; set; }               // 排序权重，越小越靠前
+    public string? Permission { get; set; }      // 可选权限码，空 = 无需权限
+    public string? Category { get; set; }        // 分组名（预留给二级菜单）
+    public bool IsDefault { get; set; }          // 是否启动默认页
+}
+```
+
+`NavigationMenuItemBuilder.Build(contributors, hasPermission, defaultTarget, visibilityFilter)` 负责：扁平化 → 过滤无效项 → 按 `NavigationTarget` 去重（取最小 Order）→ 排序 → 默认项匹配（含 `defaultTarget` 配置）→ 权限过滤 → 白名单过滤 → 无默认项时取第一个可见项。
+
+**设置贡献者模式**（`Configuration/`）：
+
+```csharp
+public interface ISettingsContributor
+{
+    string Category { get; }            // 分组（如 "系统"/"硬件"）
+    string Title { get; }               // 页标题
+    string IconKind { get; }            // 图标
+    int Order { get; }                  // 排序
+    string ConfigurationSection { get; } // 对应配置节
+    ISettingsEditorViewModel CreateViewModel(IServiceProvider serviceProvider);
+}
+
+public interface ISettingsEditorViewModel : INotifyPropertyChanged
+{
+    void LoadFromConfiguration(IConfiguration configuration);
+    bool Validate(out string errorMessage);
+    object GetConfigurationValue();
+    bool RequiresRestart { get; }
+}
+```
+
+系统配置中心（`SettingsShellViewModel`）自动收集所有 `ISettingsContributor`，保存时统一 Validate → 备份 appsettings → 写回 → 汇总需要重启的项。
+
 ### AP.Shared.UI — UI 控件库
 
-内置 Material Design 3 风格的 WPF 控件：
+全浅色 Material Design 3 视觉体系：
 
-| 控件 | 用途 |
+| 资源 | 说明 |
 |------|------|
-| `LoadingSpinner` | 加载动画 |
-| `MaterialDialog` | 自定义对话框 |
-| `Toast` | 轻量级消息提示 |
-| `BoolToVisibility` | 布尔值 ↔ 可见性转换器 |
-| `Industrial.Teal.MD3` | 工业风格主题 |
+| `Industrial.Teal.MD3.xaml` | 主题文件（文件名保留，内容为全浅色）：主色 `#1E3A5F`、强调色 `#0891B2`、语义色、表面色、文字样式、间距/圆角/海拔 |
+| `LoadingSpinner` | 加载动画控件（`IsLoading` / `LoadingText`） |
+| `ICustomDialogService` | 对话框服务：`ShowAlertAsync` / `ShowConfirmAsync` / `ShowErrorAsync`（基于 DialogHost `RootDialogHost`） |
+| `PermissionBehavior` | 附加属性 `Permission` + `HideWhenUnauthorized`（true=隐藏，false=禁用） |
+| 转换器 ×4 | `BoolToVisibilityConverter`、`InverseBoolToVisibilityConverter`、`BoolToStatusConverter`、`FileSizeConverter` |
+| `ViewModelBase` | `ObservableObject` + `INavigationAware` + `IDestructible`；`Title`/`IsBusy`/`BusyText`；`RequestClose` 事件 |
+
+主题引用链：`App.xaml` 合并 `MaterialDesign3.Defaults.xaml` + `BundledTheme(Light, BlueGrey, Cyan)` + `AP.Shared.UI` 的 `ResourceDictionary.xaml`。
 
 ### AP.Shared.Utilities — 通用工具
 
 | 工具 | 用途 |
 |------|------|
-| `SerializationHelper` | JSON 序列化/反序列化 |
-| `ConfigurationHelper` | appsettings.json 配置更新 |
+| `SerializationHelper` | JSON 序列化/反序列化（System.Text.Json，忽略大小写/忽略 null/枚举转字符串） |
+| `ConfigurationHelper` | appsettings.json 配置写回（`UpdateAppSetting`，写 `{BaseDirectory}/Configuration/appsettings.json`） |
+| `GlobalConstants` | 项目前缀、Region 名（`MainRegion`/`ContentRegion`/`SettingsRegion` 等）、配置键常量 |
+| `AppConstants` | 对话框宿主标识（`RootDialogHost`） |
+| `AppConfigurationOptions` | `AppConfiguration` 配置节模型 |
 
 ---
 
 ## 启动宿主 (AP.Host.Desktop)
 
-宿主的启动流程在 `Bootstrapping/` 目录中，主要步骤：
+宿主无 Prism Module，全部功能由插件目录扫描驱动。启动流程（`Bootstrapping/Bootstrapper.cs`，按实际代码）：
 
 ```
-1. 读取 appsettings.json → 确定 AppRole
-2. 根据 AppRole 加载对应的专属配置（appsettings.Server.json 等）
-3. 配置 Serilog 日志
-4. 配置 Prism + DryIoc DI 容器
-5. 注册框架服务（Database、gRPC、EventBus、Resilience、PlcHardware 等）
-6. 注册报表框架
-7. 启动插件加载器：
-   a. 扫描 plugins/ 目录
-   b. 创建隔离 AssemblyLoadContext
-   c. 加载并实例化匹配 AppRole 的插件
-   d. 注册到 PluginLifecycleManager
-8. 调用 PluginLifecycleManager.InitializePluginsAsync()
-9. 调用 PluginLifecycleManager.StartPluginsAsync()
-10. 手动初始化报表数据库（`ReportDatabaseInitializer.StartAsync`）
-11. 调用 `PluginLifecycleManager.InitializePluginsAsync()` 和 `StartPluginsAsync()`
-12. 根据 AppRole 启动 gRPC（Server 启动 Kestrel，Client 启动 Worker）
-13. 显示主窗口（Standalone 或 Client 模式）
+App.OnStartup
+  │
+  ├── 1. GlobalExceptionHandler.Initialize()（崩溃日志 logs/crash-*.log）
+  ├── 2. RoleResolver.Resolve(args)（--role=xxx > appsettings AppRole > 默认 Standalone）
+  ├── 3. 显示 SplashWindow
+  └── 4. new Bootstrapper(role, splash).Run()
+         │
+         │  RegisterTypes:
+         ├── 5. 加载配置（appsettings.json + appsettings.{Role}.json + 环境变量）
+         ├── 6. 注册 IConfiguration / AppRole
+         ├── 7. ServiceCollection 依次注册：
+         │       AddPlatformLogging → AddPlatformDatabase → AddPlatformResilience
+         │       → AddPlatformSecurity → AddPlatformRecipe → AddPlcHardware → AddReportFramework
+         │       （Server 角色：AddPlatformGrpcServer + StreamBroadcaster；
+         │         Client 角色：GrpcClientWorker 等客户端服务）
+         ├── 8. PluginLoader.DiscoverPlugins(appRole)：扫描 → 隔离加载 → 角色过滤 → 按 Priority 排序
+         ├── 9. 两阶段实例化：临时容器实例化插件 → ConfigureServices 收集服务 → 收集程序集
+         ├── 10. AddMediatR（扫描插件程序集 + Host 程序集，含 MediatRToPrismBridge）
+         ├── 11. 构建最终 ServiceProvider，重新实例化插件
+         ├── 12. DryIoc 桥接：containerRegistry.GetContainer().Populate(services)
+         │       + 注册插件实例（IPlugin；若为 INavigationContributor 再注册一份）
+         └── 13. 创建 PluginLifecycleManager 并 RegisterPlugins；注册 ICustomDialogService 等
+         │
+         │  CreateShell / InitializeShell:
+         ├── 14. Resolve MainWindow；Security 启用时：先同步跑 SecurityDbInitializer
+         │       → 关 Splash → ILoginService.ShowLoginDialog()（失败退出）
+         │       → MustChangePassword 则强制改密 → MainWindow.Show()
+         │
+         │  OnInitialized（异步，进度写 Splash）:
+         ├── 15. LogCleanupHelper 清理过期日志
+         ├── 16. Security 启用时再次 SecurityDbInitializer（幂等）
+         ├── 17. RecipeDbInitializer
+         ├── 18. ReportDatabaseInitializer.StartAsync（手动调用，IHostedService 不自动启动）
+         ├── 19. PluginLifecycleManager.InitializePluginsAsync + StartPluginsAsync
+         ├── 20. Server 角色：内嵌 Kestrel 启动 gRPC（共享 StreamBroadcaster 单例）
+         │       Client 角色：手动 GrpcClientWorker.StartAsync
+         ├── 21. 汇总失败插件告警 → 发布 AppInitializedEvent → 关闭 Splash
+         │
+         └── 22. TrayIconManager.Attach(MainWindow)（最小化到托盘/重启/退出）
 ```
 
 ---
@@ -558,24 +642,31 @@ public abstract class PluginBase : IPlugin
 
 ### 硬件驱动插件
 
-| 插件 | 协议 | 功能 |
-|------|------|------|
-| `AP.Plugin.Plc.Mitsubishi` | MC 协议 (Qna_3E) | 读写 bool/short/int/float，批量操作，看门狗心跳，自动重连 |
-| `AP.Plugin.Plc.Siemens` | S7 协议 (S7_200/300/400/1200/1500/Smart) | 读写 bool/short/int/float/string，批量操作，看门狗心跳，自动重连 |
-| `AP.Plugin.Scanner` | 串口协议 | 扫码枪数据接收 |
+| 插件 | Priority | 角色 | 协议 | 功能 |
+|------|---------|------|------|------|
+| `AP.Plugin.Plc.Mitsubishi` | 20 | Server\|Standalone | MC 协议 (Qna_3E) | 注册 `IPlcDriverFactory`；读写 bool/short/ushort/int/uint/float；批量为循环单点；看门狗 2 秒心跳 + 自动重连 |
+| `AP.Plugin.Plc.Siemens` | 21 | Server\|Standalone | S7 协议 (S7_200/300/400/1200/1500/Smart) | 注册 `IPlcDriverFactory`；额外支持 string；`BatchRead`/`BatchWrite` 真批量；看门狗 + 自动重连 |
+| `AP.Plugin.Scanner` | 20 | Client\|Standalone | 串口协议 | 扫码枪数据接收（SerialPort → Channel → MediatR `ScanCompletedEvent`） |
 
 ### 业务功能插件
 
-| 插件 | 功能 |
-|------|------|
-| `AP.Plugin.AirtightnessCheck` | 气密性检测流程（含报表） |
-| `AP.Plugin.DeviceConfiguration` | 设备参数配置界面 |
+| 插件 | Priority | 功能 |
+|------|---------|------|
+| `AP.Plugin.AirtightnessCheck` | 30 | 气密性检测 UI 骨架（4 步步进流程，未接 PLC / 未实现报表 Provider） |
+| `AP.Plugin.DeviceConfiguration` | 100 | 通过 `ISettingsContributor` 提供"扫码枪配置"设置页 |
 
 ### 系统功能插件
 
-| 插件 | 功能 |
-|------|------|
-| `AP.Plugin.Layout` | 布局管理 / Sidebar 导航 |
+| 插件 | Priority | 功能 | 菜单（Order / 权限） |
+|------|---------|------|---------------------|
+| `AP.Plugin.Layout` | 10 | 布局（Standard/SinglePage）、Sidebar、Header、仪表盘 | 仪表板（100 / 无，IsDefault） |
+| `AP.Plugin.Login` | 1 | 登录认证、强制改密、重新登录 | — |
+| `AP.Plugin.SystemSettings` | 5 | 系统配置中心（设置贡献者宿主） | 系统配置（1000 / `system.settings`） |
+| `AP.Plugin.UserManagement` | 5 | 用户 CRUD、重置密码 | 用户管理（4000 / `user.manage`） |
+| `AP.Plugin.RoleManagement` | 6 | 角色 CRUD、权限分配 | 角色管理（4100 / `role.manage`） |
+| `AP.Plugin.AuditLog` | 7 | 审计日志查询/筛选/分页 | 审计日志（4200 / `audit.view`） |
+| `AP.Plugin.RecipeManagement` | 8 | 配方 CRUD、默认配方、切换 | 配方管理（2000 / `recipe.view`） |
+| `AP.Plugin.ReportCenter` | 9 | 报表归档查询/生成/打开/导出 | 报表中心（3000 / `report.view`） |
 
 ---
 
@@ -584,14 +675,14 @@ public abstract class PluginBase : IPlugin
 ### 1. 策略模式 (Polly Pipeline Factory)
 
 ```csharp
-// 根据配置键动态选择重试策略
-var pipeline = resilienceFactory.GetPipeline("PLC-Retry");
+// 根据 Key 获取预建管道
+var pipeline = resilienceFactory.GetPipeline(ResiliencePipelineFactory.Keys.Plc);
 await pipeline.ExecuteAsync(operation, ct);
 ```
 
 ### 2. 观察者模式 (MediatR EventBus)
 
-插件通过发布/订阅事件通信，发布者和订阅者无需互相知道对方存在。
+插件通过发布/订阅事件通信，发布者和订阅者无需互相知道对方存在；关键事件经 `MediatRToPrismBridge` 桥接到 Prism 事件聚合器。
 
 ### 3. 状态模式 (PluginStateMachine)
 
@@ -601,13 +692,22 @@ await pipeline.ExecuteAsync(operation, ct);
 
 每个业务插件实现 `IReportDataProvider` 接口提供数据，报表框架统一处理生成和归档。
 
-### 5. 依赖注入 + 模块化 (Prism)
+### 5. 贡献者模式 (Contributor Pattern)
 
-使用 Prism 的模块化能力，每个插件的 `ConfigureServices` 方法向全局 DI 容器注册自己的服务。
+- **导航贡献者**：插件实现 `INavigationContributor` 声明菜单项，Sidebar 统一收集、去重、排序、按权限过滤——新增页面零侵入。
+- **设置贡献者**：插件实现 `ISettingsContributor` 声明配置页，系统配置中心统一收集、分组、保存——新增配置零侵入。
 
-### 6. 隔离上下文 (AssemblyLoadContext)
+### 6. 工厂 + 注册表 + 代理 (PLC 驱动切换)
 
-每个插件在独立的 `AssemblyLoadContext` 中运行，避免 DLL 版本冲突。
+各品牌插件注册 `IPlcDriverFactory` → `PlcDriverRegistry` 按 DriverType 索引 → `ActivePlcService` 懒加载代理转发 `IPlcService` 调用。业务代码与品牌解耦。
+
+### 7. 依赖注入 + 两阶段服务收集 (Prism + MS-DI 桥接)
+
+插件的 `ConfigureServices` 先向 `ServiceCollection` 注册服务（阶段一），最终容器建成后重新实例化插件（阶段二），再通过 `DryIoc.Microsoft.DependencyInjection` 的 `Populate` 桥接到 Prism 的 DryIoc 容器——插件服务与 Prism 服务共用一个容器。
+
+### 8. 隔离上下文 (AssemblyLoadContext)
+
+每个插件在独立的 `AssemblyLoadContext` 中运行，避免 DLL 版本冲突；共享契约回落到默认上下文加载。
 
 ---
 
@@ -618,33 +718,34 @@ await pipeline.ExecuteAsync(operation, ct);
 ```
 Bootstrapper
   │
-  ├── 1. 读取 AppRole
+  ├── 1. 读取 AppRole（命令行 > 配置 > 默认 Standalone）
   │
-  ├── 2. PluginLoader.ScanAndLoad(pluginsDir, appRole)
+  ├── 2. PluginLoader.DiscoverPlugins(pluginsDir, appRole)
   │       │
-  │       ├── 2a. 扫描目录 → 发现匹配插件 DLL
-  │       ├── 2b. 创建 AssemblyLoadContext
+  │       ├── 2a. 扫描目录 → 发现插件 DLL
+  │       ├── 2b. 创建 PluginLoadContext
   │       ├── 2c. 加载程序集
-  │       ├── 2d. 反射扫描 IPlugin 实现
-  │       ├── 2e. 校验角色匹配
-  │       └── 2f. 实例化插件 → 返回 List<PluginDescriptor>
+  │       ├── 2d. AssemblyScanner 找 IPlugin 实现 + 读特性
+  │       ├── 2e. 校验角色匹配（不匹配则卸载）
+  │       └── 2f. 按 Priority 排序 → List<PluginDescriptor>
   │
-  ├── 3. PluginLifecycleManager.RegisterPlugins(descriptors)
-  │       │
-  │       └── 3a. 为每个插件创建 PluginStateMachine
-  │           └── 3b. TransitionTo(Discovered → Loading → Loaded)
+  ├── 3. 两阶段实例化 + ConfigureServices 收集
   │
-  ├── 4. PluginLifecycleManager.InitializePluginsAsync()
-  │       │
-  │       └── 4a. 按优先级依次调用 InitializeAsync
-  │           └── 4b. TransitionTo(Initializing → Initialized 或 Failed)
+  ├── 4. MediatR 扫描（插件程序集 + Host）
   │
-  ├── 5. PluginLifecycleManager.StartPluginsAsync()
-  │       │
-  │       └── 5a. 按优先级依次调用 StartAsync
-  │           └── 5b. TransitionTo(Starting → Running 或 Failed)
+  ├── 5. DryIoc Populate 桥接 + 注册插件实例/INavigationContributor
   │
-  └── 6. 显示主窗口 / 启动 gRPC
+  ├── 6. PluginLifecycleManager.RegisterPlugins(descriptors)
+  │       └── 为每个插件创建 PluginStateMachine
+  │
+  ├── 7. （Security 启用）安全库初始化 → 登录窗口 → 强制改密
+  │
+  ├── 8. 数据库初始化器（Recipe / Report）
+  │
+  ├── 9. InitializePluginsAsync() → StartPluginsAsync()
+  │       └── 按优先级调用，状态机迁移，失败仅记录
+  │
+  └── 10. 按角色启动 gRPC / 显示主窗口 / 发布 AppInitializedEvent
 ```
 
 ### 运行时硬件通信
@@ -656,27 +757,27 @@ Bootstrapper
 ViewModel.ExecuteCommand
     │
     ▼
-[Polly Retry Pipeline]
+[Polly Pipeline: PLC-Retry]
     │
     ▼
-PLC Service (通过 IPlcService 接口)
+IPlcService (ActivePlcService 代理)
     │
-    ├── ReadAsync / WriteAsync
+    ├── 按 Plc:DriverType 懒加载真实驱动
     │       │
     │       ▼
-    │   MitsubishiPlcDriver (MC 协议)
+    │   MitsubishiPlcService / SiemensPlcService (IoTClient)
     │       │
     │       ▼
     │   TcpClient.Send/Receive
     │
     └── Watchdog (每 2 秒)
             │
-            ├── 正常 → 无操作
+            ├── 正常 → 心跳读写
             └── 超时 → Publish(DeviceConnectionFailedEvent)
                            │
                            ▼
                       MediatR → 通知 UI 更新连接状态
-                               → 自动重连
+                               → 自动重连（失败退避 5 秒）
 ```
 
 ### 报表生成
@@ -700,12 +801,13 @@ PLC Service (通过 IPlcService 接口)
                ├── ExcelExporter.Export(data, template)
                │       │
                │       ▼
-               │   xlsx 文件写入
+               │   临时文件 → 原子重命名为 xlsx
                │
                └── ReportStorage.Save(filePath, record)
                        │
                        ▼
                 reports/2026/01/2026-01-12_Type.xlsx
+                + report_archives 数据库归档记录
 ```
 
 ---
@@ -717,23 +819,24 @@ PLC Service (通过 IPlcService 接口)
 1. 在 `platform/infra/` 下创建类库项目
 2. 定义接口（可放在 Contracts 或 Infra 内部）
 3. 编写扩展方法 `AddXxx(this IServiceCollection, IConfiguration)`
-4. 在宿主的 Bootstrapper 中调用注册方法
+4. 在宿主的 `Bootstrapper.RegisterTypes` 中调用注册方法
+5. 如有数据库实体：编写初始化器并在 `Bootstrapper.OnInitialized` 中显式调用（IHostedService 不会自动启动）
 
 ### 添加新的硬件驱动插件
 
 1. 在 `platform/plugins/hardware/` 下创建类库项目
-2. 实现硬件服务接口（定义在 `AP.Contracts.Hardware`）
-3. 加上 `[PluginMetadata]` 和 `[RequiresCapabilities]` 特性
-4. 在 `ConfigureServices` 中注册服务
-5. 配置构建后事件自动复制到 `plugins/` 目录
+2. 实现 `IPlcDriverFactory`（契约在 `AP.Contracts.Hardware`）
+3. 加上 `[PluginMetadata]`（注意 `SupportedRoles` 与 `Priority`）
+4. 在 `ConfigureServices` 中 `AddSingleton<IPlcDriverFactory, YourFactory>()`
+5. 业务代码无需任何修改，`Plc:DriverType` 配置即可切换
 
 ### 添加新的业务插件
 
-1. 在 `platform/plugins/business/` 下创建类库项目
-2. 创建插件主类继承 `PluginBase`
-3. 创建 View 和 ViewModel
-4. 在 `InitializeAsync` 中注册 Region 视图
-5. 可选实现 `IReportDataProvider` 提供报表能力
+1. 在 `platform/plugins/business/` 下创建类库项目（输出目录由 `Directory.Build.props` 自动处理）
+2. 创建插件主类继承 `PluginBase`，按需实现 `INavigationContributor` / `ISettingsContributor`
+3. 创建 View 和 ViewModel（View 构造函数注入 ViewModel）
+4. 在 `InitializeAsync` 中按权限条件注册 Region 视图
+5. 可选：实现 `IReportDataProvider` 提供报表能力；新增权限码时在 `SecurityDbInitializer` 中补充种子数据
 
 ---
 
@@ -741,8 +844,9 @@ PLC Service (通过 IPlcService 接口)
 
 - [使用指南](GETTING_STARTED.md) — 环境准备、快速开始、详细配置
 - [测试指南](TESTING.md) — 测试编写规范与运行方式
+- [项目状态](PROJECT_STATUS.md) — 模块成熟度与工作计划
 - [README](../README.md) — 项目概览与技术栈
 
 ---
 
-**最后更新**: 2026-07-14
+**最后更新**: 2026-07-21
