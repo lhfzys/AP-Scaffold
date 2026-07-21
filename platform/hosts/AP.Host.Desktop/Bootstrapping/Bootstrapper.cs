@@ -331,6 +331,11 @@ public class Bootstrapper : PrismBootstrapper
                     var reportDbInitializer = container.Resolve<AP.Infra.Report.Services.ReportDatabaseInitializer>();
                     await reportDbInitializer.StartAsync(CancellationToken.None);
                     Log.Information("报表模块数据库初始化完成");
+
+                    // 宿主不自动启动 IHostedService，报表后台任务需显式启动
+                    await container.Resolve<AP.Infra.Report.Services.ReportScheduler>().StartAsync(CancellationToken.None);
+                    await container.Resolve<AP.Infra.Report.Services.ReportCleanupService>().StartAsync(CancellationToken.None);
+                    Log.Information("报表后台任务（定时归档/定期清理）已启动");
                 }
                 catch (Exception ex)
                 {
@@ -378,6 +383,21 @@ public class Bootstrapper : PrismBootstrapper
             catch (Exception ex)
             {
                 Log.Fatal(ex, "系统启动过程中发生未捕获异常");
+
+                // 兜底：关闭 Splash 并提示操作员，避免启动失败后界面卡死无任何反馈
+                try
+                {
+                    CloseSplashWindow();
+                    System.Windows.MessageBox.Show(
+                        $"系统启动失败：{ex.Message}\n详细信息请查看日志。",
+                        "启动失败",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                catch
+                {
+                    // 兜底 UI 操作失败不掩盖原始异常
+                }
             }
         });
     }

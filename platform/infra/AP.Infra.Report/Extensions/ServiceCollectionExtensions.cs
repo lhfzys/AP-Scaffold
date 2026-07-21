@@ -36,13 +36,16 @@ public static class ServiceCollectionExtensions
         // 注册示例报表数据提供者（骨架演示用）
         services.AddReportDataProvider<SampleReportDataProvider>();
 
-        // 注册后台服务
-        services.AddHostedService<ReportScheduler>();
-        services.AddHostedService<ReportCleanupService>();
+        // 注册后台服务（宿主不自动启动 IHostedService，由 Bootstrapper 显式解析启动；
+        // 单例 + 转发注册，保证解析到同一实例）
+        services.AddSingleton<ReportScheduler>();
+        services.AddHostedService(p => p.GetRequiredService<ReportScheduler>());
+        services.AddSingleton<ReportCleanupService>();
+        services.AddHostedService(p => p.GetRequiredService<ReportCleanupService>());
 
         // 注册数据库初始化宿主服务（确保表结构存在）
         services.AddSingleton<ReportDatabaseInitializer>();
-        services.AddHostedService<ReportDatabaseInitializer>();
+        services.AddHostedService(p => p.GetRequiredService<ReportDatabaseInitializer>());
 
         return services;
     }
