@@ -180,7 +180,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 - [x] 韧性管道接线（DB 操作接 `Database-Retry`；2026-07-22 完成，含移除误导性 Empty 注册）
 - [x] `IReportDataProvider` 移至契约层（2026-07-22 完成；`AP.Contracts` 前缀强制共享保证类型标识，首个真实 Provider 落地时做端到端验证）
-- [ ] PLC 写操作审计 + 配置修改审计 + 审计拦截器化
+- [x] PLC 写操作审计 + 配置修改审计 + 审计拦截器化（2026-07-22 完成：`AuditingPlcServiceDecorator` + `SettingsService` 审计）
 - [ ] PLC 看门狗监督重启 + Scanner 断线重连
 - [ ] 托盘重启单实例 Mutex
 - [x] 仓库示例连接串占位符化（2026-07-22 完成，3d0dd97）

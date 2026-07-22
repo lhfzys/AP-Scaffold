@@ -44,7 +44,7 @@
 
 - [ ] 报表中心接入真实业务数据提供者（目前仅 `SampleReportDataProvider` 示例）
 - [ ] 配方管理完善校验与版本历史；`IRecipeManager.SwitchAsync` 的事件发布仍是 TODO
-- [ ] 审计日志更多业务事件接入与导出
+- [ ] 审计日志导出（PLC 写操作与配置修改审计已于 2026-07-22 接入）
 - [x] 西门子 PLC 协议支持
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 注释已预留 "Omron"）
 - [ ] OpenTelemetry 可观测性
@@ -144,7 +144,7 @@ bin/Release/AP.Host.Desktop.exe
 
 - 接口定义在 `AP.Shared.PluginSDK/Configuration/`：`ISettingsContributor`（`Category` / `Title` / `IconKind` / `Order` / `ConfigurationSection` + `CreateViewModel(IServiceProvider)`），编辑器 VM 实现 `ISettingsEditorViewModel`（`LoadFromConfiguration` / `Validate` / `GetConfigurationValue` / `RequiresRestart`）。
 - 在插件 `ConfigureServices` 中 `AddSingleton<ISettingsContributor, YourContributor>()`，并在 `InitializeAsync` 中把 `编辑器VM→编辑器View` 的 DataTemplate 注册到 `Application.Current.Resources`。
-- `SettingsShellViewModel` 自动收集所有贡献者按 Category 分组显示；保存时统一 Validate → 备份 appsettings → `ConfigurationHelper.UpdateAppSetting` 写回（临时文件+替换原子写入，失败如实抛错并提示）。
+- `SettingsShellViewModel` 自动收集所有贡献者按 Category 分组显示；保存时统一 Validate → 备份 appsettings → `ConfigurationHelper.UpdateAppSetting` 写回（临时文件+替换原子写入，失败如实抛错并提示）；保存成功/失败均由 `SettingsService` 写审计日志（`Update`/"修改系统配置"，含变更配置节，不记录具体值）。
 - 参考实现：`AP.Plugin.SystemSettings`（应用基础信息、PLC 配置）、`AP.Plugin.DeviceConfiguration`（扫码枪配置）。
 
 ### 5.3 插件开发约定
@@ -170,6 +170,7 @@ bin/Release/AP.Host.Desktop.exe
 - 通过统一的 `Plc` 配置节切换（不是各插件独立配置节）：
   `Plc:DriverType`（`Mitsubishi` / `Siemens`，预留 `Omron`）、`Plc:IpAddress`、`Plc:Port`、`Plc:Timeout`、`Plc:Model`（三菱 `Qna_3E`；西门子 `S7_1200` 等）、`Plc:HeartbeatAddress`。
 - 各 PLC 插件注册 `IPlcDriverFactory`，`AP.Infra.Hardware.ActivePlcService`（懒加载代理）按 `DriverType` 从 `PlcDriverRegistry` 取工厂创建真实驱动并转发 `IPlcService` / `IPlcBatchReadWrite` 调用。
+- **PLC 写操作审计**：DI 中 `IPlcService` 实际解析为 `AuditingPlcServiceDecorator`（包装 `ActivePlcService`），`WriteAsync`/`WriteBatchAsync` 自动写审计日志（`ManualControl`，含地址/值/结果；操作人取 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`）；审计/身份服务未注册时降级不审计，审计失败不影响写入。读操作与连接管理不审计。
 - `PlcDriverRegistry` 为单例，**首次解析时从 DI 收集所有 `IPlcDriverFactory`**（`AddPlcHardware` 中的工厂委托完成，2026-07-22 修复了注册表恒为空的缺陷）；不要在插件里手动 `new PlcDriverRegistry()` 或调 `Register`。
 - 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
 - 西门子地址格式与三菱不同，业务插件中的地址应通过配置或参数传入，避免硬编码。

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
     <ProjectReference Include="..\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
   </ItemGroup>
 

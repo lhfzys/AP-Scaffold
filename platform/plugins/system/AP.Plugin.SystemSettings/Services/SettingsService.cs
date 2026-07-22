@@ -1,5 +1,7 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
+using AP.Contracts.Security.Abstractions;
+using AP.Contracts.Security.Audit;
 using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.Utilities.Helpers;
 using Microsoft.Extensions.Configuration;
@@ -15,13 +17,21 @@ public class SettingsService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<SettingsService> _logger;
+    private readonly IAuditService? _auditService;
+    private readonly IIdentityService? _identityService;
     private readonly string _configDirectory;
     private readonly string _appSettingsPath;
 
-    public SettingsService(IConfiguration configuration, ILogger<SettingsService> logger)
+    public SettingsService(
+        IConfiguration configuration,
+        ILogger<SettingsService> logger,
+        IAuditService? auditService = null,
+        IIdentityService? identityService = null)
     {
         _configuration = configuration;
         _logger = logger;
+        _auditService = auditService;
+        _identityService = identityService;
         _configDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
         _appSettingsPath = Path.Combine(_configDirectory, "appsettings.json");
     }
@@ -31,7 +41,7 @@ public class SettingsService
     /// </summary>
     /// <param name="editors">配置编辑器集合</param>
     /// <returns>保存结果，包含是否需要重启及错误信息</returns>
-    public SaveSettingsResult SaveSettings(IReadOnlyList<(ISettingsContributor Contributor, ISettingsEditorViewModel Editor)> editors)
+    public async Task<SaveSettingsResult> SaveSettingsAsync(IReadOnlyList<(ISettingsContributor Contributor, ISettingsEditorViewModel Editor)> editors)
     {
         // 1. 统一验证
         var validationErrors = new List<string>();
@@ -77,6 +87,8 @@ public class SettingsService
 
             _logger.LogInformation("配置保存成功，备份文件: {BackupPath}", backupPath);
 
+            await LogAuditSafeAsync(true, changedSections, requiresRestart, null);
+
             return new SaveSettingsResult
             {
                 Success = true,
@@ -88,11 +100,41 @@ public class SettingsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "保存配置失败");
+            await LogAuditSafeAsync(false, changedSections, requiresRestart, ex.Message);
             return new SaveSettingsResult
             {
                 Success = false,
                 Errors = new List<string> { $"保存配置失败: {ex.Message}" }
             };
+        }
+    }
+
+    /// <summary>
+    /// 记录配置修改审计日志（审计服务不可用时静默跳过，审计失败不影响保存结果）
+    /// </summary>
+    private async Task LogAuditSafeAsync(bool succeeded, IReadOnlyList<string> changedSections, bool requiresRestart, string? error)
+    {
+        if (_auditService is null) return;
+
+        try
+        {
+            var sections = string.Join(", ", changedSections);
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                Timestamp = DateTime.Now,
+                // 未登录时记为 system；Security 禁用时 CurrentUser 恒为 anonymous
+                UserName = _identityService?.CurrentUser?.UserName ?? "system",
+                ActionType = AuditActionType.Update,
+                ActionName = "修改系统配置",
+                TargetId = sections,
+                Description = $"更新配置节: {sections}；需要重启: {requiresRestart}",
+                Succeeded = succeeded,
+                ErrorMessage = error
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "记录配置修改审计日志失败");
         }
     }
 

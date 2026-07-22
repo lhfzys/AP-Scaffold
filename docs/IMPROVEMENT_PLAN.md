@@ -95,7 +95,7 @@
 - **影响**：任何拿到服务引用的代码（尤其是插件——`Bootstrapper.cs:343` 把根容器传给每个插件的 `InitializeAsync`）可完全绕过权限体系直接读写用户、配方、报表数据。`PermissionBehavior` 仅是控件隐藏/禁用，不是安全边界。
 - **严重度**：高
 
-### S4 [高] 审计覆盖面不足且接入方式脆弱
+### S4 [高] 审计覆盖面不足且接入方式脆弱（🔶 2026-07-22 部分解决：PLC 写操作 + 配置修改审计已拦截器化落地）
 
 - **证据**：
   - 已有审计（ViewModel 层手工调用）：登录/登出/改密、用户与角色管理、配方管理、报表操作
@@ -346,7 +346,7 @@
 |---|------|------|--------|---------|
 | 1 | ✅ 韧性管道接线：DB 操作接 `Database-Retry`；移除误导性 Empty 注册（gRPC 部分 ❄ 冻结）（2026-07-22 完成） | T7 | 1d | 管道调用点存在且有效 |
 | 2 | ✅ `IReportDataProvider` 移至 `AP.Contracts.Report`（2026-07-22 完成；共享前缀保证类型标识，端到端验证随首个真实 Provider） | R1 | 1d | 业务插件 Provider 生成的报表真实出现在报表中心 |
-| 3 | PLC 写操作审计 + 配置修改审计 + 审计拦截器化（业务无感接入） | S4 | 3d | PLC WriteAsync 留痕（操作人/地址/值/结果）；配置保存留痕。操作人取值：经 `IIdentityService.CurrentUser`（Security 禁用时恒为 `anonymous`）；后台服务发起的写操作记为 `system` |
+| 3 | ✅ PLC 写操作审计 + 配置修改审计 + 审计拦截器化（2026-07-22 完成：`AuditingPlcServiceDecorator` 业务无感拦截 Write/WriteBatch；`SettingsService` 配置保存留痕；操作人经 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`） | S4 | 3d | PLC WriteAsync 留痕（操作人/地址/值/结果）；配置保存留痕 |
 | 4 | PLC 看门狗监督重启 + Scanner 断线重连（ErrorReceived + 重开策略） | T5/T6 | 2–3d | 模拟看门狗异常退出后自动恢复；USB 拔插后扫码恢复 |
 | 5 | 托盘重启加单实例 Mutex（复用阶段一已引入的命名互斥体） | T8 | 0.5d | 双击 exe/托盘重启不产生双进程 |
 | 6 | ✅ 仓库示例连接串改为占位符（2026-07-22 完成，3d0dd97） | S5 | 0.5d | 仓库无明文密码 |

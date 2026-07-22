@@ -445,6 +445,7 @@ Server 端                    Client 端
 - `IPlcDriverFactory`（契约层）：`DriverType`、`SupportedFeatures`、`CreateDriver(PlcOptions, IServiceProvider)`
 - `PlcDriverRegistry`：收集各品牌插件注册的工厂（按 DriverType 大小写不敏感索引）
 - `ActivePlcService`：懒加载代理（`Lazy<IPlcService>`），实现 `IPlcService` / `IPlcBatchReadWrite`，首次调用时按 `Plc:DriverType` 创建真实驱动并转发全部调用
+- `AuditingPlcServiceDecorator`：包装 `ActivePlcService` 的审计拦截器（`IPlcService` 实际解析类型），`WriteAsync` / `WriteBatchAsync` 自动留痕（操作人/地址/值/结果），读操作与连接管理不审计
 - `AddPlcHardware`：宿主统一注册 `IPlcService`
 
 业务代码只依赖 `IPlcService`，切换 PLC 品牌只需修改 `Plc:DriverType` 配置（或系统设置中的 PLC 配置页）。

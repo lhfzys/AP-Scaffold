@@ -1,8 +1,11 @@
 using AP.Contracts.Hardware.Models;
 using AP.Contracts.Hardware.Services;
+using AP.Contracts.Security.Abstractions;
+using AP.Contracts.Security.Audit;
 using AP.Infra.Hardware.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AP.Infra.Hardware.Extensions;
 
@@ -27,7 +30,14 @@ public static class ServiceCollectionExtensions
                 registry.Register(factory);
             return registry;
         });
-        services.AddSingleton<IPlcService, ActivePlcService>();
+        services.AddSingleton<ActivePlcService>();
+        // IPlcService 解析为审计装饰器：PLC 写操作自动留痕，业务无感知；
+        // 审计/身份服务未注册（如独立测试）时自动降级为不审计
+        services.AddSingleton<IPlcService>(sp => new AuditingPlcServiceDecorator(
+            sp.GetRequiredService<ActivePlcService>(),
+            sp.GetService<IAuditService>(),
+            sp.GetService<IIdentityService>(),
+            sp.GetService<ILogger<AuditingPlcServiceDecorator>>()));
         services.AddSingleton<IPlcBatchReadWrite>(sp => (IPlcBatchReadWrite)sp.GetRequiredService<IPlcService>());
         return services;
     }

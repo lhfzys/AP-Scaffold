@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows;
 using AP.Plugin.SystemSettings.Services;
 using AP.Shared.PluginSDK.Configuration;
@@ -117,7 +117,7 @@ public partial class SettingsShellViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var result = _settingsService.SaveSettings(editors);
+            var result = await _settingsService.SaveSettingsAsync(editors);
 
             if (!result.Success)
             {

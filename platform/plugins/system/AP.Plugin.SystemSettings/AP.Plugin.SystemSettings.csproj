@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Core\AP.Contracts.Core.csproj" />
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
+    <ProjectReference Include="..\..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.System\AP.Contracts.System.csproj" />
   </ItemGroup>
 

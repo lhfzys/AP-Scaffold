@@ -35,7 +35,7 @@ public class PlcHardwareRegistrationTests
     }
 
     [Fact]
-    public void AddPlcHardware_ResolvesActivePlcServiceAsPlcService()
+    public void AddPlcHardware_ResolvesAuditingDecoratorAsPlcService()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<Microsoft.Extensions.Logging.ILogger<ActivePlcService>>());
@@ -43,7 +43,10 @@ public class PlcHardwareRegistrationTests
 
         using var provider = services.BuildServiceProvider();
 
-        provider.GetRequiredService<IPlcService>().Should().BeOfType<ActivePlcService>();
-        provider.GetRequiredService<IPlcBatchReadWrite>().Should().BeOfType<ActivePlcService>();
+        // IPlcService 解析为审计装饰器，ActivePlcService 作为其内部代理单独注册
+        provider.GetRequiredService<IPlcService>().Should().BeOfType<AuditingPlcServiceDecorator>();
+        provider.GetRequiredService<ActivePlcService>().Should().NotBeNull();
+        // IPlcBatchReadWrite 与 IPlcService 为同一装饰器实例
+        provider.GetRequiredService<IPlcBatchReadWrite>().Should().BeSameAs(provider.GetRequiredService<IPlcService>());
     }
 }
