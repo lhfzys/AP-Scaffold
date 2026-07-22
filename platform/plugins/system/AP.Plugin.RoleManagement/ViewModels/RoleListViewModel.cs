@@ -1,6 +1,7 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
+using System.Windows;
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
@@ -98,6 +99,7 @@ public partial class RoleListViewModel : ViewModelBase
             await vm.InitializeForCreateAsync();
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is RoleEditViewModel editVm && editVm.IsSaved)
         {
@@ -117,6 +119,7 @@ public partial class RoleListViewModel : ViewModelBase
             await vm.InitializeForEditAsync(SelectedRole);
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is RoleEditViewModel editVm && editVm.IsSaved)
         {

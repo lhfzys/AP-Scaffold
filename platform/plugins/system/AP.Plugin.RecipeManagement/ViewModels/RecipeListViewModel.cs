@@ -1,6 +1,7 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
+using System.Windows;
 using AP.Contracts.Recipe.Abstractions;
 using AP.Contracts.Recipe.Models;
 using AP.Contracts.Security.Abstractions;
@@ -101,6 +102,7 @@ public partial class RecipeListViewModel : ViewModelBase
             await vm.InitializeForCreateAsync();
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is RecipeEditViewModel editVm && editVm.IsSaved)
         {
@@ -120,6 +122,7 @@ public partial class RecipeListViewModel : ViewModelBase
             await vm.InitializeForEditAsync(SelectedRecipe);
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is RecipeEditViewModel editVm && editVm.IsSaved)
         {

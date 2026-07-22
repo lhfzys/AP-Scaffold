@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -98,6 +98,7 @@ public partial class UserListViewModel : ViewModelBase
             await vm.InitializeForCreateAsync();
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is UserEditViewModel editVm && editVm.IsSaved)
         {
@@ -117,6 +118,7 @@ public partial class UserListViewModel : ViewModelBase
             await vm.InitializeForEditAsync(SelectedUser);
         }
 
+        window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
         if (window.DataContext is UserEditViewModel editVm && editVm.IsSaved)
         {
