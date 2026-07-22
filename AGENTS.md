@@ -235,6 +235,7 @@ bin/Release/AP.Host.Desktop.exe
 - **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`、`Resilience:GrpcCircuitBreakerThreshold`、`Resilience:CircuitBreakerDurationSeconds`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"` / `Grpc="Grpc-CircuitBreaker"`。三条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
 - **文件名大小写**：`appsettings.server.json` 是小写（Linux 上与 `appsettings.Server.json` 不匹配，Windows 无碍）。
 - **崩溃日志**：全局异常写入 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`，不弹窗。
+- **单实例**：`App.OnStartup` 用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 检查（非首实例弹提示退出；该互斥体同时供 Inno `AppMutex` 检测）；托盘重启给新进程传 `--restart`，新进程等待旧实例释放互斥体（最长 60s，含 `AbandonedMutexException` 处理）后再启动。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：`SerialPortScannerService` 订阅 `ErrorReceived`（标记重连）+ 5s 周期重连监控（`GetPortNames` 检测 USB 拔出→关闭残留句柄等待重插；设备恢复或出错后自动重开）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道；初始化失败由监控持续重试。
 

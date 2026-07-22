@@ -175,10 +175,11 @@
 - **证据**：`Database-Retry` 注册后全仓库无任何 `GetPipeline(Keys.Database)` 调用（仅 `Keys.Plc` 被两个驱动使用）；另 `AddTransient<ResiliencePipeline>` 注册了一个 Empty 管道，直接注入 `ResiliencePipeline` 会拿到空管道（`ResilienceServiceExtensions.cs:30-35`），属于误导性注册。
 - **严重度**：中（原 gRPC 部分——`Grpc-CircuitBreaker` 接线、客户端重连退避——随 Server/Client 模式 ❄ 冻结）
 
-### T8 [中] 托盘重启无单实例保护
+### T8 [中] 托盘重启无单实例保护（✅ 2026-07-22 已解决）
 
 - **证据**：`RestartApplication` 先 `Process.Start` 再 `Shutdown()`（`TrayIconManager.cs:70-78`），全仓库无 Mutex/单实例检查。新旧进程并存窗口内：SQLite 备份 `File.Copy` 可能撞锁（降级为警告）；双击 exe 也会产生双实例。
 - **严重度**：中（Standalone 不启动 gRPC，原"gRPC 端口 5000 被旧进程占用"的冲突在当前范围不成立；SQLite/双实例问题仍在）
+- **解决**：2026-07-22，`App.OnStartup` 复用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 做单实例检查（非首实例弹提示并退出；Inno AppMutex 检测不受影响）；托盘重启改为带 `--restart` 启动新进程，新进程等待旧实例释放互斥体（最长 60s，含遗弃互斥体处理）后再继续启动。
 
 ### T9 [中] 数据库无降级与忙等待
 
@@ -344,13 +345,15 @@
 
 > **范围修订（2026-07-22）**：部署形态为外包项目单机、无外网、登录使用率低。原 #1（登录安全加固）、#3（服务层权限校验）、#8（Security 测试 + CI）移入本节末「保留项」，其余保留并按"排雷优先"重排。
 
+> **✅ 阶段二已完成（2026-07-22）**：#1–#6 全部落地（韧性管道接线 / `IReportDataProvider` 移契约层 / PLC 写操作+配置修改审计 / 看门狗监督重启+Scanner 断线重连 / 托盘重启单实例 / 连接串占位符化）。出口实测：全量 Rebuild 0 警告 0 错误、237 个测试全部通过；硬件相关修复（看门狗、串口重连）为逻辑级修复，真机验证待现场。
+
 | # | 事项 | 关联 | 工作量 | 验收标准 |
 |---|------|------|--------|---------|
 | 1 | ✅ 韧性管道接线：DB 操作接 `Database-Retry`；移除误导性 Empty 注册（gRPC 部分 ❄ 冻结）（2026-07-22 完成） | T7 | 1d | 管道调用点存在且有效 |
 | 2 | ✅ `IReportDataProvider` 移至 `AP.Contracts.Report`（2026-07-22 完成；共享前缀保证类型标识，端到端验证随首个真实 Provider） | R1 | 1d | 业务插件 Provider 生成的报表真实出现在报表中心 |
 | 3 | ✅ PLC 写操作审计 + 配置修改审计 + 审计拦截器化（2026-07-22 完成：`AuditingPlcServiceDecorator` 业务无感拦截 Write/WriteBatch；`SettingsService` 配置保存留痕；操作人经 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`） | S4 | 3d | PLC WriteAsync 留痕（操作人/地址/值/结果）；配置保存留痕 |
 | 4 | ✅ PLC 看门狗监督重启 + Scanner 断线重连（2026-07-22 完成：监督者循环 + ObjectDisposed 不再致死；ErrorReceived + 5s 重开监控） | T5/T6 | 2–3d | 模拟看门狗异常退出后自动恢复；USB 拔插后扫码恢复（逻辑级修复，真机验证待现场） |
-| 5 | 托盘重启加单实例 Mutex（复用阶段一已引入的命名互斥体） | T8 | 0.5d | 双击 exe/托盘重启不产生双进程 |
+| 5 | ✅ 托盘重启加单实例 Mutex（2026-07-22 完成：复用命名互斥体做单实例检查，重启经 `--restart` 交接） | T8 | 0.5d | 双击 exe/托盘重启不产生双进程 |
 | 6 | ✅ 仓库示例连接串改为占位符（2026-07-22 完成，3d0dd97） | S5 | 0.5d | 仓库无明文密码 |
 
 #### 保留项（暂缓，触发条件出现时再启动）

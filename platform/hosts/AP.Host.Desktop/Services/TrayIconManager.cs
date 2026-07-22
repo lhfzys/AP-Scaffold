@@ -70,9 +70,11 @@ public sealed class TrayIconManager : IDisposable
     private static void RestartApplication()
     {
         var fileName = Environment.ProcessPath ?? Application.ResourceAssembly.Location;
+        // --restart：新进程将等待本进程释放单实例互斥体后再继续启动，避免双进程并存
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(fileName)
         {
-            UseShellExecute = true
+            UseShellExecute = true,
+            Arguments = "--restart"
         });
         Application.Current.Shutdown();
     }
