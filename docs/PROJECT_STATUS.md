@@ -176,20 +176,24 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
    - [ ] 更多业务操作记录审计日志（重点：PLC 写操作）
    - [ ] 导出审计日志
 
-### 中期（对应 IMPROVEMENT_PLAN 阶段二/三）
+### 中期（对应 IMPROVEMENT_PLAN 阶段二，2026-07-22 已按外包单机形态修订）
 
+- [ ] 韧性管道接线（DB 操作接 `Database-Retry`）
+- [ ] `IReportDataProvider` 移至契约层 + 验证插件 Provider 可被收集
+- [ ] PLC 写操作审计 + 配置修改审计 + 审计拦截器化
+- [ ] PLC 看门狗监督重启 + Scanner 断线重连
+- [ ] 托盘重启单实例 Mutex
+- [ ] 仓库示例连接串占位符化
 - [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
-- [ ] 登录失败锁定 + 密码复杂度策略
-- [ ] 服务层权限校验 + 审计拦截器化
-- [ ] `IReportDataProvider` 移至契约层
-- [ ] `AP.Infra.Security` 单元测试 + CI 最小流水线
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 已预留 "Omron"）
-- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持）
-- [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
-- [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
 
 ### 长期
 
+- [ ] （保留项）登录失败锁定 + 密码复杂度策略 + 重置密码随机化——联网部署/等保要求出现时启动
+- [ ] （保留项）服务层权限校验、`AP.Infra.Security` 单元测试 + CI 流水线——开放插件生态/CI 环境出现时启动
+- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持）
+- [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
+- [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
 - [ ] 插件市场/启用禁用机制（隔离上下文已为热卸载预留，但热卸载本身不做）
 - [ ] `RequiresCapabilitiesAttribute` 能力声明的运行时强制执行
 - [ ] 多语言/国际化支持
@@ -203,8 +207,8 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 1. **IHostedService 不会自动启动**
    - `AP.Host.Desktop` 使用 `PrismBootstrapper` 手动构建容器，不会调用 `IHost.StartAsync()`。
    - 当前安全/配方/报表的数据库初始化器已在 `Bootstrapper` 中手动调用；`GrpcClientWorker` 手动 Start。
-   - **`ReportScheduler` / `ReportCleanupService` 以 `AddHostedService` 注册，目前不会被自动启动**——定时归档与清理实际需要宿主显式启动（待办）。
-   - 若未来新增 `IHostedService`，需在 `Bootstrapper.OnInitialized` 中显式解析并调用。
+   - `ReportScheduler` / `ReportCleanupService` 已修复：注册为"单例 + `AddHostedService` 转发"并由 `Bootstrapper` 显式 `StartAsync`（2026-07-21）。
+   - 若未来新增 `IHostedService`，需沿用同一模式在 `Bootstrapper.OnInitialized` 中显式解析并调用。
 
 2. **契约程序集必须被 Host 直接引用**
    - 插件通过 `PluginLoadContext` 隔离加载，但共享契约程序集必须能被主程序默认上下文加载，否则 MediatR 扫描类型时抛出 `ReflectionTypeLoadException`。
