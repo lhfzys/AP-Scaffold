@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
@@ -52,6 +52,7 @@ public partial class LoginViewModel : ViewModelBase
         }
 
         ErrorMessage = string.Empty;
+        BusyText = "正在登录...";
         IsBusy = true;
 
         try

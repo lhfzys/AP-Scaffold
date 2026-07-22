@@ -1,4 +1,4 @@
-﻿<Window x:Class="AP.Host.Desktop.Views.MainWindow"
+<Window x:Class="AP.Host.Desktop.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6,6 +6,7 @@
         xmlns:prism="http://prismlibrary.com/"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:AP.Host.Desktop.Views"
+        xmlns:spinner="clr-namespace:AP.Shared.UI.Controls.LoadingSpinner;assembly=AP.Shared.UI"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
@@ -31,24 +32,9 @@
 
             <ContentControl  prism:RegionManager.RegionName="MainRegion" />
 
-            <Grid Grid.Row="0"
-                  Background="{DynamicResource MaterialDesignPaper}" 
-                  Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" 
-                  Panel.ZIndex="999">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" 
-                                 Value="0" 
-                                 IsIndeterminate="True" 
-                                 Width="50" Height="50"
-                                 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-
-                    <TextBlock Text="系统资源初始化中..." 
-                               Margin="0,24,0,0" 
-                               HorizontalAlignment="Center" 
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                               Opacity="0.7"/>
-                </StackPanel>
-            </Grid>
+            <spinner:LoadingSpinner IsLoading="{Binding IsLoading}"
+                                    LoadingText="系统资源初始化中..."
+                                    Panel.ZIndex="999"/>
         </Grid>
     </md:DialogHost>
 </Window>

@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using System.IO;
@@ -145,6 +145,8 @@ public partial class ReportListViewModel : ViewModelBase
         if (!EnsurePermission("report.view")) return;
         if (SelectedArchive == null) return;
 
+        BusyText = "正在打开报表...";
+        IsBusy = true;
         try
         {
             await _reportCenterService.OpenAsync(SelectedArchive.Id);
@@ -155,6 +157,10 @@ public partial class ReportListViewModel : ViewModelBase
             _logger.LogError(ex, "打开报表失败");
             await _dialogService.ShowErrorAsync("打开报表失败：" + ex.Message);
         }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -163,6 +169,8 @@ public partial class ReportListViewModel : ViewModelBase
         if (!EnsurePermission("report.export")) return;
         if (SelectedArchive == null) return;
 
+        BusyText = "正在导出报表...";
+        IsBusy = true;
         try
         {
             var destDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Reports");
@@ -174,6 +182,10 @@ public partial class ReportListViewModel : ViewModelBase
         {
             _logger.LogError(ex, "导出报表失败");
             await _dialogService.ShowErrorAsync("导出报表失败：" + ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 

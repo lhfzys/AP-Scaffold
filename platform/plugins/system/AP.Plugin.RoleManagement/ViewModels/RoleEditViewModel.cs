@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using AP.Contracts.Security.Abstractions;
@@ -152,6 +152,7 @@ public partial class RoleEditViewModel : ViewModelBase
             return;
         }
 
+        BusyText = "正在保存角色...";
         IsBusy = true;
         try
         {

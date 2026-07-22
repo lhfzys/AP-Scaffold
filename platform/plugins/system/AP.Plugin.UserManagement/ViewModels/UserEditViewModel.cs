@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using AP.Contracts.Security.Abstractions;
@@ -142,6 +142,7 @@ public partial class UserEditViewModel : ViewModelBase
             return;
         }
 
+        BusyText = "正在保存用户...";
         IsBusy = true;
         try
         {

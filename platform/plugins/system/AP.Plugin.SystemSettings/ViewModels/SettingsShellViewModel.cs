@@ -114,6 +114,7 @@ public partial class SettingsShellViewModel : ViewModelBase
             .Select(c => (c.Contributor, c.Editor))
             .ToList();
 
+        BusyText = "正在保存配置...";
         IsBusy = true;
         try
         {

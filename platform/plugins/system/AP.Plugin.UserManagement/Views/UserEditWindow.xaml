@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:ui="clr-namespace:AP.Shared.UI.Behaviors;assembly=AP.Shared.UI"
+        xmlns:spinner="clr-namespace:AP.Shared.UI.Controls.LoadingSpinner;assembly=AP.Shared.UI"
         mc:Ignorable="d"
         Title="{Binding Title}"
         Height="560"
@@ -108,5 +109,11 @@
                         ui:PermissionBehavior.HideWhenUnauthorized="False"/>
             </StackPanel>
         </Border>
+
+        <!-- 加载遮罩 -->
+        <spinner:LoadingSpinner Grid.Row="0"
+                                Grid.RowSpan="3"
+                                IsLoading="{Binding IsBusy}"
+                                LoadingText="{Binding BusyText}"/>
     </Grid>
 </Window>

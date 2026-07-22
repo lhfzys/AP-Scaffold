@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using AP.Contracts.Recipe.Abstractions;
@@ -124,6 +124,7 @@ public partial class RecipeEditViewModel : ViewModelBase
             return;
         }
 
+        BusyText = "正在保存配方...";
         IsBusy = true;
         try
         {

@@ -1,4 +1,4 @@
-﻿using AP.Contracts.Security.Abstractions;
+using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
 using AP.Shared.UI.Base;
@@ -71,6 +71,7 @@ public partial class ChangePasswordViewModel : ViewModelBase
         }
 
         ErrorMessage = string.Empty;
+        BusyText = "正在修改密码...";
         IsBusy = true;
 
         try
