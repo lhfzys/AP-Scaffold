@@ -1,6 +1,9 @@
-﻿using AP.Infra.Resilience.Factories;
+using AP.Infra.Resilience.Factories;
+using AP.Infra.Resilience.Policies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Polly;
 
 namespace AP.Infra.Resilience.Configuration;
@@ -19,21 +22,38 @@ public static class ResilienceServiceExtensions
         // 1. 绑定配置
         services.Configure<ResilienceOptions>(configuration.GetSection(ResilienceOptions.SectionName));
 
-        // 2. 注册 Polly Registry
+        // 2. 注册 Polly Registry，并直接登记平台管道（注册表自描述，不依赖工厂的解析时机）
         services.AddResiliencePipelineRegistry<string>();
-
-        // 3. 注册自定义工厂 (负责初始化策略)
-        services.AddSingleton<ResiliencePipelineFactory>();
-
-        // 4. 自动初始化工厂 (在应用启动时构建策略)
-        // 这一步确保 Factory 的构造函数被调用，策略被注册到 Registry 中
-        services.AddTransient<ResiliencePipeline>(sp =>
+        services.AddResiliencePipeline<string>(ResiliencePipelineFactory.Keys.Database, (builder, context) =>
         {
-            var factory = sp.GetRequiredService<ResiliencePipelineFactory>();
-            // 仅作为触发器，实际使用时应注入 ResiliencePipelineFactory 或 ResiliencePipelineRegistry
-            return ResiliencePipeline.Empty;
+            var (options, logger) = Resolve(context.ServiceProvider);
+            builder.AddPipeline(DatabaseRetryPolicy.Create(options.DatabaseRetryCount, logger));
+        });
+        services.AddResiliencePipeline<string>(ResiliencePipelineFactory.Keys.Plc, (builder, context) =>
+        {
+            var (options, logger) = Resolve(context.ServiceProvider);
+            builder.AddPipeline(PlcRetryPolicy.Create(options.PlcRetryCount, logger));
+        });
+        services.AddResiliencePipeline<string>(ResiliencePipelineFactory.Keys.Grpc, (builder, context) =>
+        {
+            var (options, logger) = Resolve(context.ServiceProvider);
+            builder.AddPipeline(GrpcCircuitBreakerPolicy.Create(
+                options.GrpcCircuitBreakerThreshold,
+                options.CircuitBreakerDurationSeconds,
+                logger));
         });
 
+        // 3. 注册自定义工厂（PLC 插件等通过 GetPipeline 便捷取管道；
+        //    其构造器内的 TryAddBuilder 与上面的注册幂等共存）
+        services.AddSingleton<ResiliencePipelineFactory>();
+
         return services;
+    }
+
+    private static (ResilienceOptions Options, ILogger Logger) Resolve(IServiceProvider serviceProvider)
+    {
+        var options = serviceProvider.GetRequiredService<IOptions<ResilienceOptions>>().Value;
+        var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Resilience");
+        return (options, logger);
     }
 }

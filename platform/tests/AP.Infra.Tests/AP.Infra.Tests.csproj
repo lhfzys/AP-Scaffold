@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\infra\AP.Infra.Database\AP.Infra.Database.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Hardware\AP.Infra.Hardware.csproj" />

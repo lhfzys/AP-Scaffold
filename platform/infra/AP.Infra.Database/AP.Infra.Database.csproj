@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\core\AP.Core\AP.Core.csproj" />
+    <ProjectReference Include="..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
     <ProjectReference Include="..\..\shared\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
   </ItemGroup>
 
@@ -17,5 +18,7 @@
     <PackageReference Include="FreeSql.Provider.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Polly.Core" />
+    <PackageReference Include="Polly.Extensions" />
   </ItemGroup>
 </Project>
