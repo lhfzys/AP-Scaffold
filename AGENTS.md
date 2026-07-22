@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
+- **最近提交主题**: UI 一致性五批次（Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 遮罩收敛+忙碌反馈、DataGrid 全局样式、Splash 去英文）；Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -97,10 +97,10 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（18 个测试文件 / 222 个测试）
-│       ├── AP.Core.Tests                 # 8 文件 / 123 测试
-│       ├── AP.Shared.Tests               # 4 文件 / 46 测试
-│       └── AP.Infra.Tests                # 5 文件 / 44 测试
+│   └── tests/                            # xUnit 测试（22 个测试文件 / 237 个测试）
+│       ├── AP.Core.Tests                 # 9 文件 / 130 测试
+│       ├── AP.Shared.Tests               # 4 文件 / 48 测试
+│       └── AP.Infra.Tests                # 9 文件 / 59 测试
 ├── docs/                                 # 架构/使用/测试/状态文档
 ├── installer/setup.iss                   # Inno Setup 6 安装包脚本
 ├── AGENTS.md                             # 本文件
@@ -226,7 +226,10 @@ bin/Release/AP.Host.Desktop.exe
 - 主色 `Color.Primary #1E3A5F`（深蓝），强调色 `Color.Accent #0891B2`（青蓝），语义色 Success/Warning/Error/Info 齐全；表面色全浅色（`Surface #FFFFFF`、`SurfaceDark #E8EDF2` 用于侧边栏）。
 - 引用链：`App.xaml` 合并 `MaterialDesign3.Defaults.xaml` + `BundledTheme(BaseTheme=Light, Primary=BlueGrey, Secondary=Cyan)` + `AP.Shared.UI/Resources/ResourceDictionary.xaml`（内部合并主题与转换器）。
 - 新 UI 请使用主题资源键（`Brush.*`、`TextStyle.*`、`Layout.Spacing.*` 等），不要硬编码颜色。
-- 遮罩场景用 `Brush.Overlay.Background`（`#80000000`，`LoadingSpinner` 在用）。
+- **加载遮罩**：统一用 `AP.Shared.UI.Controls.LoadingSpinner`（浅色遮罩 `Brush.Surface` Opacity=0.85 + `TextStyle.Body`；`IsLoading`/`LoadingText` DP 通常绑 `IsBusy`/`BusyText`，两者 `ViewModelBase` 自带）。不要再手写遮罩 Grid；长操作在 VM 里先设 `BusyText` 再设 `IsBusy`。
+- **弹窗双轨**：确认/提示/错误走 `ICustomDialogService`（DialogHost 弹层）；新增/编辑走插件自带模态 Window——`ShowDialog()` 前必须 `window.Owner = Application.Current.MainWindow`，XAML 用 `WindowStartupLocation="CenterOwner"`。
+- **DataGrid**：不要显式 `Style="{StaticResource MaterialDesignDataGrid}"`——`App.xaml` 隐式样式已 `BasedOn` 它，并全局并入虚拟化 4 项 + `AutoGenerateColumns=False`/`GridLinesVisibility=Horizontal`/`BorderThickness=0`/背景/前景；页面只写差异属性（`ItemsSource`/`IsReadOnly`/`BorderThickness` 等）。
+- **深色例外**（刻意不走浅色主题）：Splash 启动页（深色硬编码品牌页，仅显示中文软件名）；Login/ChangePassword 的蓝色 `ColorZone PrimaryMid` 横幅页头。其余窗口一律浅色主题键。
 
 ### 5.11 其他坑点
 

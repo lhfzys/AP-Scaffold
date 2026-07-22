@@ -117,9 +117,9 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 | 项目 | 文件数 | 测试数（`dotnet test` 实测，全部通过） | 覆盖范围 |
 |------|-------|--------------------------------|----------|
-| `AP.Core.Tests` | 8 | 123 | 状态机、生命周期、事件总线、插件框架、Capability |
-| `AP.Shared.Tests` | 4 | 46 | PluginBase、导航菜单构建器、序列化、配置更新 |
-| `AP.Infra.Tests` | 5 | 44 | 报表选项/实体、弹性策略选项、PLC 驱动注册表/激活服务 |
+| `AP.Core.Tests` | 9 | 130 | 状态机、生命周期、事件总线、插件框架、Capability |
+| `AP.Shared.Tests` | 4 | 48 | PluginBase、导航菜单构建器、序列化、配置更新 |
+| `AP.Infra.Tests` | 9 | 59 | 报表选项/实体、弹性策略选项、PLC 驱动注册表/激活服务、DB 仓储/PLC 审计装饰器/韧性注册 |
 
 ---
 
@@ -184,7 +184,9 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 - [x] PLC 看门狗监督重启 + Scanner 断线重连（2026-07-22 完成，真机验证待现场）
 - [x] 托盘重启单实例 Mutex（2026-07-22 完成）
 - [x] 仓库示例连接串占位符化（2026-07-22 完成，3d0dd97）
+- [x] UI 一致性五批次（2026-07-22 完成：Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 浅色遮罩收敛+补齐忙碌反馈、DataGrid 全局样式收敛；Splash 深色保留并移除英文公司行）
 - [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
+- [ ] （可选）列表页 CRUD 交互统一（Recipe 行内按钮 vs User/Role 工具栏）；SettingsShell 补页头标题；AuditLog/Report 工具栏补刷新按钮
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 已预留 "Omron"）
 
 ### 长期
@@ -239,11 +241,11 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 8. **主题资源**
    - `Industrial.Teal.MD3.xaml` 文件名保留但内容已是全浅色主题；新 UI 一律使用主题资源键，不硬编码颜色。
-   - 遮罩场景用 `Brush.Overlay.Background`（`#80000000`，已补齐，`LoadingSpinner` 在用）。
+   - 加载遮罩统一用 `LoadingSpinner` 控件（浅色 `Brush.Surface` 0.85，绑 `IsBusy`/`BusyText`），不手写遮罩 Grid；DataGrid 不显式设 `Style`，公共属性已在 `App.xaml` 隐式样式全局化；深色例外：Splash 启动页与 Login/ChangePassword 蓝色横幅（刻意保留）。
 
 9. **配置文件大小写**
    - `appsettings.server.json` 文件名是小写 server（Linux 上与 `appsettings.Server.json` 不匹配；Windows 无碍）。
 
 ---
 
-**最后更新**: 2026-07-21
+**最后更新**: 2026-07-22

@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### UI 一致性优化（2026-07-22）
+
+变更：
+
+- **Dashboard 移除快捷入口**：导航职责统一归 Sidebar（快捷入口此前无权限过滤，无权限用户点击静默无反应）；「最近事件」卡片整行布局；硬编码分隔色 `#E5E7EB` → `MaterialDesignDivider`
+- **编辑窗口统一 Owner+CenterOwner**：用户/角色/配方编辑窗挂接主窗口并随其居中，与 Login/Settings 窗口行为一致
+- **视图级权限防线统一**：UserEdit/RoleEdit 保存按钮补 `user.manage`/`role.manage` 门控；PLC/应用设置编辑器根元素补 `system.settings` 门控；SettingsShell「取消」按钮移除门控（此前无权限用户连取消都被禁用）
+- **加载反馈收敛**：`LoadingSpinner` 改浅色遮罩（`Brush.Surface` 0.85 + `TextStyle.Body`）并成为唯一遮罩控件，替换 6 处手写遮罩副本（5 个列表页 + MainWindow）；设置保存、用户/角色/配方保存、登录、改密补遮罩反馈与 BusyText 文案；报表打开/导出补 `IsBusy`
+- **DataGrid 样式全局收敛**：5 项公共属性并入 `App.xaml` 隐式样式（修复各页显式 `Style=` 将虚拟化 4 项设置屏蔽为死配置的缺陷）；6 个 DataGrid 声明删除重复抄写，只留差异属性
+- **Splash**：深色启动页作为主题例外刻意保留；移除英文公司行（"Industrial Automation"），软件名居中布局
+
 ### 默认配置变更（2026-07-22）
 
 变更：
