@@ -1,3 +1,4 @@
+using AP.Contracts.Report.Abstractions;
 using AP.Infra.Report.Abstractions;
 using AP.Infra.Report.Configuration;
 using AP.Infra.Report.Entities;

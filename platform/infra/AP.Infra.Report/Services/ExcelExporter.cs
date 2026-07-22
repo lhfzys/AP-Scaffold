@@ -1,5 +1,5 @@
+using AP.Contracts.Report.Models;
 using AP.Infra.Report.Abstractions;
-using AP.Infra.Report.Entities;
 using Microsoft.Extensions.Logging;
 using MiniExcelLibs;
 

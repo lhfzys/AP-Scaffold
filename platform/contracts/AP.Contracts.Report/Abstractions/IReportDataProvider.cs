@@ -1,6 +1,6 @@
-using AP.Infra.Report.Entities;
+using AP.Contracts.Report.Models;
 
-namespace AP.Infra.Report.Abstractions;
+namespace AP.Contracts.Report.Abstractions;
 
 /// <summary>
 /// 报表数据提供者接口

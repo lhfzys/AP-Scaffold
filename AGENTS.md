@@ -75,7 +75,7 @@ AP-Scaffold/
 │   │   ├── AP.Infra.Resilience           # Polly 策略工厂（Database-Retry / PLC-Retry / Grpc-CircuitBreaker）
 │   │   ├── AP.Infra.Security             # 安全/权限/审计实现、SecurityDbInitializer
 │   │   ├── AP.Infra.Recipe               # RecipeManager、RecipeDbInitializer
-│   │   └── AP.Infra.Report               # 报表框架、IReportDataProvider（定义在本项目，非契约层）
+│   │   └── AP.Infra.Report               # 报表框架（IReportDataProvider/ReportData 在契约层 AP.Contracts.Report）
 │   ├── shared/                           # 共享库
 │   │   ├── AP.Shared.PluginSDK           # PluginBase、INavigationContributor、ISettingsContributor
 │   │   ├── AP.Shared.UI                  # LoadingSpinner、对话框服务、PermissionBehavior、浅色主题

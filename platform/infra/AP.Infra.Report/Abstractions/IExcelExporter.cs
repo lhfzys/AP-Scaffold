@@ -1,4 +1,4 @@
-using AP.Infra.Report.Entities;
+using AP.Contracts.Report.Models;
 
 namespace AP.Infra.Report.Abstractions;
 

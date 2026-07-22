@@ -348,13 +348,13 @@ public interface IEventBus
 | `AP.Contracts.System` | `ILoginService`、`ISettingsDialogService`、`ISystemMonitorService`、`SystemMetrics` |
 | `AP.Contracts.Security` | `IIdentityService`、`IUserRepository` / `IRoleRepository` / `IPermissionRepository` / `IPasswordHasher`、`ISecurityDbInitializer`、`IAuditService` / `AuditLogEntry` / `AuditActionType`、用户/角色/权限模型 |
 | `AP.Contracts.Recipe` | `IRecipeManager`（含 `CurrentRecipe`、`SwitchAsync`）、`IRecipeDbInitializer`、`RecipeInfo` / `RecipeParameter` |
-| `AP.Contracts.Report` | `IReportCenterService`、`ReportTypeInfo`、`ReportArchiveDto` |
+| `AP.Contracts.Report` | `IReportCenterService`、`ReportTypeInfo`、`ReportArchiveDto`、`IReportDataProvider`、`ReportData` |
 
 **设计原则**：
 - Contracts 只定义接口和模型，不包含实现
 - 插件引用 Contracts，Infra 实现 Contracts
 - 插件间通过 Contracts 定义的事件进行通信
-- 例外：`IReportDataProvider` 定义在 `AP.Infra.Report`（报表框架内部抽象），需要报表能力的业务插件直接引用该 Infra 项目
+- 报表数据提供者接口 `IReportDataProvider` 与数据模型 `ReportData` 定义在 `AP.Contracts.Report`（契约程序集经 `PluginLoadContext` 前缀强制共享，跨 ALC 类型标识一致），业务插件实现并注册后即可被报表框架收集
 
 ---
 

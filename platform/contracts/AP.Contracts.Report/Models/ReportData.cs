@@ -1,4 +1,4 @@
-namespace AP.Infra.Report.Entities;
+namespace AP.Contracts.Report.Models;
 
 /// <summary>
 /// 通用报表数据模型

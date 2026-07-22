@@ -438,18 +438,18 @@ public override void ConfigureServices(IServiceCollection services, IConfigurati
 {
     base.ConfigureServices(services, configuration);
 
-    // 注册本插件的报表数据提供者
-    services.AddReportDataProvider<YourReportProvider>();
+    // 注册本插件的报表数据提供者（IReportDataProvider 在契约层，宿主侧统一收集）
+    services.AddSingleton<IReportDataProvider, YourReportProvider>();
 }
 ```
 
 ### 2. 实现报表数据提供者
 
-创建 `YourReportProvider.cs`（`IReportDataProvider` 定义在 `AP.Infra.Report`）：
+创建 `YourReportProvider.cs`（`IReportDataProvider` 定义在 `AP.Contracts.Report`）：
 
 ```csharp
-using AP.Infra.Report.Abstractions;
-using AP.Infra.Report.Entities;
+using AP.Contracts.Report.Abstractions;
+using AP.Contracts.Report.Models;
 
 namespace AP.Plugin.YourFeature.Reports;
 
@@ -698,7 +698,7 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 ### Q: 报表没有生成
 
 **检查项**:
-1. 是否注册了 `IReportDataProvider` 实现（`services.AddReportDataProvider<T>()`）
+1. 是否注册了 `IReportDataProvider` 实现（`services.AddSingleton<IReportDataProvider, T>()`）
 2. 检查 `Report` 配置节中的 `Archive.Enabled` 是否为 `true`
 3. 定时归档依赖 `ReportScheduler`（IHostedService），确认宿主已显式启动
 4. 查看日志中是否有报表相关的错误

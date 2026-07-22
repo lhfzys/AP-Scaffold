@@ -334,7 +334,7 @@ await pipeline.ExecuteAsync(async token => {
                                  reports/2026/01/2026-01-12_DeviceRun.xlsx
 ```
 
-> 注意：`IReportDataProvider` 定义在 `AP.Infra.Report`（非契约层）；`ReportScheduler` / `ReportCleanupService` 以 `IHostedService` 注册，而宿主不会自动启动 `IHostedService`（详见 `AGENTS.md` 5.6）。
+> 注意：`IReportDataProvider` 与 `ReportData` 定义在契约层 `AP.Contracts.Report`（插件与 Host 共享同一程序集，Provider 可被报表框架收集）；`ReportScheduler` / `ReportCleanupService` 以 `IHostedService` 注册，而宿主不会自动启动 `IHostedService`（详见 `AGENTS.md` 5.6）。
 
 ---
 
@@ -627,18 +627,18 @@ public class MyEventHandler : INotificationHandler<MyEvent>
 
 ### 为业务插件添加报表能力
 
-**第 1 步**：在业务插件中引用报表框架
+**第 1 步**：在业务插件中引用报表契约
 
 ```xml
 <!-- 在 .csproj 中添加 -->
-<ProjectReference Include="..\..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
+<ProjectReference Include="..\..\..\contracts\AP.Contracts.Report\AP.Contracts.Report.csproj" />
 ```
 
 **第 2 步**：实现 `IReportDataProvider` 接口
 
 ```csharp
-using AP.Infra.Report.Abstractions;
-using AP.Infra.Report.Entities;
+using AP.Contracts.Report.Abstractions;
+using AP.Contracts.Report.Models;
 
 namespace AP.Plugin.MyFeature.Reports;
 
@@ -684,7 +684,7 @@ public class MyReportProvider : IReportDataProvider
 public override void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
     // 注册本插件的报表数据提供者（报表框架由宿主统一注册）
-    services.AddReportDataProvider<MyReportProvider>();
+    services.AddSingleton<IReportDataProvider, MyReportProvider>();
 }
 ```
 

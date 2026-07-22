@@ -197,12 +197,13 @@
 
 ## 五、差距明细：复用
 
-### R1 [高] `IReportDataProvider` 放错层，插件报表机制存在断点风险
+### R1 [高] `IReportDataProvider` 放错层，插件报表机制存在断点风险（✅ 2026-07-22 已解决）
 
 - **证据**：接口定义在 `AP.Infra.Report/Abstractions/IReportDataProvider.cs:9`；`PluginLoadContext` 的共享程序集前缀不含 `AP.Infra.*`（`PluginLoadContext.cs:13-78`），`Directory.Build.props` 的插件瘦身删除清单也不含。
 - **影响**：业务插件实现该接口须引用 `AP.Infra.Report`，插件会在隔离 ALC 里加载自己的程序集副本，导致接口类型标识与 Host 不一致，Host 侧 `IEnumerable<IReportDataProvider>` 可能永远收集不到插件实现。当前仅 Infra 内置 `SampleReportDataProvider`，问题未暴露——但**这正是"报表接入真实业务数据"待办的前置断点**。（机制推断，列入未验证项）
 - **建议**：移至 `AP.Contracts.Report`（契约程序集由 Host 直接引用，默认上下文加载）。
 - **严重度**：高
+- **解决**：2026-07-22，`IReportDataProvider` 与 `ReportData` 已移至 `AP.Contracts.Report`（命名空间 `AP.Contracts.Report.Abstractions` / `AP.Contracts.Report.Models`）；`PluginLoadContext` 对 `AP.Contracts` 前缀强制共享，跨 ALC 类型标识一致；插件经 `services.AddSingleton<IReportDataProvider, T>()` 注册即可被 Host 收集。
 
 ### R2 [高] 插件依赖与 ID 均无校验
 
@@ -343,12 +344,12 @@
 
 | # | 事项 | 关联 | 工作量 | 验收标准 |
 |---|------|------|--------|---------|
-| 1 | 韧性管道接线：DB 操作接 `Database-Retry`；移除误导性 Empty 注册（gRPC 部分 ❄ 冻结） | T7 | 1d | 管道调用点存在且有效 |
-| 2 | `IReportDataProvider` 移至 `AP.Contracts.Report` + 验证插件 Provider 可被 Host 收集 | R1 | 1d | 业务插件 Provider 生成的报表真实出现在报表中心（实施前先验证附录未验证项 #1） |
+| 1 | ✅ 韧性管道接线：DB 操作接 `Database-Retry`；移除误导性 Empty 注册（gRPC 部分 ❄ 冻结）（2026-07-22 完成） | T7 | 1d | 管道调用点存在且有效 |
+| 2 | ✅ `IReportDataProvider` 移至 `AP.Contracts.Report`（2026-07-22 完成；共享前缀保证类型标识，端到端验证随首个真实 Provider） | R1 | 1d | 业务插件 Provider 生成的报表真实出现在报表中心 |
 | 3 | PLC 写操作审计 + 配置修改审计 + 审计拦截器化（业务无感接入） | S4 | 3d | PLC WriteAsync 留痕（操作人/地址/值/结果）；配置保存留痕。操作人取值：经 `IIdentityService.CurrentUser`（Security 禁用时恒为 `anonymous`）；后台服务发起的写操作记为 `system` |
 | 4 | PLC 看门狗监督重启 + Scanner 断线重连（ErrorReceived + 重开策略） | T5/T6 | 2–3d | 模拟看门狗异常退出后自动恢复；USB 拔插后扫码恢复 |
 | 5 | 托盘重启加单实例 Mutex（复用阶段一已引入的命名互斥体） | T8 | 0.5d | 双击 exe/托盘重启不产生双进程 |
-| 6 | 仓库示例连接串改为占位符（杜绝"仓库可放真实密码"的先例） | S5 | 0.5d | 仓库无明文密码 |
+| 6 | ✅ 仓库示例连接串改为占位符（2026-07-22 完成，3d0dd97） | S5 | 0.5d | 仓库无明文密码 |
 
 #### 保留项（暂缓，触发条件出现时再启动）
 
@@ -389,7 +390,7 @@
 
 | # | 条目 | 来源 |
 |---|------|------|
-| 1 | `IReportDataProvider` 跨 ALC 类型不一致（机制推断：插件加载各自 AP.Infra.Report 副本，Host 收集不到插件实现）——未实跑复现 | R1 |
+| 1 | ~~`IReportDataProvider` 跨 ALC 类型不一致（机制推断：插件加载各自 AP.Infra.Report 副本，Host 收集不到插件实现）~~（✅ 2026-07-22 随 R1 解决：接口移至契约层，`AP.Contracts` 前缀强制共享，类型标识一致） | R1 |
 | 2 | ~~PostgreSQL 路径真实可用性~~（❄ 已冻结，解冻时再验证） | G3 |
 | 3 | DryIoc `Populate` 桥接后 Scoped 服务的运行时行为 | R6 |
 | 4 | SQLite 实际并发写压力（是否出现 SQLITE_BUSY） | T9 |

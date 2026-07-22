@@ -68,7 +68,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | `AP.Infra.Resilience` | `ResiliencePipelineFactory`（Keys：`Database-Retry` / `PLC-Retry` / `Grpc-CircuitBreaker`）、扁平配置键 `Resilience:*RetryCount` 等 |
 | `AP.Infra.Security` | 安全模块实现：用户/角色/权限 Repository、PBKDF2-SHA256 密码哈希（10 万次迭代）、`IdentityService` / `AnonymousIdentityService`、`AuditService` / `NullAuditService`、`SecurityDbInitializer`（12 权限 + 3 角色 + admin 种子数据） |
 | `AP.Infra.Recipe` | `RecipeManager`（CRUD + 版本 + 默认配方 + 切换；`SwitchAsync` 事件发布留 TODO）、`RecipeDbInitializer`（自动创建 DEFAULT 配方） |
-| `AP.Infra.Report` | 报表框架：`ReportService`、`ReportCenterService`、`ExcelExporter`（MiniExcel）、`ReportStorage`、`ReportScheduler`、`ReportCleanupService`、`ReportDatabaseInitializer`、`IReportDataProvider`（定义在本项目）、`SampleReportDataProvider` 示例 |
+| `AP.Infra.Report` | 报表框架：`ReportService`、`ReportCenterService`、`ExcelExporter`（MiniExcel）、`ReportStorage`、`ReportScheduler`、`ReportCleanupService`、`ReportDatabaseInitializer`、`SampleReportDataProvider` 示例（`IReportDataProvider`/`ReportData` 已移至契约层） |
 
 ### 4. 共享库 `platform/shared`
 
@@ -178,12 +178,12 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 中期（对应 IMPROVEMENT_PLAN 阶段二，2026-07-22 已按外包单机形态修订）
 
-- [ ] 韧性管道接线（DB 操作接 `Database-Retry`）
-- [ ] `IReportDataProvider` 移至契约层 + 验证插件 Provider 可被收集
+- [x] 韧性管道接线（DB 操作接 `Database-Retry`；2026-07-22 完成，含移除误导性 Empty 注册）
+- [x] `IReportDataProvider` 移至契约层（2026-07-22 完成；`AP.Contracts` 前缀强制共享保证类型标识，首个真实 Provider 落地时做端到端验证）
 - [ ] PLC 写操作审计 + 配置修改审计 + 审计拦截器化
 - [ ] PLC 看门狗监督重启 + Scanner 断线重连
 - [ ] 托盘重启单实例 Mutex
-- [ ] 仓库示例连接串占位符化
+- [x] 仓库示例连接串占位符化（2026-07-22 完成，3d0dd97）
 - [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 已预留 "Omron"）
 
