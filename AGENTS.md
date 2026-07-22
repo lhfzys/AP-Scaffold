@@ -50,7 +50,6 @@
 - [ ] OpenTelemetry 可观测性
 - [ ] Dashboard 仪表盘目前为硬编码占位数据（`DashboardViewModel.LoadPlaceholderData`，已加 TODO(sample) 标注）
 - [ ] `RequiresCapabilitiesAttribute` 目前仅有声明，无运行时强制检查
-- [ ] **已知问题（待排查）**：运行日志出现 `未找到 PLC 驱动 'Mitsubishi'。已注册的驱动: 无`——`IPlcDriverFactory` 注册进 `PlcDriverRegistry` 的时机/链路疑似断裂（用户确认复现，计划阶段一完成后处理）
 
 ---
 
@@ -171,7 +170,8 @@ bin/Release/AP.Host.Desktop.exe
 - 通过统一的 `Plc` 配置节切换（不是各插件独立配置节）：
   `Plc:DriverType`（`Mitsubishi` / `Siemens`，预留 `Omron`）、`Plc:IpAddress`、`Plc:Port`、`Plc:Timeout`、`Plc:Model`（三菱 `Qna_3E`；西门子 `S7_1200` 等）、`Plc:HeartbeatAddress`。
 - 各 PLC 插件注册 `IPlcDriverFactory`，`AP.Infra.Hardware.ActivePlcService`（懒加载代理）按 `DriverType` 从 `PlcDriverRegistry` 取工厂创建真实驱动并转发 `IPlcService` / `IPlcBatchReadWrite` 调用。
-- 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改。
+- `PlcDriverRegistry` 为单例，**首次解析时从 DI 收集所有 `IPlcDriverFactory`**（`AddPlcHardware` 中的工厂委托完成，2026-07-22 修复了注册表恒为空的缺陷）；不要在插件里手动 `new PlcDriverRegistry()` 或调 `Register`。
+- 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
 - 西门子地址格式与三菱不同，业务插件中的地址应通过配置或参数传入，避免硬编码。
 - 系统设置中已有 PLC 配置编辑页（`PlcConfigurationContributor`，DriverType 切换自动填默认值，RequiresRestart）。
 
