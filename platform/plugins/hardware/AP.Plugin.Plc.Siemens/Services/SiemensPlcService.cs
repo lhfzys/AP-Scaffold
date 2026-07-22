@@ -157,6 +157,9 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
         return Task.FromResult(_currentConnectionState);
     }
 
+    /// <summary>
+    ///     核心：7x24小时全自动自愈看门狗（含监督者：看门狗循环异常退出会被自动重启）
+    /// </summary>
     private void StartWatchdog()
     {
         if (_isWatchdogRunning) return;
@@ -168,62 +171,106 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
             var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "DB1.0.0" : _options.HeartbeatAddress;
             _logger.LogInformation("🛡️ PLC 自动自愈看门狗已启动，心跳地址: {Address}", hbAddress);
 
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-            try
+            // 监督者循环：看门狗循环异常退出时延迟重启，仅取消时真正退出
+            while (!_watchdogCts.IsCancellationRequested)
             {
-                while (await timer.WaitForNextTickAsync(_watchdogCts.Token))
+                try
                 {
+                    await RunWatchdogLoopAsync(hbAddress, _watchdogCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 正常取消，退出监督循环
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "💀 [看门狗] 循环异常退出，5 秒后由监督者重启");
                     try
                     {
-                        if (!_currentConnectionState)
-                        {
-                            _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
-                            try
-                            {
-                                await ExecuteConnectInternalAsync(_watchdogCts.Token);
-                            }
-                            catch
-                            {
-                                try { await Task.Delay(TimeSpan.FromSeconds(5), _watchdogCts.Token); }
-                                catch (OperationCanceledException) { break; }
-                            }
-                            continue;
-                        }
-
-                        try
-                        {
-                            var result = _client.ReadBoolean(hbAddress);
-                            if (!result.IsSucceed)
-                            {
-                                _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
-                                _currentConnectionState = false;
-                                await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
-                            }
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            _logger.LogWarning("⚠️ [看门狗] PLC 客户端已释放，看门狗退出");
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
-                            _currentConnectionState = false;
-                            await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
-                        }
+                        await Task.Delay(TimeSpan.FromSeconds(5), _watchdogCts.Token);
                     }
-                    catch (OperationCanceledException) { break; }
-                    catch (Exception ex) { _logger.LogError(ex, "⚠️ [看门狗] 循环体发生未预期异常，继续运行"); }
+                    catch (OperationCanceledException)
+                    {
+                        // 正常取消，退出监督循环
+                        break;
+                    }
                 }
             }
-            catch (OperationCanceledException) { /* 正常取消 */ }
-            catch (Exception ex) { _logger.LogError(ex, "💀 [看门狗] 看门狗线程异常退出"); }
-            finally
-            {
-                _logger.LogInformation("🛡️ PLC 看门狗线程已退出");
-                _isWatchdogRunning = false;
-            }
+
+            _logger.LogInformation("🛡️ PLC 看门狗线程已退出");
+            _isWatchdogRunning = false;
         }, _watchdogCts.Token);
+    }
+
+    /// <summary>
+    ///     看门狗扫描循环：断线重连 + 心跳检测（由监督者托管）
+    /// </summary>
+    private async Task RunWatchdogLoopAsync(string hbAddress, CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+
+        while (await timer.WaitForNextTickAsync(ct))
+        {
+            try
+            {
+                // 【状态一：已断线】-> 尝试重连
+                if (!_currentConnectionState)
+                {
+                    _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
+                    try
+                    {
+                        await ExecuteConnectInternalAsync(ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw; // 交由监督者处理取消
+                    }
+                    catch
+                    {
+                        // 连不上就静默等待下一次 Timer 触发
+                        // 增加退避，避免网络不可达时频繁创建连接线程
+                        await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                    }
+
+                    continue;
+                }
+
+                // 【状态二：已连接】-> 执行心跳检测
+                try
+                {
+                    var result = _client.ReadBoolean(hbAddress);
+                    if (!result.IsSucceed)
+                    {
+                        _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
+                        _currentConnectionState = false;
+                        await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 重连替换客户端的瞬间可能读到已释放的旧实例：判定掉线即可，
+                    // 重连分支会创建全新客户端，看门狗不再因此退出
+                    _logger.LogWarning("⚠️ [看门狗] PLC 客户端已释放，判定为掉线并准备重连");
+                    _currentConnectionState = false;
+                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "客户端已释放", DateTime.Now));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
+                    _currentConnectionState = false;
+                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // 交由监督者处理取消
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚠️ [看门狗] 循环体发生未预期异常，继续运行");
+            }
+        }
     }
 
     private void StopWatchdog()

@@ -158,15 +158,17 @@
 - **证据**：`ConfigurationHelper.UpdateAppSetting` catch 所有异常仅 `Console.WriteLine`（`ConfigurationHelper.cs:50-54`）——WPF 无控制台，磁盘满/占用/权限失败完全不可见；`SettingsService.SaveSettings` 仍返回 `Success=true`（`SettingsService.cs:80-86`）。另：写入非原子（`File.WriteAllText` 直接覆盖），写一半断电即损坏 appsettings.json，启动 `AddJsonFile` 遇坏 JSON 直接抛异常，无自动从备份恢复；备份文件无清理策略、无限增长。
 - **严重度**：高
 
-### T5 [中] PLC 重连无熔断，看门狗退出后无监督重启
+### T5 [中] PLC 重连无熔断，看门狗退出后无监督重启（✅ 2026-07-22 已解决）
 
 - **证据**：重连为固定节奏（2s 心跳 + 失败固定 5s 延迟，`MitsubishiPlcService.cs:212,234`、`SiemensPlcService.cs:171,187`）；看门狗循环最外层 catch 记录后 `_isWatchdogRunning=false` 直接退出（`MitsubishiPlcService.cs:284-292`），无监督者重启——一旦退出，自动重连永久失效，只能重启应用。
 - **严重度**：中
+- **解决**：2026-07-22，两个驱动均加入监督者循环（`StartWatchdog` 托管 `RunWatchdogLoopAsync`，异常退出 5s 后自动重启，仅取消时真正退出）；心跳读到已释放客户端（`ObjectDisposedException`，重连换客户端竞态）不再退出看门狗，改为判定掉线走重连分支。
 
-### T6 [中] Scanner 串口断开完全不重连
+### T6 [中] Scanner 串口断开完全不重连（✅ 2026-07-22 已解决）
 
 - **证据**：仅订阅 `DataReceived`（`SerialPortScannerService.cs:54`），无 `ErrorReceived`、无断开检测；USB 拔插后 `IsOpen` 仍为 true，服务永久失能直到重启应用；初始化失败仅记日志无重试（`ScannerPlugin.cs:49-52`）。
 - **严重度**：中
+- **解决**：2026-07-22，`SerialPortScannerService` 新增 `ErrorReceived` 订阅（标记重连）+ 5s 周期重连监控：`GetPortNames` 检测设备消失时关闭残留句柄并等待重新插入，设备恢复或出错后自动重开；数据通道/消费者只建一次，重连不重建；初始化失败由监控持续重试。
 
 ### T7 [中] 韧性管道声明后未接线
 
@@ -347,7 +349,7 @@
 | 1 | ✅ 韧性管道接线：DB 操作接 `Database-Retry`；移除误导性 Empty 注册（gRPC 部分 ❄ 冻结）（2026-07-22 完成） | T7 | 1d | 管道调用点存在且有效 |
 | 2 | ✅ `IReportDataProvider` 移至 `AP.Contracts.Report`（2026-07-22 完成；共享前缀保证类型标识，端到端验证随首个真实 Provider） | R1 | 1d | 业务插件 Provider 生成的报表真实出现在报表中心 |
 | 3 | ✅ PLC 写操作审计 + 配置修改审计 + 审计拦截器化（2026-07-22 完成：`AuditingPlcServiceDecorator` 业务无感拦截 Write/WriteBatch；`SettingsService` 配置保存留痕；操作人经 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`） | S4 | 3d | PLC WriteAsync 留痕（操作人/地址/值/结果）；配置保存留痕 |
-| 4 | PLC 看门狗监督重启 + Scanner 断线重连（ErrorReceived + 重开策略） | T5/T6 | 2–3d | 模拟看门狗异常退出后自动恢复；USB 拔插后扫码恢复 |
+| 4 | ✅ PLC 看门狗监督重启 + Scanner 断线重连（2026-07-22 完成：监督者循环 + ObjectDisposed 不再致死；ErrorReceived + 5s 重开监控） | T5/T6 | 2–3d | 模拟看门狗异常退出后自动恢复；USB 拔插后扫码恢复（逻辑级修复，真机验证待现场） |
 | 5 | 托盘重启加单实例 Mutex（复用阶段一已引入的命名互斥体） | T8 | 0.5d | 双击 exe/托盘重启不产生双进程 |
 | 6 | ✅ 仓库示例连接串改为占位符（2026-07-22 完成，3d0dd97） | S5 | 0.5d | 仓库无明文密码 |
 

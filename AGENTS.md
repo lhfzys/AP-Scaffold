@@ -171,6 +171,7 @@ bin/Release/AP.Host.Desktop.exe
   `Plc:DriverType`（`Mitsubishi` / `Siemens`，预留 `Omron`）、`Plc:IpAddress`、`Plc:Port`、`Plc:Timeout`、`Plc:Model`（三菱 `Qna_3E`；西门子 `S7_1200` 等）、`Plc:HeartbeatAddress`。
 - 各 PLC 插件注册 `IPlcDriverFactory`，`AP.Infra.Hardware.ActivePlcService`（懒加载代理）按 `DriverType` 从 `PlcDriverRegistry` 取工厂创建真实驱动并转发 `IPlcService` / `IPlcBatchReadWrite` 调用。
 - **PLC 写操作审计**：DI 中 `IPlcService` 实际解析为 `AuditingPlcServiceDecorator`（包装 `ActivePlcService`），`WriteAsync`/`WriteBatchAsync` 自动写审计日志（`ManualControl`，含地址/值/结果；操作人取 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`）；审计/身份服务未注册时降级不审计，审计失败不影响写入。读操作与连接管理不审计。
+- **看门狗监督**：三菱/西门子驱动的看门狗由监督者循环托管（`StartWatchdog` → `RunWatchdogLoopAsync`），循环异常退出 5s 后自动重启，仅取消时真正退出；心跳读到已释放客户端（`ObjectDisposedException`，重连换客户端竞态）判定掉线走重连分支，不再退出看门狗。
 - `PlcDriverRegistry` 为单例，**首次解析时从 DI 收集所有 `IPlcDriverFactory`**（`AddPlcHardware` 中的工厂委托完成，2026-07-22 修复了注册表恒为空的缺陷）；不要在插件里手动 `new PlcDriverRegistry()` 或调 `Register`。
 - 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
 - 西门子地址格式与三菱不同，业务插件中的地址应通过配置或参数传入，避免硬编码。
@@ -235,6 +236,7 @@ bin/Release/AP.Host.Desktop.exe
 - **文件名大小写**：`appsettings.server.json` 是小写（Linux 上与 `appsettings.Server.json` 不匹配，Windows 无碍）。
 - **崩溃日志**：全局异常写入 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`，不弹窗。
 - **报表 IHostedService**：见 5.6。
+- **扫码枪断线重连**：`SerialPortScannerService` 订阅 `ErrorReceived`（标记重连）+ 5s 周期重连监控（`GetPortNames` 检测 USB 拔出→关闭残留句柄等待重插；设备恢复或出错后自动重开）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道；初始化失败由监控持续重试。
 
 ---
 
