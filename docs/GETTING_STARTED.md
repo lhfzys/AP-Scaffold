@@ -86,7 +86,7 @@ cd AP-Scaffold
 
 将 `AP.Host.Desktop` 设为启动项目，按 F5 运行。
 
-默认 `Security:Enabled=true`，会弹出登录窗口：使用 `admin / admin123` 登录，**首次登录强制修改密码**。开发时可将 `Security:Enabled` 设为 `false` 跳过登录（此时注入匿名身份，拥有全部权限，菜单按白名单过滤）。
+默认 `Security:Enabled=false`，免登录直接进入主界面（注入匿名身份，拥有全部权限，菜单按白名单过滤）。如需登录与权限控制，将 `Security:Enabled` 设为 `true`，启动时会弹出登录窗口：使用 `admin / admin123` 登录，**首次登录强制修改密码**。
 
 ---
 

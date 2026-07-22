@@ -223,9 +223,9 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
    - `ActivePlcService` 懒加载代理按 DriverType 转发；驱动不支持批量时抛 `NotSupportedException`。
    - 系统设置中的 PLC 配置页编辑同一 `Plc` 节，保存后需重启。
 
-5. **安全模块可关闭**
-   - `Security:Enabled=false` 时跳过登录窗口、注入匿名身份（全部权限），Sidebar 按 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单过滤菜单。
-   - 审计开关 `Security:Audit:Enabled` 独立判断，缺省回退到 `Security:Enabled`。
+5. **安全模块可关闭（当前默认关闭）**
+   - 随附配置默认 `Security:Enabled=false`（2026-07-22 起）：跳过登录窗口、注入匿名身份（全部权限），Sidebar 按 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单过滤菜单。
+   - 审计开关 `Security:Audit:Enabled` 独立判断，缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留（审计表由 `AuditService` 构造函数幂等自建）。
    - 注意：RecipeManagement / ReportCenter 视图注册只检查各自权限，未检查 Security 开关（匿名身份下权限恒 true，行为一致）。
 
 6. **插件输出目录**

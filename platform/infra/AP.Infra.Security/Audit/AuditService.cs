@@ -13,6 +13,10 @@ public class AuditService : IAuditService
     public AuditService(IFreeSql freeSql)
     {
         _freeSql = freeSql ?? throw new ArgumentNullException(nameof(freeSql));
+
+        // 自确保审计表存在：Security:Enabled=false 时 SecurityDbInitializer 不会运行，
+        // 但审计可独立启用（Security:Audit:Enabled=true），此处幂等建表
+        _freeSql.CodeFirst.SyncStructure<AuditLog>();
     }
 
     public async Task LogAsync(AuditLogEntry entry, CancellationToken ct = default)

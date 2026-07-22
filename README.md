@@ -297,7 +297,7 @@ await pipeline.ExecuteAsync(async token => {
 - 登录窗口 + 首次登录强制改密（默认账号 `admin / admin123`）
 - 审计日志：登录/登出/改密/用户角色操作等自动记录，可视化查询
 - 视图级权限控制：`PermissionBehavior` 附加属性（无权限时隐藏或禁用）
-- `Security:Enabled=false` 一键关闭：跳过登录、注入匿名身份（拥有全部权限）、菜单按白名单过滤
+- `Security:Enabled` 一键开关（**当前默认 `false` 免登录**）：关闭时跳过登录、注入匿名身份（拥有全部权限）、菜单按白名单过滤；审计可独立保留
 
 ### 9. 统一视觉（全浅色 Material Design 3）
 
@@ -398,7 +398,7 @@ Configuration/
 
 ### 5. 运行
 
-将 `AP.Host.Desktop` 设为启动项目，按 F5 运行。默认 `Security:Enabled=true`，使用 `admin / admin123` 登录（首次登录强制改密）。
+将 `AP.Host.Desktop` 设为启动项目，按 F5 运行。默认 `Security:Enabled=false`，免登录直接进入主界面。如需登录与权限控制，将 `Security:Enabled` 改为 `true`，使用 `admin / admin123` 登录（首次登录强制改密）。
 
 ---
 

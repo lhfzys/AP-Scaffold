@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+### 默认配置变更（2026-07-22）
+
+变更：
+
+- **`Security:Enabled` 默认改为 `false`（免登录）**：面向单机外包场景，默认不弹登录窗、直接进入主界面；`Security:Audit:Enabled` 显式保留 `true`，PLC 写操作/配置修改等审计在免登录下继续工作（操作人记匿名/`system`）；审计表改由 `AuditService` 构造函数幂等自建（`SyncStructure<AuditLog>`），不再依赖仅 Security 启用时注册的初始化器
+
 ### 阶段二加固（2026-07-22）
 
 修复：

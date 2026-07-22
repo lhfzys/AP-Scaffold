@@ -372,11 +372,11 @@ public interface IEventBus
 
 ### AP.Infra.Security — 安全模块
 
-- `AddPlatformSecurity(configuration)`，配置键 `Security:Enabled`（默认 true）、`Security:Audit:Enabled`（缺省回退）
+- `AddPlatformSecurity(configuration)`，配置键 `Security:Enabled`（代码缺省 true；随附 appsettings 默认显式 `false`，即免登录）、`Security:Audit:Enabled`（缺省回退到 `Security:Enabled`，随附配置显式 `true`）
 - 实体：`User`/`Role`/`Permission`/`UserRole`/`RolePermission`/`AuditLog`（表：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`）
 - `PasswordHasher`：PBKDF2-SHA256，16 字节盐 + 32 字节密钥 + 100,000 次迭代，定时间比较验证
-- `SecurityDbInitializer`：建表 + 种子数据（12 个权限、3 个角色、admin/admin123 强制改密）
-- `Security:Enabled=false` 时：`IIdentityService` 替换为 `AnonymousIdentityService`（全部权限），审计用 `NullAuditService`
+- `SecurityDbInitializer`：建表 + 种子数据（12 个权限、3 个角色、admin/admin123 强制改密）；`sys_audit_logs` 表另由 `AuditService` 构造函数幂等自建
+- `Security:Enabled=false` 时：`IIdentityService` 替换为 `AnonymousIdentityService`（全部权限）；审计按 `Security:Audit:Enabled` 独立判断，关闭时用 `NullAuditService`
 
 ### AP.Infra.Recipe — 配方管理
 

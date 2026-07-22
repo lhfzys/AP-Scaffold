@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: 阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
+- **最近提交主题**: Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -208,13 +208,15 @@ bin/Release/AP.Host.Desktop.exe
 | `device.config` | 设备配置 |
 | `test.start` | 启动测试 |
 
-默认角色：`Administrator`（全部权限）、`Operator`（system.view / recipe.view / recipe.switch / report.view / report.export / test.start）、`Technician`（system.view / system.settings / recipe.* / report.view / report.export / device.config）。默认账号 `admin / admin123`，首次登录强制改密。
+默认角色：`Administrator`（全部权限）、`Operator`（system.view / recipe.view / recipe.switch / report.view / report.export / test.start）、`Technician`（system.view / system.settings / recipe.* / report.view / report.export / device.config）。默认账号 `admin / admin123`，首次登录强制改密（仅 `Security:Enabled=true` 时涉及；当前默认配置为 false，见 5.9）。
 
 视图级权限控制还可用 `AP.Shared.UI` 的 `PermissionBehavior` 附加属性：`ui:PermissionBehavior.Permission="user.manage"`，`HideWhenUnauthorized=false` 时禁用而非隐藏。
 
 ### 5.9 Security:Enabled=false 的行为
 
-- DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`），关闭时用 `NullAuditService`。
+> **当前默认配置即为 `Security:Enabled=false`**（2026-07-22 起，面向免登录单机场景）；需要登录与权限时改为 `true`。
+
+- DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留），关闭时用 `NullAuditService`；审计表由 `AuditService` 构造函数幂等自建（`SyncStructure<AuditLog>`），不再依赖仅 Security 启用时注册的初始化器。
 - 宿主：跳过登录窗口与安全库初始化。
 - 菜单：Sidebar 只显示 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单内的 Target；UserManagement/RoleManagement/AuditLog 插件在 `InitializeAsync` 中检测禁用后直接 return 不注册视图（注意：RecipeManagement/ReportCenter 目前只按各自权限门控，未检查 `Security:Enabled`）。
 
@@ -259,11 +261,11 @@ bin/Release/AP.Host.Desktop.exe
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 222 个测试通过。
+2. 运行三个测试项目确认 237 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。
 
 ---
 
-**最后更新**: 2026-07-21
+**最后更新**: 2026-07-22
