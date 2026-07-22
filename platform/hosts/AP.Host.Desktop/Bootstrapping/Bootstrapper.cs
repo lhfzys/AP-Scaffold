@@ -296,7 +296,7 @@ public class Bootstrapper : PrismBootstrapper
 
         containerRegistry.RegisterSingleton<ICustomDialogService, MaterialDialogService>();
         // 让插件也能解析 Prism 的 IContainerProvider
-        containerRegistry.RegisterInstance<IContainerProvider>(containerRegistry as IContainerProvider);
+        containerRegistry.RegisterInstance<IContainerProvider>((IContainerProvider)containerRegistry);
     }
 
     /// <summary>

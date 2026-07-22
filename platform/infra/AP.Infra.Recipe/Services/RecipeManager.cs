@@ -99,7 +99,7 @@ public class RecipeManager : IRecipeManager
         if (recipe == null || !recipe.IsEnabled) return false;
 
         CurrentRecipe = recipe;
-        // 实际项目中可在此发布 RecipeSwitchedEvent
+        // TODO: 发布 RecipeSwitchedEvent（配方切换事件），供业务插件订阅联动
         return true;
     }
 

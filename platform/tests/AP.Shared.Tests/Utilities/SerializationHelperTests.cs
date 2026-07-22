@@ -140,7 +140,7 @@ public class SerializationHelperTests
 
         result.Should().NotBeNull();
         result.Should().BeOfType<TestData>();
-        var typed = (TestData)result;
+        var typed = (TestData)result!;
         typed.Name.Should().Be("Typed");
         typed.Value.Should().Be(7);
     }

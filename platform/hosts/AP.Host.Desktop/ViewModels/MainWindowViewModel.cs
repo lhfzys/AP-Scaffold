@@ -56,9 +56,9 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     // [RelayCommand]
-    private void OnClosing(CancelEventArgs e)
+    private void OnClosing(CancelEventArgs? e)
     {
-        if (_canClose) return;
+        if (_canClose || e is null) return;
         e.Cancel = true;
         Application.Current.Dispatcher.InvokeAsync(async () => { await ExitSystem(); });
     }
