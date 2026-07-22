@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:ui="clr-namespace:AP.Shared.UI.Behaviors;assembly=AP.Shared.UI"
         mc:Ignorable="d"
         Title="{Binding Title}"
         Height="560"
@@ -111,7 +112,9 @@
                 <Button Content="保存"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Command="{Binding SaveCommand}"
-                        Height="{DynamicResource Button.StandardHeight}"/>
+                        Height="{DynamicResource Button.StandardHeight}"
+                        ui:PermissionBehavior.Permission="role.manage"
+                        ui:PermissionBehavior.HideWhenUnauthorized="False"/>
             </StackPanel>
         </Border>
     </Grid>
