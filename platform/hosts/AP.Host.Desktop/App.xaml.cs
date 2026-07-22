@@ -85,10 +85,13 @@ public partial class App : System.Windows.Application
         {
             Log.Information("应用程序正在退出...");
 
-            // 优雅停止所有插件和服务（在关闭日志之前）
+            // 优雅停止所有插件和服务（在关闭日志之前）。
+            // 异步链放到线程池执行，避免 UI 线程 sync-over-async 卡死关闭流程；
+            // 15s 硬上限保证进程必定退出（后台线程不阻止进程退出）
             if (_bootstrapper != null)
             {
-                _bootstrapper.ShutdownAsync().GetAwaiter().GetResult();
+                Task.Run(() => _bootstrapper.ShutdownAsync())
+                    .Wait(TimeSpan.FromSeconds(15));
             }
         }
         catch (Exception ex)

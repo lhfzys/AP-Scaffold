@@ -9,6 +9,22 @@
 
 ## [Unreleased]
 
+### 阶段二加固（2026-07-22）
+
+修复：
+
+- **关闭流程卡死、进程残留**：`App.OnExit` 改为线程池执行优雅关闭 + 15s 硬上限（消除 UI 线程 sync-over-async 卡死）；`PluginLifecycleManager` 单插件停止增加 5s 独立超时，单个插件卡死不再拖死整个关闭序列；托盘双击在窗口已关闭时不再抛异常；清理 `bin/Release/plugins` 中气密残留插件与 `_wpftmp` 构建垃圾（残留插件此前仍被运行时加载）
+- **PLC 看门狗异常退出后自动重连永久失效**：三菱/西门子看门狗改由监督者循环托管，异常退出 5s 后自动重启；心跳读到已释放客户端（重连换实例竞态）判定掉线走重连，不再退出看门狗
+- **扫码枪串口断开完全不重连**：订阅 `ErrorReceived` + 5s 周期重连监控，USB 拔出检测（`GetPortNames`）后关闭残留句柄等待重插，设备恢复或出错后自动重开；初始化失败由监控持续重试
+
+变更：
+
+- **韧性管道接线**：三条管道（`Database-Retry`/`PLC-Retry`/`Grpc-CircuitBreaker`）在 `AddPlatformResilience` 中直接登记到 Registry，移除误导性 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法接入 `Database-Retry`
+- **`IReportDataProvider`/`ReportData` 移至 `AP.Contracts.Report`**：契约前缀强制共享 ALC，业务插件 Provider 可被 Host 收集（插件经 `AddSingleton<IReportDataProvider, T>()` 注册）
+- **审计覆盖**：新增 `AuditingPlcServiceDecorator`（`IPlcService` 实际解析类型），PLC Write/WriteBatch 自动留痕（操作人/地址/值/结果，未登录记 `system`）；`SettingsService` 配置保存成功/失败均写审计日志
+- **单实例与托盘重启**：启动时以命名互斥体做单实例检查（重复启动弹提示退出）；托盘重启新进程带 `--restart`，等待旧实例释放互斥体后接管启动
+- 测试规模：237 个测试（新增韧性注册 5 例、DB 仓储 2 例、PLC 审计装饰器 6 例）
+
 ### 阶段一排雷（2026-07-22）
 
 修复：

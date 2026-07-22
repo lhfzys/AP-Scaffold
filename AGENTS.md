@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: 阶段一排雷（报表后台任务显式启动、配置写回原子化、安装包升级保护、Required/Dependencies/重复 ID 插件语义落地、气密业务残留清理、构建警告清零）
+- **最近提交主题**: 阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -236,6 +236,7 @@ bin/Release/AP.Host.Desktop.exe
 - **文件名大小写**：`appsettings.server.json` 是小写（Linux 上与 `appsettings.Server.json` 不匹配，Windows 无碍）。
 - **崩溃日志**：全局异常写入 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`，不弹窗。
 - **单实例**：`App.OnStartup` 用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 检查（非首实例弹提示退出；该互斥体同时供 Inno `AppMutex` 检测）；托盘重启给新进程传 `--restart`，新进程等待旧实例释放互斥体（最长 60s，含 `AbandonedMutexException` 处理）后再启动。
+- **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：`SerialPortScannerService` 订阅 `ErrorReceived`（标记重连）+ 5s 周期重连监控（`GetPortNames` 检测 USB 拔出→关闭残留句柄等待重插；设备恢复或出错后自动重开）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道；初始化失败由监控持续重试。
 

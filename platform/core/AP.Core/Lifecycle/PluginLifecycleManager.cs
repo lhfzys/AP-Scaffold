@@ -1,4 +1,4 @@
-﻿using AP.Core.PluginFramework.Abstractions;
+using AP.Core.PluginFramework.Abstractions;
 using AP.Core.PluginFramework.Loading;
 using AP.Core.StateMachine;
 using Microsoft.Extensions.Logging;
@@ -138,7 +138,10 @@ public class PluginLifecycleManager
             {
                 sm.TransitionTo(PluginState.Stopping);
 
-                await descriptor.Instance!.StopAsync(ct);
+                // 单插件停止独立超时：不响应 ct 的同步阻塞（Thread.Sleep/Task.Wait/驱动内同步调用）
+                // 不再拖死整个关闭序列；超时或失败记录后继续停止其余插件
+                await descriptor.Instance!.StopAsync(ct)
+                    .WaitAsync(TimeSpan.FromSeconds(5), ct);
 
                 sm.TransitionTo(PluginState.Stopped);
                 _logger.LogInformation("插件已停止: {Name}", descriptor.Metadata.Name);

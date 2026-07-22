@@ -58,7 +58,8 @@ public sealed class TrayIconManager : IDisposable
 
     private void ShowMainWindow()
     {
-        if (_mainWindow == null) return;
+        // IsLoaded=false 表示窗口已关闭（如关闭流程中双击托盘），避免对已关闭窗口调用 Show 抛异常
+        if (_mainWindow == null || !_mainWindow.IsLoaded) return;
 
         _mainWindow.Show();
         _mainWindow.WindowState = WindowState.Normal;
