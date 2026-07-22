@@ -9,6 +9,25 @@
 
 ## [Unreleased]
 
+### 阶段一排雷（2026-07-22）
+
+修复：
+
+- **报表后台任务不运行**：`ReportScheduler` / `ReportCleanupService` 由 `Bootstrapper` 显式启动，恢复定时归档/定期清理；注册改为"单例 + `AddHostedService` 转发"，消除双注册多实例隐患
+- **启动异常卡死 Splash**：`OnInitialized` 最外层异常兜底关闭 Splash 并弹出错误提示
+- **主题缺键**：补齐 `Brush.Overlay.Background`，修复 `LoadingSpinner` 使用处潜在的 XamlParseException
+- **配置写回静默失败**：`ConfigurationHelper.UpdateAppSetting` 改为临时文件+替换原子写入，IO/JSON/权限错误如实抛出（设置中心可正确提示保存失败）
+- **安装包升级覆盖现场配置**：`appsettings*.json` 改为仅首次安装写入；.NET 运行时检测改为 8.x 主版本精确匹配；AppMutex 防止应用运行中安装
+- **插件语义未执行**：落地 `Required`/`Dependencies`/重复 ID——重复 ID 全部拒绝加载并中止启动；依赖缺失拒绝加载并级联；Required 插件失败中止启动并明确提示
+- **业务残留**：移除气密示例插件 `AP.Plugin.AirtightnessCheck`；标题/软件名/工位名中性化；Dashboard 占位数据加 TODO 标注
+- **构建警告清零**：修复全部 Nullable 警告（全量 Rebuild 0 警告 0 错误）
+
+变更：
+
+- 插件元数据审计：11 个功能/硬件插件改为 `Required = false`（仅 Login/Layout 保持必需），外设缺失或功能插件故障不再中止系统启动
+- 范围决策：仅聚焦 Standalone + SQLite，Server/Client（gRPC）与 PostgreSQL/SQL Server 冻结，README/GETTING_STARTED/AGENTS 已同步标注
+- 测试规模：18 个测试文件 / 222 个测试（新增 `PluginGraphValidatorTests` 7 例 + `ConfigurationHelperTests` 2 例）
+
 ### 新增
 
 - **安全模块**：新增 `AP.Contracts.Security` / `AP.Infra.Security`

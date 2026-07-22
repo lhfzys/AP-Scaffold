@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: 声明式导航贡献者模式、Security 禁用时菜单过滤、Sidebar 默认导航修复、全浅色 MaterialDesign 主题、西门子 PLC 统一驱动切换
+- **最近提交主题**: 阶段一排雷（报表后台任务显式启动、配置写回原子化、安装包升级保护、Required/Dependencies/重复 ID 插件语义落地、气密业务残留清理、构建警告清零）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -48,8 +48,9 @@
 - [x] 西门子 PLC 协议支持
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 注释已预留 "Omron"）
 - [ ] OpenTelemetry 可观测性
-- [ ] Dashboard 仪表盘目前为硬编码占位数据（`DashboardViewModel.LoadPlaceholderData`）
+- [ ] Dashboard 仪表盘目前为硬编码占位数据（`DashboardViewModel.LoadPlaceholderData`，已加 TODO(sample) 标注）
 - [ ] `RequiresCapabilitiesAttribute` 目前仅有声明，无运行时强制检查
+- [ ] **已知问题（待排查）**：运行日志出现 `未找到 PLC 驱动 'Mitsubishi'。已注册的驱动: 无`——`IPlcDriverFactory` 注册进 `PlcDriverRegistry` 的时机/链路疑似断裂（用户确认复现，计划阶段一完成后处理）
 
 ---
 
@@ -97,7 +98,7 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（17 个测试文件 / 213 个测试）
+│   └── tests/                            # xUnit 测试（18 个测试文件 / 222 个测试）
 │       ├── AP.Core.Tests                 # 8 文件 / 123 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 46 测试
 │       └── AP.Infra.Tests                # 5 文件 / 44 测试
@@ -144,12 +145,13 @@ bin/Release/AP.Host.Desktop.exe
 
 - 接口定义在 `AP.Shared.PluginSDK/Configuration/`：`ISettingsContributor`（`Category` / `Title` / `IconKind` / `Order` / `ConfigurationSection` + `CreateViewModel(IServiceProvider)`），编辑器 VM 实现 `ISettingsEditorViewModel`（`LoadFromConfiguration` / `Validate` / `GetConfigurationValue` / `RequiresRestart`）。
 - 在插件 `ConfigureServices` 中 `AddSingleton<ISettingsContributor, YourContributor>()`，并在 `InitializeAsync` 中把 `编辑器VM→编辑器View` 的 DataTemplate 注册到 `Application.Current.Resources`。
-- `SettingsShellViewModel` 自动收集所有贡献者按 Category 分组显示；保存时统一 Validate → 备份 appsettings → `ConfigurationHelper.UpdateAppSetting` 写回。
+- `SettingsShellViewModel` 自动收集所有贡献者按 Category 分组显示；保存时统一 Validate → 备份 appsettings → `ConfigurationHelper.UpdateAppSetting` 写回（临时文件+替换原子写入，失败如实抛错并提示）。
 - 参考实现：`AP.Plugin.SystemSettings`（应用基础信息、PLC 配置）、`AP.Plugin.DeviceConfiguration`（扫码枪配置）。
 
 ### 5.3 插件开发约定
 
 - 插件主类继承 `AP.Shared.PluginSDK.Base.PluginBase`，标注 `[PluginMetadata]`（`Id` 必须与目录名/DLL 名一致；`SupportedRoles` 默认 `AppRole.All`；`Priority` 默认 100，越小越先加载；`Required` 默认 true）。
+- **Required/Dependencies/重复 ID 语义已落地**（2026-07-21，`PluginGraphValidator`）：重复 ID 全部拒绝加载并中止启动；`Dependencies` 缺失时拒绝加载该插件并级联（Required 插件依赖缺失中止启动）；Required 插件配置/实例化/初始化/启动失败时中止启动并弹窗说明。当前仅 `Login`、`Layout` 为 Required，其余 10 个插件均 `Required = false`——新插件请按"没有它系统是否还可用"判断，功能/硬件类默认应设 `Required = false`。
 - `ConfigureServices` 注册 View/ViewModel；`InitializeAsync` 中按权限条件注册 Region 视图。
 - **View 的 DataContext 注入模式**: 统一采用**构造函数注入 ViewModel**（`public UserListView(UserListViewModel vm)`）。全仓库无 `AutoWireViewModel`；部分插件保留 `ViewModelLocationProvider.Register` 作双保险。Login 窗口由 `LoginService` 手动赋 DataContext；设置编辑器 View 通过 DataTemplate 关联。
 - 插件之间不允许互相引用，通信通过 `Contracts` 事件 + MediatR。
@@ -177,7 +179,7 @@ bin/Release/AP.Host.Desktop.exe
 
 - `AP.Host.Desktop` 使用 `PrismBootstrapper` 手动构建容器，不启动 `IHost`，因此 `AddHostedService<T>()` 注册的服务**不会自动运行**。
 - 若需要在启动时执行，必须在 `Bootstrapper.OnInitialized` 中显式解析并调用（参考 `ReportDatabaseInitializer`、`GrpcClientWorker`）。
-- 注意：`ReportScheduler` / `ReportCleanupService` 是以 `AddHostedService` 注册的，当前同样**不会自动跑**——定时归档/清理依赖宿主显式启动，接手相关需求时先确认这一点。
+- `ReportScheduler` / `ReportCleanupService` 已修复（2026-07-21）：注册改为"单例 + `AddHostedService` 转发"，并由 `Bootstrapper.OnInitialized` 在报表初始化段显式 `StartAsync`。新增同类后台服务请沿用同一模式。
 
 ### 5.7 契约程序集必须被 Host 直接引用
 
@@ -220,11 +222,11 @@ bin/Release/AP.Host.Desktop.exe
 - 主色 `Color.Primary #1E3A5F`（深蓝），强调色 `Color.Accent #0891B2`（青蓝），语义色 Success/Warning/Error/Info 齐全；表面色全浅色（`Surface #FFFFFF`、`SurfaceDark #E8EDF2` 用于侧边栏）。
 - 引用链：`App.xaml` 合并 `MaterialDesign3.Defaults.xaml` + `BundledTheme(BaseTheme=Light, Primary=BlueGrey, Secondary=Cyan)` + `AP.Shared.UI/Resources/ResourceDictionary.xaml`（内部合并主题与转换器）。
 - 新 UI 请使用主题资源键（`Brush.*`、`TextStyle.*`、`Layout.Spacing.*` 等），不要硬编码颜色。
-- 已知小问题：`LoadingSpinner.xaml` 引用的 `Brush.Overlay.Background` 键在仓库中未定义（待补）。
+- 遮罩场景用 `Brush.Overlay.Background`（`#80000000`，`LoadingSpinner` 在用）。
 
 ### 5.11 其他坑点
 
-- **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`。
+- **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`；临时文件+替换原子写入，IO/JSON/权限错误会**抛出异常**（配置文件不存在则静默返回），调用方需处理失败。
 - **SQLite**：启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
 - **gRPC 配置键**：服务端 `Grpc:ServerPort`（默认 5000）；客户端 `Grpc:ServerUrl`、`Grpc:ClientId`、`Grpc:ClientName`。
@@ -252,7 +254,7 @@ bin/Release/AP.Host.Desktop.exe
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 213 个测试通过。
+2. 运行三个测试项目确认 222 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。

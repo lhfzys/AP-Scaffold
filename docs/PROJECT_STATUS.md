@@ -155,17 +155,17 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 1. **报表中心完善**
    - [ ] 接入真实业务报表数据提供者（如设备运行日报）
-   - [ ] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理
+   - [x] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理（2026-07-22，`5c98faf`）
    - [ ] 报表模板化支持验证、手动生成/补档端到端测试
 
-2. **排雷修复**（详见 IMPROVEMENT_PLAN 阶段一）
-   - [ ] 主题补齐 `Brush.Overlay.Background` 键
-   - [ ] 启动异常兜底关闭 Splash
-   - [ ] 配置写回失败不再静默 + 原子化
-   - [ ] 安装包升级不覆盖现场配置 + .NET 主版本检测
-   - [ ] `Required`/`Dependencies`/重复插件 ID 语义落地
-   - [ ] 业务残留清理（标题/示例插件/占位数据）
-   - [ ] 构建警告清零
+2. **排雷修复**（详见 IMPROVEMENT_PLAN 阶段一，2026-07-22 全部完成）
+   - [x] 主题补齐 `Brush.Overlay.Background` 键（`5c98faf`）
+   - [x] 启动异常兜底关闭 Splash（`5c98faf`）
+   - [x] 配置写回失败不再静默 + 原子化（`b8a95c2`）
+   - [x] 安装包升级不覆盖现场配置 + .NET 主版本检测（`16704af`）
+   - [x] `Required`/`Dependencies`/重复插件 ID 语义落地（`b1a4ab9`）
+   - [x] 业务残留清理（标题/示例插件/占位数据，`3d8c86c`）
+   - [x] 构建警告清零（`1b68462`，全量 Rebuild 0 警告）
 
 3. **配方管理完善**
    - [ ] 配方参数校验规则
@@ -235,7 +235,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 8. **主题资源**
    - `Industrial.Teal.MD3.xaml` 文件名保留但内容已是全浅色主题；新 UI 一律使用主题资源键，不硬编码颜色。
-   - `LoadingSpinner.xaml` 引用的 `Brush.Overlay.Background` 键未定义（已知小问题，待补）。
+   - 遮罩场景用 `Brush.Overlay.Background`（`#80000000`，已补齐，`LoadingSpinner` 在用）。
 
 9. **配置文件大小写**
    - `appsettings.server.json` 文件名是小写 server（Linux 上与 `appsettings.Server.json` 不匹配；Windows 无碍）。

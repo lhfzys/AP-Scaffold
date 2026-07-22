@@ -8,6 +8,8 @@
 - **安全可靠** — 本地用户/角色/权限体系、审计日志、PBKDF2 密码哈希、Polly 容错、PLC 看门狗自愈、崩溃日志
 - **统一视觉** — 全浅色 Material Design 3 主题、统一控件/文字/间距资源、权限行为附加属性
 
+> **当前范围（2026-07-21）**：项目聚焦 **Standalone 单机模式 + SQLite**。Server/Client（gRPC 分布式通信）与 PostgreSQL/SQL Server 支持为**冻结能力**——代码保留、文档保留，但标注 ❄ 的内容未维护、未验证，请勿用于新部署。详见 `docs/IMPROVEMENT_PLAN.md`。
+
 ---
 
 ## 📋 目录
@@ -36,7 +38,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 - 🛡️ 工业级容错与自愈机制（断线重连、断路器、看门狗）
 - 🔐 完整的安全体系（登录、用户/角色/权限、审计日志，可一键关闭）
 - 🖥️ 全浅色 Material Design 3 统一视觉主题
-- 📡 进程内消息总线 + gRPC 分布式通信
+- 📡 进程内消息总线（gRPC 分布式通信 ❄ 冻结，未支持）
 
 ### 适用场景
 
@@ -60,8 +62,8 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 | 图表 | LiveChartsCore | 2.0-rc6 | 实时数据可视化 |
 | 容错框架 | Polly | 8.6 | 重试、断路器、超时策略 |
 | 日志 | Serilog | 4.3 | 结构化日志（文件 + 控制台） |
-| 数据库 ORM | FreeSql | 3.5 | 支持 SQLite / PostgreSQL |
-| gRPC | Grpc.AspNetCore | 2.76 | 服务端 / 客户端通信 |
+| 数据库 ORM | FreeSql | 3.5 | SQLite（PostgreSQL ❄ 冻结） |
+| gRPC | Grpc.AspNetCore | 2.76 | 服务端 / 客户端通信（❄ 冻结，未支持） |
 | PLC 通信 | IoTClient | 1.0 | 三菱 MC 协议 / 西门子 S7 协议 |
 | 串口通信 | System.IO.Ports | 4.6 | 串口扫码枪等设备 |
 | Excel | MiniExcel | 1.42 | 轻量级 Excel 导入导出 |
@@ -280,7 +282,9 @@ await pipeline.ExecuteAsync(async token => {
 }, ct);
 ```
 
-### 7. gRPC 分布式通信
+### 7. gRPC 分布式通信（❄ 冻结，未支持）
+
+> 该能力仅在 Server/Client 模式下使用，当前范围外，代码保留但不维护、不验证。
 
 - **服务端**：Server 模式下内嵌 Kestrel（仅 HTTP/2）+ gRPC 服务，proto 契约定义于 `AP.Contracts.Communication`
 - **客户端**：Client 模式下 `GrpcClientWorker` 保持连接，接收数据流并经 MediatR 转发
@@ -355,17 +359,17 @@ cd AP-Scaffold
 
 ### 3. 配置运行模式
 
-项目支持三种运行模式，配置文件位于 `platform/hosts/AP.Host.Desktop/Configuration/`：
+项目支持三种运行模式（**当前仅 Standalone 受支持**，Server/Client ❄ 冻结），配置文件位于 `platform/hosts/AP.Host.Desktop/Configuration/`：
 
 ```
 Configuration/
 ├── appsettings.json             # 基础配置（所有模式共用）
-├── appsettings.Standalone.json  # 单机模式
-├── appsettings.server.json      # 服务端模式（注意：文件名小写）
-└── appsettings.Client.json      # 客户端模式
+├── appsettings.Standalone.json  # 单机模式（当前唯一受支持）
+├── appsettings.server.json      # 服务端模式 ❄ 冻结（注意：文件名小写）
+└── appsettings.Client.json      # 客户端模式 ❄ 冻结
 ```
 
-通过 `appsettings.json` 的 `AppRole` 键或命令行参数 `--role=Server` 选择模式。
+通过 `appsettings.json` 的 `AppRole` 键或命令行参数 `--role=Server` 选择模式（❄ 冻结角色请勿使用）。
 
 ### 4. 修改硬件配置
 
@@ -406,9 +410,9 @@ Configuration/
 
 | 角色 | 说明 | 加载的插件范围 |
 |------|------|----------------|
-| `Standalone` | 单机模式（默认） | 所有 `Standalone` 标记的插件 |
-| `Server` | 服务端（含 gRPC Server） | `Server` 标记的插件 + 启动 Kestrel |
-| `Client` | 客户端（含 gRPC Client） | `Client` 标记的插件 + 启动 gRPC Worker |
+| `Standalone` | 单机模式（默认，当前唯一受支持） | 所有 `Standalone` 标记的插件 |
+| `Server` ❄ | 服务端（含 gRPC Server） | `Server` 标记的插件 + 启动 Kestrel |
+| `Client` ❄ | 客户端（含 gRPC Client） | `Client` 标记的插件 + 启动 gRPC Worker |
 
 一个插件可以同时支持多种模式：`SupportedRoles = AppRole.Server | AppRole.Standalone`
 
@@ -418,7 +422,7 @@ Configuration/
 {
   "AppConfiguration": {
     "MachineId": "Station-01",
-    "MachineName": "一号工位电脑",
+    "MachineName": "本机",
     "CompanyName": "自动化系统",
     "SoftwareName": "自动化监控系统",
     "LayoutMode": "Standard",
@@ -435,6 +439,8 @@ Configuration/
 | `LayoutMode` | `Standard`（带 Sidebar）/ `SinglePage`（单页） |
 
 ### 数据库
+
+当前仅支持 **SQLite**（PostgreSQL ❄ 冻结，配置保留但未经维护验证）：
 
 ```json
 {
@@ -472,7 +478,7 @@ Configuration/
 }
 ```
 
-### gRPC 配置
+### gRPC 配置（❄ 冻结，未支持）
 
 ```json
 // 服务端
@@ -706,9 +712,11 @@ reports/
 
 ## 部署模式
 
+> **当前仅 Standalone 单机模式受支持**；Server/Client 分布式部署为 ❄ 冻结能力（下图仅供参考，未维护验证）。
+
 ```
 ┌──────────────┐     gRPC      ┌──────────────┐
-│  Server 端    │◄────────────►│  Client 端    │
+│  Server 端 ❄  │◄────────────►│  Client 端 ❄  │
 │  (含PLC连接)  │   Stream       │  (展示/操作)  │
 │  + Kestrel   │   Broadcaster  │  + gRPC Worker│
 └──────────────┘               └──────────────┘
@@ -723,16 +731,16 @@ reports/
 | 模式 | 适用场景 |
 |------|----------|
 | **Standalone** | 工控一体机，直接连 PLC 并显示界面 |
-| **Server** | 作为数据网关，连接硬件并对外提供 gRPC 服务 |
-| **Client** | 远程监控终端，通过 gRPC 获取服务端数据 |
+| **Server** ❄ | 作为数据网关，连接硬件并对外提供 gRPC 服务 |
+| **Client** ❄ | 远程监控终端，通过 gRPC 获取服务端数据 |
 
-安装包：`installer/setup.iss`（Inno Setup 6），先 `dotnet publish -c Release` 再编译脚本，安装时自动检测 .NET 8 桌面运行时。
+安装包：`installer/setup.iss`（Inno Setup 6），先 `dotnet publish -c Release` 再编译脚本；安装时检测 .NET 8 桌面运行时（主版本精确匹配），覆盖安装保留现场配置，应用运行中禁止安装。
 
 ---
 
 ## 测试覆盖
 
-项目当前包含 **17 个测试文件 / 213 个测试**（全部通过），覆盖核心框架、共享库与基础设施配置。
+项目当前包含 **18 个测试文件 / 222 个测试**（全部通过），覆盖核心框架、共享库与基础设施配置。
 
 ### 测试项目结构
 

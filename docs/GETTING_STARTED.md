@@ -59,15 +59,15 @@ cd AP-Scaffold
 ```
 
 支持的运行模式：
-- `Standalone` - 单机模式（PLC + UI 在同一台机器）
-- `Server` - 服务端模式（仅连接 PLC，提供 gRPC 服务）
-- `Client` - 客户端模式（仅 UI，通过 gRPC 连接服务端）
+- `Standalone` - 单机模式（PLC + UI 在同一台机器，**当前唯一受支持**）
+- `Server` ❄ - 服务端模式（仅连接 PLC，提供 gRPC 服务；冻结，未支持）
+- `Client` ❄ - 客户端模式（仅 UI，通过 gRPC 连接服务端；冻结，未支持）
 
-也可以用命令行参数覆盖：`AP.Host.Desktop.exe --role=Server`
+也可以用命令行参数覆盖：`AP.Host.Desktop.exe --role=Server`（❄ 冻结角色请勿使用）
 
 ### 4. 配置数据库
 
-默认使用 SQLite，无需额外配置（`appsettings.Standalone.json` 中为 `local_data.db`）。如需使用 PostgreSQL：
+默认使用 SQLite，无需额外配置（`appsettings.Standalone.json` 中为 `local_data.db`）。**当前仅支持 SQLite**；PostgreSQL 配置保留但属于 ❄ 冻结能力（未维护、未验证），如需启用请自行验证：
 
 ```json
 {
@@ -302,9 +302,9 @@ public override void ConfigureServices(IServiceCollection services, IConfigurati
 ```
 Configuration/
 ├── appsettings.json              # 基础配置（所有模式共用）
-├── appsettings.Standalone.json   # 单机模式专属配置
-├── appsettings.server.json       # 服务端模式专属配置（注意：文件名小写）
-└── appsettings.Client.json       # 客户端模式专属配置
+├── appsettings.Standalone.json   # 单机模式专属配置（当前唯一受支持）
+├── appsettings.server.json       # 服务端模式专属配置 ❄ 冻结（注意：文件名小写）
+└── appsettings.Client.json       # 客户端模式专属配置 ❄ 冻结
 ```
 
 ### 完整配置示例
@@ -314,7 +314,7 @@ Configuration/
   // 应用基础配置
   "AppConfiguration": {
     "MachineId": "Station-01",
-    "MachineName": "一号工位电脑",
+    "MachineName": "本机",
     "CompanyName": "自动化系统",
     "SoftwareName": "自动化监控系统",
     "LayoutMode": "Standard",
@@ -346,7 +346,7 @@ Configuration/
     }
   },
 
-  // 数据库配置（注意是嵌套结构）
+  // 数据库配置（注意是嵌套结构；当前仅 SQLite 受支持，PostgreSQL ❄ 冻结）
   "Database": {
     "Provider": "SQLite",
     "SQLite": {
@@ -363,7 +363,7 @@ Configuration/
     "Audit": { "Enabled": true }
   },
 
-  // gRPC 配置（服务端用 ServerPort；客户端用 ServerUrl/ClientName）
+  // gRPC 配置 ❄ 冻结（服务端用 ServerPort；客户端用 ServerUrl/ClientName）
   "Grpc": {
     "ServerPort": 5000,
     "ServerUrl": "http://192.168.1.100:5000",

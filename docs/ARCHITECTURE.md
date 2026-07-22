@@ -364,7 +364,7 @@ public interface IEventBus
 
 基于 FreeSql 的 Repository 模式，`AddPlatformDatabase(configuration, appRole)` 注册：
 
-- 按 `Database:Provider` 选择 SQLite / PostgreSQL
+- 按 `Database:Provider` 选择 SQLite / PostgreSQL（**当前仅 SQLite 受支持**，PostgreSQL ❄ 冻结）
 - **SQLite**：启动前自动备份（`.db → .db.bak`，连同 `-wal`/`-shm`），启用 WAL 等 PRAGMA 优化
 - `UseAutoSyncStructure(false)`：**不自动建表**，各模块初始化器显式 `CodeFirst.SyncStructure<T>()`
 - `IRepository<T>` / `FreeSqlRepository<T>`（Scoped）：`GetAsync / GetListAsync / InsertAsync / UpdateAsync / DeleteAsync`
@@ -385,12 +385,14 @@ public interface IEventBus
 - `UpdateAsync` 自动 `Version+1`；`SetDefaultAsync` 先清除其他默认；`SwitchAsync` 设置内存 `CurrentRecipe`（事件发布留 TODO）
 - `RecipeDbInitializer`：建表 + 无 DEFAULT 配方时创建默认配方
 
-### AP.Infra.Grpc — gRPC 通信
+### AP.Infra.Grpc — gRPC 通信（❄ 冻结，未支持）
+
+> Server/Client 分布式模式当前范围外：代码保留但不维护、不验证。Standalone 模式不启动 gRPC。
 
 | 角色 | 模式 | 行为 |
 |------|------|------|
-| Server | 服务端 | 内嵌 Kestrel（仅 HTTP/2）+ `GrpcGateService`，通过 `StreamBroadcaster` 广播消息 |
-| Client | 客户端 | `GrpcClientWorker` 连接服务端，接收数据流经 MediatR 转发 |
+| Server ❄ | 服务端 | 内嵌 Kestrel（仅 HTTP/2）+ `GrpcGateService`，通过 `StreamBroadcaster` 广播消息 |
+| Client ❄ | 客户端 | `GrpcClientWorker` 连接服务端，接收数据流经 MediatR 转发 |
 | Standalone | 单机 | 不启动 gRPC，插件间通过 MediatR 通信 |
 
 **StreamBroadcaster 机制**：
