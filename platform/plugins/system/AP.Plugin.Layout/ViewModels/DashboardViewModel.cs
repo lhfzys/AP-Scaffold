@@ -3,15 +3,12 @@ using System.Windows.Threading;
 using AP.Contracts.Security.Abstractions;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Prism.Navigation.Regions;
 
 namespace AP.Plugin.Layout.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase
 {
     private readonly IIdentityService _identityService;
-    private readonly IRegionManager _regionManager;
     private readonly DispatcherTimer _uptimeTimer;
     private readonly DateTime _startTime;
 
@@ -24,10 +21,9 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty] private string _uptime = "--";
     [ObservableProperty] private ObservableCollection<RecentEventItem> _recentEvents = new();
 
-    public DashboardViewModel(IIdentityService identityService, IRegionManager regionManager)
+    public DashboardViewModel(IIdentityService identityService)
     {
         _identityService = identityService;
-        _regionManager = regionManager;
         _startTime = DateTime.Now;
 
         RefreshGreeting();
@@ -87,16 +83,6 @@ public partial class DashboardViewModel : ViewModelBase
             new("用户 admin 登录", DateTime.Now.AddMinutes(-5)),
             new("配方「默认配方」已切换", DateTime.Now.AddMinutes(-2))
         };
-    }
-
-    [RelayCommand]
-    private void Navigate(string target)
-    {
-        if (string.IsNullOrWhiteSpace(target)) return;
-
-        _regionManager.RequestNavigate(
-            AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
-            target);
     }
 
     public override void Destroy()

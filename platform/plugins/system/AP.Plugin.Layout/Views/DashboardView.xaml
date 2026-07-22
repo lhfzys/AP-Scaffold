@@ -139,111 +139,42 @@
             </md:Card>
         </WrapPanel>
 
-        <!-- 下方两栏 -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="24"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- 最近事件 -->
+        <md:Card Grid.Row="2" Padding="24"
+                 md:ElevationAssist.Elevation="Dp1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <!-- 快捷入口 - 图标按钮网格 -->
-            <md:Card Grid.Column="0" Padding="24"
-                     md:ElevationAssist.Elevation="Dp1">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           Text="最近事件"
+                           FontSize="16" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.OnSurface}"
+                           Margin="0,0,0,20"/>
 
-                    <TextBlock Grid.Row="0"
-                               Text="快捷入口"
-                               FontSize="16" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.OnSurface}"
-                               Margin="0,0,0,20"/>
-
-                    <UniformGrid Grid.Row="1" Columns="2" Rows="2">
-                        <Button Command="{Binding NavigateCommand}"
-                                CommandParameter="RecipeListView"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Height="56" Margin="0,0,8,8">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="FileDocument" Width="20" Height="20"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="配方管理" VerticalAlignment="Center" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding NavigateCommand}"
-                                CommandParameter="ReportListView"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Height="56" Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="ChartPie" Width="20" Height="20"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="报表中心" VerticalAlignment="Center" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding NavigateCommand}"
-                                CommandParameter="AuditLogListView"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Height="56" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="ClipboardText" Width="20" Height="20"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="审计日志" VerticalAlignment="Center" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding NavigateCommand}"
-                                CommandParameter="SettingsShellView"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Height="56">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="Cog" Width="20" Height="20"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="系统设置" VerticalAlignment="Center" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                    </UniformGrid>
-                </Grid>
-            </md:Card>
-
-            <!-- 最近事件 - 去除深色嵌套背景 -->
-            <md:Card Grid.Column="2" Padding="24"
-                     md:ElevationAssist.Elevation="Dp1">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="最近事件"
-                               FontSize="16" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.OnSurface}"
-                               Margin="0,0,0,20"/>
-
-                    <ItemsControl Grid.Row="1"
-                                  ItemsSource="{Binding RecentEvents}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="#E5E7EB"
-                                        BorderThickness="0,0,0,1"
-                                        Padding="0,10">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="13" FontWeight="Medium"
-                                                   Foreground="{DynamicResource Brush.OnSurface}"/>
-                                        <TextBlock Text="{Binding TimestampText}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"
-                                                   Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Grid>
-            </md:Card>
-        </Grid>
+                <ItemsControl Grid.Row="1"
+                              ItemsSource="{Binding RecentEvents}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="0,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="13" FontWeight="Medium"
+                                               Foreground="{DynamicResource Brush.OnSurface}"/>
+                                    <TextBlock Text="{Binding TimestampText}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                                               Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </md:Card>
     </Grid>
 </UserControl>
