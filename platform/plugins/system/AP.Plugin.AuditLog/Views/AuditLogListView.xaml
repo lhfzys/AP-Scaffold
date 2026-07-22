@@ -81,13 +81,7 @@
                  Padding="0"
                  md:ElevationAssist.Elevation="Dp2">
             <DataGrid ItemsSource="{Binding Logs}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      GridLinesVisibility="Horizontal"
-                      BorderThickness="0"
-                      Background="{DynamicResource Brush.Surface}"
-                      Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"
-                      Style="{StaticResource MaterialDesignDataGrid}">
+                      IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="时间"
                                         Binding="{Binding Timestamp, StringFormat=yyyy-MM-dd HH:mm:ss}"

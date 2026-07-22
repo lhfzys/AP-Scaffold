@@ -69,13 +69,7 @@
                  md:ElevationAssist.Elevation="Dp2">
             <DataGrid ItemsSource="{Binding Recipes}"
                       SelectedItem="{Binding SelectedRecipe}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      GridLinesVisibility="Horizontal"
-                      BorderThickness="0"
-                      Background="{DynamicResource Brush.Surface}"
-                      Foreground="{DynamicResource MaterialDesign.Brush.OnSurface}"
-                      Style="{StaticResource MaterialDesignDataGrid}">
+                      IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="编码"
                                         Binding="{Binding Code}"

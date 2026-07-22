@@ -91,14 +91,10 @@
 
                 <DataGrid ItemsSource="{Binding Parameters}"
                           SelectedItem="{Binding SelectedParameter}"
-                          AutoGenerateColumns="False"
                           CanUserAddRows="True"
-                          GridLinesVisibility="Horizontal"
                           BorderThickness="1"
                           BorderBrush="{DynamicResource MaterialDesignDivider}"
-                          Background="{DynamicResource Brush.Surface}"
-                          Height="220"
-                          Style="{StaticResource MaterialDesignDataGrid}">
+                          Height="220">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="参数名"
                                             Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"

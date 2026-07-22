@@ -11,9 +11,6 @@ public partial class SplashViewModel : ObservableObject
     private string _softwareName = "自动化监控系统";
 
     [ObservableProperty]
-    private string _companyName = "Industrial Automation";
-
-    [ObservableProperty]
     private double _progressValue;
 
     [ObservableProperty]
