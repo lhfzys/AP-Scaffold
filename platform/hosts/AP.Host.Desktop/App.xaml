@@ -118,17 +118,29 @@
                 <Setter Property="BorderThickness" Value="0,0,1,1"/>
             </Style>
 
-            <!-- DataGrid Cell 样式（Style.Resources 隐式 TextBlock 居中：MD 单元格模板不消费 VerticalContentAlignment，44px 行高下文本贴顶） -->
+            <!-- DataGrid Cell 样式：覆写模板让 ContentPresenter 消费 VerticalContentAlignment
+                 （MD 原模板 ContentPresenter 无对齐绑定，44px 行高下文本贴顶；
+                 水平方向保持 Stretch，保证编辑控件仍能填满单元格） -->
             <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
                 <Setter Property="BorderBrush" Value="#F1F5F9"/>
                 <Setter Property="BorderThickness" Value="0,0,1,0"/>
                 <Setter Property="Padding" Value="12,0"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Style.Resources>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-                    </Style>
-                </Style.Resources>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type DataGridCell}">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        SnapsToDevicePixels="True"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- 滚动条更细 -->
