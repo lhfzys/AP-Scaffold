@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+### 欧姆龙 PLC 驱动（2026-07-24）
+
+新增：
+
+- **`AP.Plugin.Plc.Omron`**：欧姆龙 FINS/TCP 驱动插件（Priority=22，Server|Standalone，Required=false），结构对齐三菱/西门子：统一 `Plc` 配置节切换（`DriverType=Omron`，端口默认 9600、心跳默认 `D0`）、IoTClient `OmronFinsClient`（字节序 CDAB）、看门狗监督重连、`IPlcDriverFactory` 注册即插即用。限制（IoTClient 未实现，代码已注释）：字符串读写抛 `NotSupportedException`；批量写入退化为逐条写入；批量读为真批量（`BatchRead` 第二参数无实际效果）
+
 ### UI 一致性优化·第二批次（2026-07-24）
 
 修复：

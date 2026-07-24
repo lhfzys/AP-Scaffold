@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: UI 一致性第二批次（DataGrid 单元格模板覆写垂直居中、`RaisedButton.Primary` 深蓝底白字按钮、Header 用户区随 `Security:Enabled` 显隐、时间列加宽）；UI 一致性五批次（Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 遮罩收敛+忙碌反馈、DataGrid 全局样式、Splash 去英文）；Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
+- **最近提交主题**: 欧姆龙 PLC 驱动插件（FINS/TCP，仿西门子结构）；UI 一致性第二批次（DataGrid 单元格模板覆写垂直居中、`RaisedButton.Primary` 深蓝底白字按钮、Header 用户区随 `Security:Enabled` 显隐、时间列加宽）；UI 一致性五批次（Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 遮罩收敛+忙碌反馈、DataGrid 全局样式、Splash 去英文）；Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -30,7 +30,7 @@
 - 插件化核心框架（加载、隔离上下文、生命周期、14 态状态机、MediatR 事件总线）
 - **声明式导航贡献者模式**（`INavigationContributor`，见 5.1）
 - **设置贡献者模式**（`ISettingsContributor`，见 5.2）
-- 三菱 / 西门子 PLC 驱动与统一切换机制（`IPlcDriverFactory` + `ActivePlcService`）
+- 三菱 / 西门子 / 欧姆龙 PLC 驱动与统一切换机制（`IPlcDriverFactory` + `ActivePlcService`）
 - 串口扫码枪硬件驱动
 - gRPC Server/Client 分布式通信（proto 契约 + StreamBroadcaster 广播）
 - 安全模块：本地用户/角色/权限（12 个种子权限、3 个默认角色）、登录、强制改密、审计日志
@@ -46,7 +46,7 @@
 - [ ] 配方管理完善校验与版本历史；`IRecipeManager.SwitchAsync` 的事件发布仍是 TODO
 - [ ] 审计日志导出（PLC 写操作与配置修改审计已于 2026-07-22 接入）
 - [x] 西门子 PLC 协议支持
-- [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 注释已预留 "Omron"）
+- [x] 欧姆龙 PLC 协议支持（2026-07-24，`AP.Plugin.Plc.Omron`，FINS/TCP）
 - [ ] OpenTelemetry 可观测性
 - [ ] Dashboard 仪表盘目前为硬编码占位数据（`DashboardViewModel.LoadPlaceholderData`，已加 TODO(sample) 标注）
 - [ ] `RequiresCapabilitiesAttribute` 目前仅有声明，无运行时强制检查
@@ -84,6 +84,7 @@ AP-Scaffold/
 │   │   ├── hardware/
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi  # Priority=20，Server|Standalone
 │   │   │   ├── AP.Plugin.Plc.Siemens     # Priority=21，Server|Standalone
+│   │   │   ├── AP.Plugin.Plc.Omron       # Priority=22，Server|Standalone
 │   │   │   └── AP.Plugin.Scanner         # Priority=20，Client|Standalone
 │   │   ├── business/
 │   │   │   └── AP.Plugin.DeviceConfiguration  # Priority=100，ISettingsContributor（扫码枪配置）
@@ -168,12 +169,13 @@ bin/Release/AP.Host.Desktop.exe
 ### 5.5 PLC 品牌切换
 
 - 通过统一的 `Plc` 配置节切换（不是各插件独立配置节）：
-  `Plc:DriverType`（`Mitsubishi` / `Siemens`，预留 `Omron`）、`Plc:IpAddress`、`Plc:Port`、`Plc:Timeout`、`Plc:Model`（三菱 `Qna_3E`；西门子 `S7_1200` 等）、`Plc:HeartbeatAddress`。
+  `Plc:DriverType`（`Mitsubishi` / `Siemens` / `Omron`）、`Plc:IpAddress`、`Plc:Port`、`Plc:Timeout`、`Plc:Model`（三菱 `Qna_3E`；西门子 `S7_1200` 等；欧姆龙 `FinsTcp`，不解析）、`Plc:HeartbeatAddress`。
 - 各 PLC 插件注册 `IPlcDriverFactory`，`AP.Infra.Hardware.ActivePlcService`（懒加载代理）按 `DriverType` 从 `PlcDriverRegistry` 取工厂创建真实驱动并转发 `IPlcService` / `IPlcBatchReadWrite` 调用。
 - **PLC 写操作审计**：DI 中 `IPlcService` 实际解析为 `AuditingPlcServiceDecorator`（包装 `ActivePlcService`），`WriteAsync`/`WriteBatchAsync` 自动写审计日志（`ManualControl`，含地址/值/结果；操作人取 `IIdentityService.CurrentUser`，未登录记 `system`，Security 禁用恒 `anonymous`）；审计/身份服务未注册时降级不审计，审计失败不影响写入。读操作与连接管理不审计。
 - **看门狗监督**：三菱/西门子驱动的看门狗由监督者循环托管（`StartWatchdog` → `RunWatchdogLoopAsync`），循环异常退出 5s 后自动重启，仅取消时真正退出；心跳读到已释放客户端（`ObjectDisposedException`，重连换客户端竞态）判定掉线走重连分支，不再退出看门狗。
+- **欧姆龙驱动差异**（IoTClient `OmronFinsClient` 限制，代码已注释）：字符串读写未实现（调用抛 `NotSupportedException`）；批量写入退化为逐条写入；批量读为真批量（`BatchRead` 第二参数无实际效果，传 0）；字节序默认 CDAB；`Model` 不解析（保留 "FinsTcp"）。
 - `PlcDriverRegistry` 为单例，**首次解析时从 DI 收集所有 `IPlcDriverFactory`**（`AddPlcHardware` 中的工厂委托完成，2026-07-22 修复了注册表恒为空的缺陷）；不要在插件里手动 `new PlcDriverRegistry()` 或调 `Register`。
-- 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
+- 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改（欧姆龙即按此方式接入）；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子/欧姆龙插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
 - 西门子地址格式与三菱不同，业务插件中的地址应通过配置或参数传入，避免硬编码。
 - 系统设置中已有 PLC 配置编辑页（`PlcConfigurationContributor`，DriverType 切换自动填默认值，RequiresRestart）。
 

@@ -651,7 +651,7 @@ public partial class PlcViewModel : ViewModelBase
 }
 ```
 
-> 注意：三菱与西门子的地址格式不同（如三菱 `D100` / 西门子 `DB1.DBW0`），业务插件中的地址应通过配置传入，不要硬编码。
+> 注意：各品牌地址格式不同（如三菱 `D100` / 西门子 `DB1.DBW0` / 欧姆龙 `D100`（位地址 `D100.0`）），业务插件中的地址应通过配置传入，不要硬编码。
 
 ### 3. 订阅 PLC 连接事件
 
@@ -707,7 +707,7 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 
 **检查项**:
 1. `Plc:DriverType` 是否与现场 PLC 品牌匹配，对应品牌的插件是否在加载
-2. PLC IP 地址和端口是否正确（三菱默认 6000，西门子默认 102）
+2. PLC IP 地址和端口是否正确（三菱默认 6000，西门子默认 102，欧姆龙默认 9600）
 3. 网络是否可达（`ping 192.168.1.10`）
 4. PLC 是否已开机并处于运行状态
 5. 查看日志中的连接错误信息（看门狗会自动重连）
@@ -778,6 +778,7 @@ AP-Scaffold/
 │   │   ├── hardware/                  # 硬件驱动插件
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi/ # 三菱 PLC
 │   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC
+│   │   │   ├── AP.Plugin.Plc.Omron/      # 欧姆龙 PLC (FINS/TCP)
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
 │   │   │   └── AP.Plugin.DeviceConfiguration/

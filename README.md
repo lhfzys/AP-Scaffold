@@ -34,7 +34,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 
 - 🧩 可插拔的插件架构，核心与业务强制解耦
 - 🧭 声明式导航与设置贡献者模式，新页面/新配置页零侵入接入
-- 🔌 开箱即用的硬件通信能力（三菱/西门子 PLC、扫码枪），配置切换品牌
+- 🔌 开箱即用的硬件通信能力（三菱/西门子/欧姆龙 PLC、扫码枪），配置切换品牌
 - 🛡️ 工业级容错与自愈机制（断线重连、断路器、看门狗）
 - 🔐 完整的安全体系（登录、用户/角色/权限、审计日志，可一键关闭）
 - 🖥️ 全浅色 Material Design 3 统一视觉主题
@@ -64,7 +64,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 | 日志 | Serilog | 4.3 | 结构化日志（文件 + 控制台） |
 | 数据库 ORM | FreeSql | 3.5 | SQLite（PostgreSQL ❄ 冻结） |
 | gRPC | Grpc.AspNetCore | 2.76 | 服务端 / 客户端通信（❄ 冻结，未支持） |
-| PLC 通信 | IoTClient | 1.0 | 三菱 MC 协议 / 西门子 S7 协议 |
+| PLC 通信 | IoTClient | 1.0 | 三菱 MC 协议 / 西门子 S7 协议 / 欧姆龙 FINS(TCP) 协议 |
 | 串口通信 | System.IO.Ports | 4.6 | 串口扫码枪等设备 |
 | Excel | MiniExcel | 1.42 | 轻量级 Excel 导入导出 |
 
@@ -114,6 +114,7 @@ AP-Scaffold/
 │   │   ├── hardware/                  # 硬件驱动插件
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi/ # 三菱 PLC (MC协议 + 看门狗)
 │   │   │   ├── AP.Plugin.Plc.Siemens/    # 西门子 PLC (S7协议 + 看门狗)
+│   │   │   ├── AP.Plugin.Plc.Omron/      # 欧姆龙 PLC (FINS/TCP协议 + 看门狗)
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
 │   │   │   └── AP.Plugin.DeviceConfiguration/ # 设备参数配置（设置贡献者）
@@ -228,17 +229,17 @@ public class MyPlugin : PluginBase, INavigationContributor
 
 ### 4. PLC 通信与品牌统一切换
 
-三菱（MC 协议）与西门子（S7 协议）驱动均已内置，通过配置即可切换品牌：
+三菱（MC 协议）、西门子（S7 协议）与欧姆龙（FINS/TCP 协议）驱动均已内置，通过配置即可切换品牌：
 
 ```json
 {
   "Plc": {
-    "DriverType": "Mitsubishi",   // 或 "Siemens"（预留 "Omron"）
+    "DriverType": "Mitsubishi",   // 或 "Siemens" / "Omron"
     "IpAddress": "192.168.1.10",
-    "Port": 6000,                 // 西门子默认 102
+    "Port": 6000,                 // 西门子默认 102，欧姆龙默认 9600
     "Timeout": 1000,
-    "Model": "Qna_3E",            // 西门子如 "S7_1200"
-    "HeartbeatAddress": "D0.0"    // 西门子如 "DB1.0.0"
+    "Model": "Qna_3E",            // 西门子如 "S7_1200"，欧姆龙为 "FinsTcp"（不解析）
+    "HeartbeatAddress": "D0.0"    // 西门子如 "DB1.0.0"，欧姆龙如 "D0"
   }
 }
 ```
@@ -246,12 +247,12 @@ public class MyPlugin : PluginBase, INavigationContributor
 | 特性 | 说明 |
 |------|------|
 | 统一抽象 | 业务代码只依赖 `IPlcService`，`ActivePlcService` 按 `DriverType` 转发到真实驱动 |
-| 基础读写 | 支持 bool/short/ushort/int/uint/float（西门子另支持 string） |
-| 批量操作 | `IPlcBatchReadWrite`（西门子为真批量，三菱为循环单点） |
+| 基础读写 | 支持 bool/short/ushort/int/uint/float（西门子另支持 string；欧姆龙不支持 string） |
+| 批量操作 | `IPlcBatchReadWrite`（西门子为真批量，三菱为循环单点；欧姆龙批量读为真批量、批量写为逐条写入） |
 | **看门狗** | 2 秒 `PeriodicTimer` 心跳检测，掉线自动重连（失败退避 5 秒） |
 | **事件通知** | `DeviceConnectingEvent` → `DeviceConnectedEvent` / `DeviceConnectionFailedEvent` |
 
-新增品牌（如欧姆龙）只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码零修改。
+新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码零修改（欧姆龙即按此方式接入）。
 
 ### 5. MediatR 消息总线
 
@@ -824,6 +825,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 - [x] 声明式导航贡献者模式 + 设置贡献者模式
 - [x] 三菱 PLC 通信（MC 协议 + 看门狗自愈）
 - [x] 西门子 PLC 通信（S7 协议 + 统一驱动切换）
+- [x] 欧姆龙 PLC 通信（FINS/TCP 协议）
 - [x] 串口扫码枪集成
 - [x] gRPC 服务端 / 客户端通信
 - [x] Polly 容错策略工厂
@@ -836,7 +838,6 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 - [x] 配方/工艺参数管理（骨架）
 - [x] 报表中心（骨架）
 - [ ] 报表/配方接入真实业务数据
-- [ ] 欧姆龙 PLC 协议支持
 - [ ] OpenTelemetry 可观测性集成
 
 ---
