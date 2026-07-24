@@ -110,12 +110,17 @@
                 <Setter Property="BorderThickness" Value="0,0,1,1"/>
             </Style>
 
-            <!-- DataGrid Cell 样式 -->
+            <!-- DataGrid Cell 样式（Style.Resources 隐式 TextBlock 居中：MD 单元格模板不消费 VerticalContentAlignment，44px 行高下文本贴顶） -->
             <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
                 <Setter Property="BorderBrush" Value="#F1F5F9"/>
                 <Setter Property="BorderThickness" Value="0,0,1,0"/>
                 <Setter Property="Padding" Value="12,0"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Style.Resources>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                    </Style>
+                </Style.Resources>
             </Style>
 
             <!-- 滚动条更细 -->

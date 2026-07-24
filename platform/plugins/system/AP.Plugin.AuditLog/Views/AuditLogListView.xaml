@@ -85,7 +85,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="时间"
                                         Binding="{Binding Timestamp, StringFormat=yyyy-MM-dd HH:mm:ss}"
-                                        Width="140"/>
+                                        Width="160"/>
                     <DataGridTextColumn Header="用户"
                                         Binding="{Binding UserName}"
                                         Width="120"/>

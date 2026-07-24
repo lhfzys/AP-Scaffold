@@ -88,7 +88,7 @@
                                             Width="80"/>
                     <DataGridTextColumn Header="更新时间"
                                         Binding="{Binding UpdatedAt, StringFormat=yyyy-MM-dd HH:mm}"
-                                        Width="140"/>
+                                        Width="160"/>
                     <DataGridTemplateColumn Header="操作" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
