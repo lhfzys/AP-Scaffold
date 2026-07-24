@@ -9,7 +9,7 @@ namespace AP.Plugin.SystemSettings.Editors;
 
 /// <summary>
 /// PLC 统一配置编辑器。
-/// 支持三菱 / 西门子 / 欧姆龙（预留）驱动切换。
+/// 支持三菱 / 西门子 / 欧姆龙驱动切换。
 /// </summary>
 public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsEditorViewModel
 {
@@ -38,34 +38,38 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
     {
         var options = configuration.GetSection(PlcOptions.SectionName).Get<PlcOptions>() ?? new PlcOptions();
 
+        // DriverType 先赋值：与当前不同会触发 OnDriverTypeChanged 回填该品牌默认值，
+        // 随后保存值逐项覆盖，最终以配置为准（末尾不可再调 ApplyDriverDefaults，会覆盖保存值）
         DriverType = options.DriverType;
         IpAddress = options.IpAddress;
         Port = options.Port;
         Timeout = options.Timeout;
         Model = options.Model;
         HeartbeatAddress = options.HeartbeatAddress;
-
-        ApplyDriverDefaults(DriverType);
     }
 
+    /// <summary>
+    /// 切换品牌时强制回填该品牌的端口/型号/心跳默认值，
+    /// 避免残留其他品牌的参数（心跳地址格式不匹配会导致看门狗误判掉线、反复重连）。
+    /// </summary>
     private void ApplyDriverDefaults(string driverType)
     {
         switch (driverType)
         {
             case "Mitsubishi":
-                if (Port == 102) Port = 6000;
-                if (string.IsNullOrWhiteSpace(Model)) Model = "Qna_3E";
-                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "D0.0";
+                Port = 6000;
+                Model = "Qna_3E";
+                HeartbeatAddress = "D0.0";
                 break;
             case "Siemens":
-                if (Port == 6000) Port = 102;
-                if (string.IsNullOrWhiteSpace(Model)) Model = "S7_1200";
-                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "DB1.0.0";
+                Port = 102;
+                Model = "S7_1200";
+                HeartbeatAddress = "DB1.0.0";
                 break;
             case "Omron":
-                if (Port == 102 || Port == 6000) Port = 9600;
-                if (string.IsNullOrWhiteSpace(Model)) Model = "FinsTcp";
-                if (string.IsNullOrWhiteSpace(HeartbeatAddress)) HeartbeatAddress = "D0";
+                Port = 9600;
+                Model = "FinsTcp";
+                HeartbeatAddress = "D0";
                 break;
         }
     }
