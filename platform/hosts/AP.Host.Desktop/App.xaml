@@ -22,6 +22,14 @@
                 <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp1"/>
             </Style>
 
+            <!-- 主色 Raised 按钮（另起新键：同名键 BasedOn 自引用会被静默置空，丢失模板/背景/内边距）。
+                 MD3 原样式前景资源解析失败会回退继承窗口根的深色文字（深底黑字），此处显式主题深蓝底 + 白字。 -->
+            <Style x:Key="RaisedButton.Primary" TargetType="Button"
+                   BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                <Setter Property="Background" Value="{DynamicResource Brush.Primary}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Brush.OnPrimary}"/>
+            </Style>
+
             <!-- DataGrid 全局行高 & 表头样式 -->
             <!--
                  完全重写 DataGridRow Template，不使用 MaterialDesignDataGridRow（其 ColorZone + Storyboard 动

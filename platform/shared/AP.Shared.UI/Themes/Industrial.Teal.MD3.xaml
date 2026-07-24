@@ -48,6 +48,10 @@
     <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}"/>
     <SolidColorBrush x:Key="Brush.AccentLight" Color="{StaticResource Color.AccentLight}"/>
 
+    <!-- 主色上的文字色（Raised 按钮前景等） -->
+    <Color x:Key="Color.OnPrimary">#FFFFFF</Color>
+    <SolidColorBrush x:Key="Brush.OnPrimary" Color="{StaticResource Color.OnPrimary}"/>
+
     <!-- ============================================================
          表面颜色 — 全浅色系统
          Surface         = 内容区纯白底

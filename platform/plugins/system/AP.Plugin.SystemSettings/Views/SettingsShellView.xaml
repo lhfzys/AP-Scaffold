@@ -63,7 +63,7 @@
                             Height="{DynamicResource Button.StandardHeight}"
                             Margin="0,0,12,0"/>
                     <Button Content="保存配置"
-                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Style="{StaticResource RaisedButton.Primary}"
                             Command="{Binding SaveSettingsCommand}"
                             Height="{DynamicResource Button.StandardHeight}"
                             ui:PermissionBehavior.Permission="system.settings"

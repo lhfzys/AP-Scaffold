@@ -61,7 +61,7 @@
                               VerticalAlignment="Center"/>
 
                     <Button Content="查询"
-                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Style="{StaticResource RaisedButton.Primary}"
                             Command="{Binding SearchCommand}"
                             Height="{DynamicResource Button.StandardHeight}"
                             Margin="0,0,8,0"
@@ -134,7 +134,7 @@
 
                 <Button Grid.Column="2"
                         Content="下一页"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Style="{StaticResource RaisedButton.Primary}"
                         Command="{Binding NextPageCommand}"
                         IsEnabled="{Binding CanGoNext}"
                         Height="{DynamicResource Button.StandardHeight}"/>
