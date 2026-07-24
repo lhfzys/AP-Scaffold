@@ -22,7 +22,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`
-- **最近提交主题**: UI 一致性五批次（Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 遮罩收敛+忙碌反馈、DataGrid 全局样式、Splash 去英文）；Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
+- **最近提交主题**: UI 一致性第二批次（DataGrid 单元格模板覆写垂直居中、`RaisedButton.Primary` 深蓝底白字按钮、Header 用户区随 `Security:Enabled` 显隐、时间列加宽）；UI 一致性五批次（Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 遮罩收敛+忙碌反馈、DataGrid 全局样式、Splash 去英文）；Security 默认关闭免登录（审计独立保留）；阶段二加固（韧性管道接线、`IReportDataProvider` 移契约层、PLC 写操作+配置修改审计、PLC 看门狗监督+Scanner 断线重连、单实例 Mutex+托盘重启交接、关闭卡死修复）
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -228,7 +228,9 @@ bin/Release/AP.Host.Desktop.exe
 - 新 UI 请使用主题资源键（`Brush.*`、`TextStyle.*`、`Layout.Spacing.*` 等），不要硬编码颜色。
 - **加载遮罩**：统一用 `AP.Shared.UI.Controls.LoadingSpinner`（浅色遮罩 `Brush.Surface` Opacity=0.85 + `TextStyle.Body`；`IsLoading`/`LoadingText` DP 通常绑 `IsBusy`/`BusyText`，两者 `ViewModelBase` 自带）。不要再手写遮罩 Grid；长操作在 VM 里先设 `BusyText` 再设 `IsBusy`。
 - **弹窗双轨**：确认/提示/错误走 `ICustomDialogService`（DialogHost 弹层）；新增/编辑走插件自带模态 Window——`ShowDialog()` 前必须 `window.Owner = Application.Current.MainWindow`，XAML 用 `WindowStartupLocation="CenterOwner"`。
-- **DataGrid**：不要显式 `Style="{StaticResource MaterialDesignDataGrid}"`——`App.xaml` 隐式样式已 `BasedOn` 它，并全局并入虚拟化 4 项 + `AutoGenerateColumns=False`/`GridLinesVisibility=Horizontal`/`BorderThickness=0`/背景/前景；页面只写差异属性（`ItemsSource`/`IsReadOnly`/`BorderThickness` 等）。
+- **DataGrid**：不要显式 `Style="{StaticResource MaterialDesignDataGrid}"`——`App.xaml` 隐式样式已 `BasedOn` 它，并全局并入虚拟化 4 项 + `AutoGenerateColumns=False`/`GridLinesVisibility=Horizontal`/`BorderThickness=0`/背景/前景；页面只写差异属性（`ItemsSource`/`IsReadOnly`/`BorderThickness` 等）。**单元格模板已全局覆写**（MD 原模板的 ContentPresenter 不消费 `VerticalContentAlignment`，44px 行高下文本贴顶；覆写后 ContentPresenter 垂直居中、水平保持 Stretch 供编辑控件填满），文本/按钮列自动垂直居中，新页面无需处理。
+- **主题按钮**：Raised 按钮统一用 `App.xaml` 的 `RaisedButton.Primary`（BasedOn `MaterialDesignRaisedButton`，`Brush.Primary` 深蓝底 + `Brush.OnPrimary` 白字；OnPrimary 语义键在主题文件定义为 `#FFFFFF`）。不要直接用 MD3 原生 Raised 键（浅色主题下灰白底、白字看不清）；**不要**用同名键 BasedOn 覆写 MD 样式——自引用会被静默置空丢模板，必须另起新键名。
+- **Header 用户区**：右上角用户标识+退出按钮整体按 `CanLogout`（即 `Security:Enabled`）显隐，免登录场景不显示；深色 Header 上的图标/文字用白色前景，用户标识底衬为 `PrimaryHueDarkBrush` 圆角 Border。
 - **深色例外**（刻意不走浅色主题）：Splash 启动页（深色硬编码品牌页，仅显示中文软件名）；Login/ChangePassword 的蓝色 `ColorZone PrimaryMid` 横幅页头。其余窗口一律浅色主题键。
 
 ### 5.11 其他坑点
@@ -271,4 +273,4 @@ bin/Release/AP.Host.Desktop.exe
 
 ---
 
-**最后更新**: 2026-07-22
+**最后更新**: 2026-07-24

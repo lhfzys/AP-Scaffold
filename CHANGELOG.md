@@ -9,6 +9,18 @@
 
 ## [Unreleased]
 
+### UI 一致性优化·第二批次（2026-07-24）
+
+修复：
+
+- **DataGrid 单元格文本不垂直居中**：根因为 MD 5.3.0 `MaterialDesignDataGridCell` 模板的 ContentPresenter 不消费 `VerticalContentAlignment`（Grid 内默认拉伸，文本贴顶渲染），且 `DataGridAssist` 强制套用的列 ElementStyle 会屏蔽单元格资源中的隐式 TextBlock 样式——此前两条路径均无效。最终覆写单元格 Template（ContentPresenter 绑定 `VerticalContentAlignment`；水平保持 Stretch，保证编辑控件仍能填满单元格），44px 行高下所有网格内容垂直居中
+- **Raised 按钮白字看不清（浅色主题下灰白底）**：新增 `RaisedButton.Primary` 样式（`App.xaml`，BasedOn `MaterialDesignRaisedButton` + `Brush.Primary` 深蓝底 + `Brush.OnPrimary` 白字），14 处 Raised 引用统一换键；主题文件补 `Color.OnPrimary #FFFFFF` / `Brush.OnPrimary` 语义键。教训：同名键 BasedOn 自引用会被静默置空丢模板，覆写样式必须另起键名
+- **未登录时 Header 用户区冗余**：用户标识+退出按钮整体按 `CanLogout`（即 `Security:Enabled`）显隐，免登录不再显示"系统用户(anonymous)+置灰退出"；用户标识由 md:Chip 改为 `PrimaryHueDarkBrush` 圆角底衬 + 白色图标/文字
+
+变更：
+
+- 配方管理 DataGrid「更新时间」列加宽（140→160），时间完整显示无需手动拉宽
+
 ### UI 一致性优化（2026-07-22）
 
 变更：

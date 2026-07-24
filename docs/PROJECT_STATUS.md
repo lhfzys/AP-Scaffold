@@ -185,6 +185,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 - [x] 托盘重启单实例 Mutex（2026-07-22 完成）
 - [x] 仓库示例连接串占位符化（2026-07-22 完成，3d0dd97）
 - [x] UI 一致性五批次（2026-07-22 完成：Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 浅色遮罩收敛+补齐忙碌反馈、DataGrid 全局样式收敛；Splash 深色保留并移除英文公司行）
+- [x] UI 一致性第二批次（2026-07-24 完成：DataGrid 单元格模板覆写垂直居中——MD 原模板不消费 `VerticalContentAlignment`；`RaisedButton.Primary` 深蓝底白字按钮替换 14 处 Raised 引用；Header 用户区随 `Security:Enabled` 显隐；配方「更新时间」列加宽）
 - [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
 - [ ] （可选）列表页 CRUD 交互统一（Recipe 行内按钮 vs User/Role 工具栏）；SettingsShell 补页头标题；AuditLog/Report 工具栏补刷新按钮
 - [ ] 欧姆龙 PLC 协议支持（`PlcOptions.DriverType` 已预留 "Omron"）
@@ -248,4 +249,4 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ---
 
-**最后更新**: 2026-07-22
+**最后更新**: 2026-07-24
