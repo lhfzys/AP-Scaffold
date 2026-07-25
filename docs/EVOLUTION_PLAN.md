@@ -298,6 +298,7 @@ Tests → 被测项目
 | T0.5 | 2026-07-25 | `ae546bb` | 欧姆龙驱动 16 处日志清理（同 T0.3 模式）；构建 0 错误 + 237 测试全绿 |
 | T0.6 | 2026-07-25 | `b0f2f28` | 13 个文件加 ❄ 封存标注（AP.Infra.Grpc 8 个、proto 2 个、Server/ClientBootstrap、Bootstrapper 分支注释）；仅注释，构建 0 错误 + 237 测试全绿。**阶段 0 收官** |
 | T1.1 | 2026-07-25 | `92a3e7f` | 按用户定位调整为 **Device Runtime Model 第一组件**：`DeviceConnectionState` 六态枚举（契约层 `DeviceRuntime/`）+ 协议无关状态机（Infra.Hardware/DeviceRuntime，锁内迁移、锁外发事件）+ 13 个单测（含相机场景协议无关性用例）；纯新增不接线，总计 250 测试全绿 |
+| T1.2 | 2026-07-25 | `2641cd6` | `ConnectionSupervisor`（纯事件源无日志依赖，`ConnectionAttemptResult` 统一结果、`ConnectAttempted`/`LoopFaulted` 事件）+ `ConnectionSupervisorLogger`（日志作为消费者 Attach）+ 状态机事件更名 `Transitioned`(From/To/Reason/Timestamp)；修复 Disconnected 需经 Connecting 过渡的迁移缺陷；+10 单测，总计 260 全绿，不接线 |
 
 ### 演进过程中发现的新问题（停车场）
 
