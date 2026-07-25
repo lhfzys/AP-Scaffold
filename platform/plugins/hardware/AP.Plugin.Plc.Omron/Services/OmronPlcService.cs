@@ -77,7 +77,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("首次连接 PLC 失败，看门狗将在后台接管并持续尝试重连。原因: {Msg}", ex.Message);
+            _logger.LogWarning(ex, "{Device} 首次连接失败，看门狗将在后台接管并持续尝试重连", _deviceName);
         }
         finally
         {
@@ -113,7 +113,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                     _ = openTask.ContinueWith(t =>
                     {
                         if (t.Exception != null)
-                            _logger.LogDebug(t.Exception, "PLC 连接尝试在超时后抛出异常，已忽略");
+                            _logger.LogDebug(t.Exception, "{Device} 连接尝试在超时后抛出异常，已忽略", _deviceName);
                     }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
 
                     SafeCloseClient(newClient);
@@ -127,7 +127,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                     var oldClient = Interlocked.Exchange(ref _client, newClient);
                     SafeCloseClient(oldClient);
 
-                    _logger.LogInformation("✅ 欧姆龙PLC 已连接: {Ip}:{Port}", _options.IpAddress, _options.Port);
+                    _logger.LogInformation("{Device} 已连接: {Ip}:{Port}", _deviceName, _options.IpAddress, _options.Port);
                     _currentConnectionState = true;
                     await _mediator.Publish(new DeviceConnectedEvent(_deviceName, DateTime.Now), token);
                 }
@@ -141,7 +141,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
         catch (Exception ex)
         {
             _currentConnectionState = false;
-            _logger.LogError("❌ PLC 建立连接失败: {Msg}", ex.Message);
+            _logger.LogError(ex, "{Device} 建立连接失败", _deviceName);
             await _mediator.Publish(new DeviceConnectionFailedEvent(_deviceName, ex.Message), ct);
             throw;
         }
@@ -152,7 +152,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
         StopWatchdog();
         _currentConnectionState = false;
         SafeCloseClient(_client);
-        _logger.LogInformation("PLC 已断开");
+        _logger.LogInformation("{Device} 已断开", _deviceName);
         await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "主动断开", DateTime.Now));
     }
 
@@ -173,7 +173,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
         _ = Task.Run(async () =>
         {
             var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "D0" : _options.HeartbeatAddress;
-            _logger.LogInformation("🛡️ PLC 自动自愈看门狗已启动，心跳地址: {Address}", hbAddress);
+            _logger.LogInformation("{Device} 看门狗已启动，心跳地址: {Address}", _deviceName, hbAddress);
 
             // 监督者循环：看门狗循环异常退出时延迟重启，仅取消时真正退出
             while (!_watchdogCts.IsCancellationRequested)
@@ -189,7 +189,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "💀 [看门狗] 循环异常退出，5 秒后由监督者重启");
+                    _logger.LogError(ex, "{Device} 看门狗循环异常退出，{RestartDelaySec} 秒后由监督者重启", _deviceName, 5);
                     try
                     {
                         await Task.Delay(TimeSpan.FromSeconds(5), _watchdogCts.Token);
@@ -202,7 +202,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                 }
             }
 
-            _logger.LogInformation("🛡️ PLC 看门狗线程已退出");
+            _logger.LogInformation("{Device} 看门狗已退出", _deviceName);
             _isWatchdogRunning = false;
         }, _watchdogCts.Token);
     }
@@ -221,7 +221,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                 // 【状态一：已断线】-> 尝试重连
                 if (!_currentConnectionState)
                 {
-                    _logger.LogInformation("🔄 [看门狗] PLC处于断开状态，尝试自动重连...");
+                    _logger.LogDebug("{Device} 处于断开状态，尝试重连", _deviceName);
                     try
                     {
                         await ExecuteConnectInternalAsync(ct);
@@ -246,7 +246,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                     var result = _client.ReadBoolean(hbAddress);
                     if (!result.IsSucceed)
                     {
-                        _logger.LogWarning("⚠️ [看门狗] 心跳读取失败，判定为掉线！原因: {Err}", result.Err);
+                        _logger.LogWarning("{Device} 心跳读取失败，判定为掉线，原因: {Reason}", _deviceName, result.Err);
                         _currentConnectionState = false;
                         await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
                     }
@@ -255,13 +255,13 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
                 {
                     // 重连替换客户端的瞬间可能读到已释放的旧实例：判定掉线即可，
                     // 重连分支会创建全新客户端，看门狗不再因此退出
-                    _logger.LogWarning("⚠️ [看门狗] PLC 客户端已释放，判定为掉线并准备重连");
+                    _logger.LogWarning("{Device} 客户端已释放，判定为掉线并准备重连", _deviceName);
                     _currentConnectionState = false;
                     await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "客户端已释放", DateTime.Now));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "⚠️ [看门狗] 发生严重通信异常！");
+                    _logger.LogError(ex, "{Device} 看门狗发生严重通信异常", _deviceName);
                     _currentConnectionState = false;
                     await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
                 }
@@ -272,7 +272,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚠️ [看门狗] 循环体发生未预期异常，继续运行");
+                _logger.LogError(ex, "{Device} 看门狗循环体发生未预期异常，继续运行", _deviceName);
             }
         }
     }
@@ -285,7 +285,7 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
             _watchdogCts?.Cancel();
             Thread.Sleep(TimeSpan.FromSeconds(3));
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "停止看门狗时发生异常"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "{Device} 停止看门狗时发生异常", _deviceName); }
         finally
         {
             _watchdogCts?.Dispose();
