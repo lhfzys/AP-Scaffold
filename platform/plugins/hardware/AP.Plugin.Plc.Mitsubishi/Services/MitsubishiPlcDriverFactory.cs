@@ -32,7 +32,10 @@ public class MitsubishiPlcDriverFactory : IPlcDriverFactory
             Port = options.Port,
             Timeout = options.Timeout,
             Version = options.Model,
-            HeartbeatAddress = options.HeartbeatAddress
+            HeartbeatAddress = options.HeartbeatAddress,
+            HeartbeatIntervalSeconds = options.HeartbeatIntervalSeconds,
+            ReconnectBackoffSeconds = options.ReconnectBackoffSeconds,
+            SupervisorRestartDelaySeconds = options.SupervisorRestartDelaySeconds
         });
 
         var logger = serviceProvider.GetRequiredService<ILogger<MitsubishiPlcService>>();

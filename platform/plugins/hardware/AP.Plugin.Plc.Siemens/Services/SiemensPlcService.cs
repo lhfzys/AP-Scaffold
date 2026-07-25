@@ -58,7 +58,12 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
 
         // 连接运行时：状态全部交给 ConnectionSupervisor 驱动（唯一事实来源）
         _stateMachine = new DeviceConnectionStateMachine();
-        _supervisor = new ConnectionSupervisor(_stateMachine, ExecuteConnectAsync, ProbeAsync);
+        _supervisor = new ConnectionSupervisor(_stateMachine, ExecuteConnectAsync, ProbeAsync, new ConnectionSupervisorOptions
+        {
+            HeartbeatInterval = TimeSpan.FromSeconds(_options.HeartbeatIntervalSeconds),
+            ReconnectBackoff = TimeSpan.FromSeconds(_options.ReconnectBackoffSeconds),
+            SupervisorRestartDelay = TimeSpan.FromSeconds(_options.SupervisorRestartDelaySeconds),
+        });
         _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
         _bridgeSubscription = CreateEventBridge().Attach(_stateMachine, n => mediator.Publish(n), _deviceName);
     }

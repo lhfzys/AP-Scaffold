@@ -19,6 +19,9 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
     [ObservableProperty] private int _timeout = 1000;
     [ObservableProperty] private string _model = "Qna_3E";
     [ObservableProperty] private string _heartbeatAddress = "D0.0";
+    [ObservableProperty] private int _heartbeatIntervalSeconds = 2;
+    [ObservableProperty] private int _reconnectBackoffSeconds = 5;
+    [ObservableProperty] private int _supervisorRestartDelaySeconds = 5;
 
     public IReadOnlyList<string> DriverTypes { get; } = new[] { "Mitsubishi", "Siemens", "Omron" };
 
@@ -46,6 +49,9 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
         Timeout = options.Timeout;
         Model = options.Model;
         HeartbeatAddress = options.HeartbeatAddress;
+        HeartbeatIntervalSeconds = options.HeartbeatIntervalSeconds;
+        ReconnectBackoffSeconds = options.ReconnectBackoffSeconds;
+        SupervisorRestartDelaySeconds = options.SupervisorRestartDelaySeconds;
     }
 
     /// <summary>
@@ -100,6 +106,15 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
         if (string.IsNullOrWhiteSpace(HeartbeatAddress))
             errors.Add("心跳地址不能为空");
 
+        if (HeartbeatIntervalSeconds < 1)
+            errors.Add("心跳周期必须不小于 1 秒");
+
+        if (ReconnectBackoffSeconds < 0)
+            errors.Add("重连退避不能为负数");
+
+        if (SupervisorRestartDelaySeconds < 0)
+            errors.Add("监督重启延迟不能为负数");
+
         return errors;
     }
 
@@ -112,7 +127,10 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
             Port = Port,
             Timeout = Timeout,
             Model = Model,
-            HeartbeatAddress = HeartbeatAddress
+            HeartbeatAddress = HeartbeatAddress,
+            HeartbeatIntervalSeconds = HeartbeatIntervalSeconds,
+            ReconnectBackoffSeconds = ReconnectBackoffSeconds,
+            SupervisorRestartDelaySeconds = SupervisorRestartDelaySeconds
         };
     }
 }

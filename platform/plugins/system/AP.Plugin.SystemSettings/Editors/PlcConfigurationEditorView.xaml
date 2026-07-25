@@ -16,6 +16,9 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -88,7 +91,34 @@
             <TextBox Grid.Column="1" Text="{Binding HeartbeatAddress, UpdateSourceTrigger=PropertyChanged}"/>
         </Grid>
 
-        <TextBlock Grid.Row="6"
+        <Grid Grid.Row="6" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="心跳周期(秒)"/>
+            <TextBox Grid.Column="1" Text="{Binding HeartbeatIntervalSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+        </Grid>
+
+        <Grid Grid.Row="7" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="重连退避(秒)"/>
+            <TextBox Grid.Column="1" Text="{Binding ReconnectBackoffSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+        </Grid>
+
+        <Grid Grid.Row="8" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="监督重启延迟(秒)"/>
+            <TextBox Grid.Column="1" Text="{Binding SupervisorRestartDelaySeconds, UpdateSourceTrigger=PropertyChanged}"/>
+        </Grid>
+
+        <TextBlock Grid.Row="9"
                    Text="* 切换 PLC 驱动类型后需要重启应用才能生效&#13;&#10;三菱示例: Version=Qna_3E, Port=6000, 心跳=D0.0&#13;&#10;西门子示例: Model=S7_1200, Port=102, 心跳=DB1.0.0"
                    Foreground="{DynamicResource MaterialDesignBodyLight}"
                    FontSize="12"
