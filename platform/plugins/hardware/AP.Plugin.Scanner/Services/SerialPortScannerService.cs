@@ -1,7 +1,9 @@
 using System.IO.Ports;
 using System.Threading.Channels;
+using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Services;
+using AP.Infra.Hardware.DeviceRuntime;
 using AP.Plugin.Scanner.Configuration;
 using MediatR;
 using Microsoft.Extensions.Configuration;
@@ -13,28 +15,26 @@ namespace AP.Plugin.Scanner.Services;
 /// <summary>
 /// 扫码枪扫码服务
 /// </summary>
-public class SerialPortScannerService : IScannerService, IDisposable
+public class SerialPortScannerService : IScannerService, IDevice, IDisposable
 {
     private readonly SerialPort _serialPort;
     private readonly IMediator _mediator;
     private readonly ILogger<SerialPortScannerService> _logger;
     private readonly SerialPortOptions _options;
+    private readonly string _deviceName;
 
     // 扫码数据缓冲通道：串口事件（同步）将数据写入通道，后台任务（异步）消费并发布事件
     private Channel<string>? _barcodeChannel;
     private CancellationTokenSource? _processCts;
     private Task? _processTask;
 
-    // --- 断线重连状态 ---
-    private readonly object _portLock = new();
-    private CancellationTokenSource? _monitorCts;
-    private Task? _monitorTask;
-    private volatile bool _needsReconnect;
-    private volatile bool _stopping;
-    private bool _started;
+    // --- 连接运行时（Device Runtime Model：状态机 + 监督器，单一事实来源） ---
+    private readonly DeviceConnectionStateMachine _stateMachine;
+    private readonly ConnectionSupervisor _supervisor;
+    private readonly IDisposable _loggerSubscription;
 
-    // 重连监控周期（检测到串口错误或设备消失后，按此节奏尝试重开）
-    private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(5);
+    private readonly object _portLock = new();
+    private bool _started;
 
     // 缓存 MachineId
     private readonly string _machineId;
@@ -49,6 +49,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
         _options = options.Value;
         _mediator = mediator;
         _logger = logger;
+        _deviceName = $"Scanner ({_options.PortName})";
 
         _machineId = configuration[MachineIdConfigKey] ?? "Unknown-Machine";
 
@@ -64,14 +65,42 @@ public class SerialPortScannerService : IScannerService, IDisposable
 
         _serialPort.DataReceived += OnDataReceived;
         _serialPort.ErrorReceived += OnErrorReceived;
+
+        // 连接运行时：参数对齐原重连监控（5 秒周期、每周期一尝试）
+        _stateMachine = new DeviceConnectionStateMachine();
+        _supervisor = new ConnectionSupervisor(_stateMachine, ConnectPortAsync, ProbePortAsync, new ConnectionSupervisorOptions
+        {
+            HeartbeatInterval = TimeSpan.FromSeconds(5),
+            ReconnectBackoff = TimeSpan.Zero,
+        });
+        _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
+
+        // IDevice 视图初始化：状态机事件转换为契约层 record 转发
+        Info = new DeviceInfo($"scanner.{_options.PortName}", "扫码枪", DeviceType.Scanner, "Serial");
+        _stateMachine.Transitioned += (_, args) =>
+            Transitioned?.Invoke(this, new DeviceConnectionTransition(args.From, args.To, args.Reason, args.Timestamp));
     }
 
-    public bool IsConnected => _serialPort.IsOpen;
+    // --- IDevice 视图（连接状态以状态机为唯一事实来源） ---
 
+    /// <inheritdoc />
+    public DeviceInfo Info { get; }
+
+    /// <inheritdoc />
+    public DeviceConnectionState State => _stateMachine.CurrentState;
+
+    /// <inheritdoc />
+    public event EventHandler<DeviceConnectionTransition>? Transitioned;
+
+    // IScannerService.IsConnected 与 IDevice.State 同源：状态机为唯一事实来源
+    public bool IsConnected => _stateMachine.CurrentState == DeviceConnectionState.Connected;
+
+    /// <summary>
+    /// 打开扫码枪（A 方案：首开由驱动驱动状态——有文档说明的例外，失败如实抛出由调用方记录；
+    /// 首开成功后连接监督器接管心跳/重连）。
+    /// </summary>
     public Task OpenAsync()
     {
-        _stopping = false;
-
         // 数据通道与后台消费者只启动一次（重连不重建，避免丢数据与重复消费）
         if (!_started)
         {
@@ -84,36 +113,74 @@ public class SerialPortScannerService : IScannerService, IDisposable
             _processCts = new CancellationTokenSource();
             _processTask = Task.Run(() => ProcessBarcodesAsync(_processCts.Token), _processCts.Token);
 
-            StartReconnectMonitor();
             _started = true;
         }
 
-        // 打开失败如实抛出（由调用方记录）；重连监控会在后台持续重试
-        TryOpenPort();
+        _stateMachine.TryTransition(DeviceConnectionState.Connecting, "开始连接");
+        try
+        {
+            TryOpenPort();
+        }
+        catch
+        {
+            _stateMachine.TryTransition(DeviceConnectionState.Disconnected, "打开失败");
+            throw;
+        }
+
+        _stateMachine.TryTransition(DeviceConnectionState.Connected, "打开成功");
+        _supervisor.Start();
 
         return Task.CompletedTask;
     }
 
+    /// <summary>IDevice.ConnectAsync 与 IScannerService.OpenAsync 同语义。</summary>
+    Task IDevice.ConnectAsync(CancellationToken ct) => OpenAsync();
+
+    /// <summary>IDevice.DisconnectAsync 与 IScannerService.CloseAsync 同语义。</summary>
+    Task IDevice.DisconnectAsync() => CloseAsync();
+
     /// <summary>
-    /// 在锁内尝试打开串口（重连监控与外部调用共用）
+    /// 连接动作（供监督器调用）：先关闭残留句柄再重开
+    /// </summary>
+    private Task<ConnectionAttemptResult> ConnectPortAsync(CancellationToken ct)
+    {
+        try
+        {
+            SafeClosePort(); // 出错重连/拔出后重插：先关闭残留状态
+            TryOpenPort();
+            return Task.FromResult(ConnectionAttemptResult.Ok());
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(ConnectionAttemptResult.Fail(ex.Message, ex));
+        }
+    }
+
+    /// <summary>
+    /// 心跳探测动作（供监督器调用）：端口存在 + 句柄打开
+    /// </summary>
+    private Task<ConnectionAttemptResult> ProbePortAsync(CancellationToken ct)
+    {
+        // USB 拔出后串口名会从系统中消失（IsOpen 可能仍为 true）
+        var portExists = SerialPort.GetPortNames()
+            .Any(p => string.Equals(p, _options.PortName, StringComparison.OrdinalIgnoreCase));
+
+        if (!portExists)
+            return Task.FromResult(ConnectionAttemptResult.Fail("串口已消失（设备拔出？）"));
+        if (!_serialPort.IsOpen)
+            return Task.FromResult(ConnectionAttemptResult.Fail("串口句柄已关闭"));
+        return Task.FromResult(ConnectionAttemptResult.Ok());
+    }
+
+    /// <summary>
+    /// 在锁内尝试打开串口（首开与监督器重连共用；失败如实抛出，由调用方处理）
     /// </summary>
     private void TryOpenPort()
     {
         lock (_portLock)
         {
             if (_serialPort.IsOpen) return;
-
-            try
-            {
-                _serialPort.Open();
-                _needsReconnect = false;
-                _logger.LogInformation("扫码枪已连接: {PortName}", _options.PortName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "扫码枪连接失败: {PortName}（重连监控将持续重试）", _options.PortName);
-                throw;
-            }
+            _serialPort.Open();
         }
     }
 
@@ -131,92 +198,25 @@ public class SerialPortScannerService : IScannerService, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "关闭扫码枪串口时发生异常（设备可能已拔出）");
+                _logger.LogWarning(ex, "{Device} 关闭串口时发生异常（设备可能已拔出）", _deviceName);
             }
         }
     }
 
     /// <summary>
-    /// 串口错误事件（USB 拔插、帧错误等）：标记需要重连，由监控循环处理
+    /// 串口错误事件（USB 拔插、帧错误等）：设备特有信号，由驱动驱动状态迁移，监督器接管重连
     /// </summary>
     private void OnErrorReceived(object sender, SerialErrorReceivedEventArgs e)
     {
-        _logger.LogWarning("扫码枪串口错误 [{PortName}]: {EventType}，将自动重连", _options.PortName, e.EventType);
-        _needsReconnect = true;
-    }
-
-    /// <summary>
-    /// 断线重连监控：周期检查串口健康，设备消失时关闭残留句柄，设备恢复/出错后自动重开
-    /// </summary>
-    private void StartReconnectMonitor()
-    {
-        _monitorCts = new CancellationTokenSource();
-        _monitorTask = Task.Run(async () =>
-        {
-            using var timer = new PeriodicTimer(ReconnectInterval);
-            try
-            {
-                while (await timer.WaitForNextTickAsync(_monitorCts.Token))
-                {
-                    try
-                    {
-                        EnsurePortConnected();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "扫码枪重连监控异常");
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // 正常取消
-            }
-        }, _monitorCts.Token);
-    }
-
-    private void EnsurePortConnected()
-    {
-        if (_stopping) return;
-
-        // USB 拔出后串口名会从系统中消失（IsOpen 可能仍为 true）
-        var portExists = SerialPort.GetPortNames()
-            .Any(p => string.Equals(p, _options.PortName, StringComparison.OrdinalIgnoreCase));
-
-        if (!portExists)
-        {
-            if (_serialPort.IsOpen)
-            {
-                _logger.LogWarning("扫码枪串口 {PortName} 已消失（设备拔出？），关闭并等待重新插入", _options.PortName);
-                SafeClosePort();
-            }
-            return; // 等待设备重新插入
-        }
-
-        if (_serialPort.IsOpen && !_needsReconnect) return;
-
-        // 出错重连：先关闭残留状态再重开
-        if (_serialPort.IsOpen)
-        {
-            _logger.LogWarning("扫码枪串口 {PortName} 发生错误，执行重连", _options.PortName);
-            SafeClosePort();
-        }
-
-        try
-        {
-            TryOpenPort();
-            _logger.LogInformation("✅ 扫码枪已自动重连: {PortName}", _options.PortName);
-        }
-        catch
-        {
-            // 重开失败，等待下一周期重试（TryOpenPort 内已记录原因）
-        }
+        _stateMachine.TryTransition(
+            DeviceConnectionState.Reconnecting,
+            $"串口错误: {e.EventType}");
     }
 
     public async Task CloseAsync()
     {
-        _stopping = true;
-        StopReconnectMonitor();
+        _supervisor.Stop();
+        _stateMachine.TryTransition(DeviceConnectionState.Disconnected, "主动断开");
 
         try
         {
@@ -232,7 +232,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
                 }
                 catch (TimeoutException)
                 {
-                    _logger.LogWarning("扫码枪后台处理任务未能在5秒内退出，强制取消");
+                    _logger.LogWarning("{Device} 后台处理任务未能在 5 秒内退出，强制取消", _deviceName);
                     _processCts?.Cancel();
                 }
                 catch (OperationCanceledException)
@@ -243,7 +243,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "停止扫码枪后台任务时发生异常");
+            _logger.LogWarning(ex, "{Device} 停止后台任务时发生异常", _deviceName);
         }
         finally
         {
@@ -253,35 +253,8 @@ public class SerialPortScannerService : IScannerService, IDisposable
             _barcodeChannel = null;
         }
 
-        if (_serialPort.IsOpen)
-        {
-            SafeClosePort();
-            _logger.LogInformation("扫码枪已断开");
-        }
-
+        SafeClosePort();
         _started = false;
-    }
-
-    /// <summary>
-    /// 停止断线重连监控（等待监控任务退出）
-    /// </summary>
-    private void StopReconnectMonitor()
-    {
-        try
-        {
-            _monitorCts?.Cancel();
-            _monitorTask?.Wait(TimeSpan.FromSeconds(3));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "停止扫码枪重连监控时发生异常");
-        }
-        finally
-        {
-            _monitorCts?.Dispose();
-            _monitorCts = null;
-            _monitorTask = null;
-        }
     }
 
     /// <summary>
@@ -305,7 +278,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "读取扫码数据异常");
+            _logger.LogError(ex, "{Device} 读取扫码数据异常", _deviceName);
         }
     }
 
@@ -322,7 +295,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
             {
                 try
                 {
-                    _logger.LogInformation("扫码成功 [{Device}]: {Barcode}", _options.PortName, barcode);
+                    _logger.LogInformation("{Device} 扫码成功: {Barcode}", _deviceName, barcode);
 
                     await _mediator.Publish(new ScanCompletedEvent(
                         _machineId,
@@ -333,7 +306,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "处理扫码数据异常");
+                    _logger.LogError(ex, "{Device} 处理扫码数据异常", _deviceName);
                 }
             }
         }
@@ -347,7 +320,7 @@ public class SerialPortScannerService : IScannerService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "扫码枪后台处理任务异常退出");
+            _logger.LogError(ex, "{Device} 后台处理任务异常退出", _deviceName);
         }
     }
 
@@ -355,8 +328,8 @@ public class SerialPortScannerService : IScannerService, IDisposable
     {
         try
         {
-            _stopping = true;
-            _monitorCts?.Cancel();
+            _supervisor.Stop();
+            _loggerSubscription.Dispose();
             _processCts?.Cancel();
             _barcodeChannel?.Writer.TryComplete();
 
@@ -365,7 +338,6 @@ public class SerialPortScannerService : IScannerService, IDisposable
 
             _serialPort.Dispose();
             _processCts?.Dispose();
-            _monitorCts?.Dispose();
         }
         catch
         {

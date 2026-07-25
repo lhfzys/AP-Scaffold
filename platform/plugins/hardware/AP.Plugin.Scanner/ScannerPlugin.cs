@@ -36,6 +36,9 @@ public class ScannerPlugin : PluginBase
 
         // 注册单例服务
         services.AddSingleton<IScannerService, SerialPortScannerService>();
+        // Device Runtime Model：扫码枪的设备视图（Bootstrapper 统一登记进设备注册表）
+        services.AddSingleton<AP.Contracts.Hardware.DeviceRuntime.IDevice>(
+            sp => (AP.Contracts.Hardware.DeviceRuntime.IDevice)sp.GetRequiredService<IScannerService>());
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)
