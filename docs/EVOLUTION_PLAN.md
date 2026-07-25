@@ -308,6 +308,7 @@ Tests → 被测项目
 | T2.2 | 2026-07-25 | `2df5ccd` | 西门子 `S7Address`（I/Q/M/DB 区 + DB 号 + 偏移 + 位号 0-7）同构落地；单读写规范化调用、批量预检保持键名；+32 单测，总计 337 全绿 |
 | T2.3 | 2026-07-25 | `f2f5417` | 欧姆龙 `FinsAddress`（D/C/W/H/A/E 区 + E 区体号 + 偏移 + 位号 0-15）同构落地；+32 单测，总计 369 全绿。**阶段 2 收官：三品牌地址全部对象化，业务仍只见字符串、协议语法已全部收敛进驱动内部** |
 | T3.1 | 2026-07-25 | `74ff193` | 设备抽象契约（方案 A）：`IDevice`（Info/State/Transitioned/Connect/Disconnect，**无 IsConnected**、不含读写能力）+ `DeviceInfo`（预留 Group/Description 可选元数据）+ `DeviceType` 粗粒度三值（Plc/Scanner/Other，细分归 DriverType）+ 契约层 `DeviceConnectionTransition` record；纯新增不接线，+3 单测总计 372 全绿 |
+| T3.2 | 2026-07-25 | `7601b4f` | `IDeviceRegistry` 契约 + `DeviceRegistry` 实现（ConcurrentDictionary、ID 大小写不敏感、重复 ID 抛错、注册事件）；单机单设备起步按多设备预留，未接线；+7 单测总计 379 全绿 |
 
 ### 演进过程中发现的新问题（停车场）
 
