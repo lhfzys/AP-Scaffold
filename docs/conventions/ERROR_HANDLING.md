@@ -83,7 +83,7 @@
 - 本规范自 T0.1 完成起**对全部新代码生效**。
 - 存量代码不批量改造；仅在以下时机按演进计划任务迁移：驱动层随 T1.3~T2.3（各品牌接入时）、业务服务层随 T5.2（调用点迁移时）。
 - 已知的主要存量差距（登记备查，不在本任务处理）：
-  - 三个 PLC 驱动 `throw new Exception("读取失败...")` 裸异常（→ T1.3/T1.4/T1.5 接入 ConnectionSupervisor 时统一为 `DeviceException` 包装）。
+  - 三个 PLC 驱动 `throw new Exception("读取失败...")` 裸异常（→ T2.x 地址解析器落地时统一处理；`DeviceException` 按第 4 节规划在 T3.x/T4.x 创建后替换）。
   - `OperationResult` 仅 `ConnectDeviceCommand` 一条链路在用；`PlatformException` 零处抛出。
   - `ChangePasswordAsync` 返回元组、`LoginResult` 自定义 DTO 等非标返回风格（→ 随对应业务模块演进时评估）。
 
