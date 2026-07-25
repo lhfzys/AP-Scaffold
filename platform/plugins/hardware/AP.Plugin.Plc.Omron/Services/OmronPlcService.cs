@@ -5,6 +5,7 @@ using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Models;
 using AP.Contracts.Hardware.Services;
 using AP.Infra.Hardware.DeviceRuntime;
+using AP.Plugin.Plc.Omron.Addressing;
 using IoTClient.Clients.PLC;
 using IoTClient.Common.Enums;
 using IoTClient.Enums;
@@ -222,6 +223,9 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 FinsAddressException（ArgumentException 子类），合法地址统一为标准表示
+        var normalized = FinsAddress.Parse(address).Normalized;
+
         var client = _client;
         return await _pipeline.ExecuteAsync(async token =>
         {
@@ -229,34 +233,37 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
             dynamic result;
 
             if (typeof(T) == typeof(bool))
-                result = client.ReadBoolean(address);
+                result = client.ReadBoolean(normalized);
             else if (typeof(T) == typeof(short))
-                result = client.ReadInt16(address);
+                result = client.ReadInt16(normalized);
             else if (typeof(T) == typeof(ushort))
-                result = client.ReadUInt16(address);
+                result = client.ReadUInt16(normalized);
             else if (typeof(T) == typeof(int))
-                result = client.ReadInt32(address);
+                result = client.ReadInt32(normalized);
             else if (typeof(T) == typeof(uint))
-                result = client.ReadUInt32(address);
+                result = client.ReadUInt32(normalized);
             else if (typeof(T) == typeof(float))
-                result = client.ReadFloat(address);
+                result = client.ReadFloat(normalized);
             else if (typeof(T) == typeof(string))
                 throw new NotSupportedException("欧姆龙 FINS 驱动暂不支持字符串读取（IoTClient OmronFinsClient 未实现）");
             else
                 throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
             if (result.IsSucceed) return (T)result.Value;
-            throw new Exception($"读取失败 [{address}]: {result.Err}");
+            throw new Exception($"读取失败 [{normalized}]: {result.Err}");
         }, ct);
     }
 
     public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 FinsAddressException（ArgumentException 子类）
+        var normalized = FinsAddress.Parse(address).Normalized;
+
         var client = _client;
         await _pipeline.ExecuteAsync(async token =>
         {
             await Task.Yield();
-            ExecuteWrite(client, address, value);
+            ExecuteWrite(client, normalized, value);
         }, ct);
     }
 
@@ -284,6 +291,10 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task<Dictionary<string, object>> ReadBatchAsync(string[] addresses, CancellationToken ct = default)
     {
+        // 地址预检（保持原样键名调用与返回，非法地址抛 FinsAddressException）
+        foreach (var address in addresses)
+            FinsAddress.Parse(address);
+
         var client = _client;
         return await _pipeline.ExecuteAsync(async token =>
         {
@@ -303,6 +314,10 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
+        // 地址预检（非法地址抛 FinsAddressException）
+        foreach (var address in data.Keys)
+            FinsAddress.Parse(address);
+
         var client = _client;
         await _pipeline.ExecuteAsync(async token =>
         {
