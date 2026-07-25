@@ -396,13 +396,20 @@ public class Bootstrapper : PrismBootstrapper
 
                 UpdateSplashStatus("正在启动服务...", 75);
 
-                // --- 2. 设备注册：全部 IDevice 单例登记进设备注册表（Device Runtime Model） ---
+                // --- 2. 设备注册：全部 IDevice 单例登记进设备注册表，并挂接统一状态事件发布（Device Runtime Model） ---
                 try
                 {
                     var deviceRegistry = container.GetService<AP.Contracts.Hardware.DeviceRuntime.IDeviceRegistry>();
+                    var mediator = container.GetService<MediatR.IMediator>();
+                    var statePublisher = mediator != null
+                        ? new AP.Infra.Hardware.DeviceRuntime.DeviceStateEventPublisher(mediator)
+                        : null;
                     if (deviceRegistry != null)
                         foreach (var device in container.GetServices<AP.Contracts.Hardware.DeviceRuntime.IDevice>())
+                        {
                             deviceRegistry.Register(device);
+                            statePublisher?.Attach(device);
+                        }
                 }
                 catch (Exception ex)
                 {
