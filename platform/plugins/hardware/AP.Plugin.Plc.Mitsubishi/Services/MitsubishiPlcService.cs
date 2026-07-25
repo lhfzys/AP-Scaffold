@@ -2,8 +2,10 @@
 
 using System.Threading;
 using AP.Contracts.Hardware.Capabilities;
+using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Services;
+using AP.Infra.Hardware.DeviceRuntime;
 using AP.Plugin.Plc.Mitsubishi.Configuration;
 using IoTClient.Clients.PLC;
 using IoTClient.Enums;
@@ -23,14 +25,15 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     private readonly ResiliencePipeline _pipeline;
     private readonly ILogger _logger;
     private readonly MitsubishiPlcOptions _options;
-    private readonly IMediator _mediator;
     private readonly MitsubishiVersion _version;
-
-    // --- 看门狗状态 ---
-    private bool _isWatchdogRunning;
-    private CancellationTokenSource? _watchdogCts;
-    private bool _currentConnectionState;
     private readonly string _deviceName;
+    private readonly string _heartbeatAddress;
+
+    // --- 连接运行时（Device Runtime Model：状态机 + 监督器，单一事实来源） ---
+    private readonly DeviceConnectionStateMachine _stateMachine;
+    private readonly ConnectionSupervisor _supervisor;
+    private readonly IDisposable _loggerSubscription;
+    private readonly IDisposable _bridgeSubscription;
 
     // 声明能力：支持基础读写 + 批量读写 + 自动重连
     public PlcServiceFeatures SupportedFeatures =>
@@ -47,16 +50,47 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         _options = options.Value;
         _pipeline = pipeline;
         _logger = logger;
-        _mediator = mediator;
 
         // 解析版本号字符串为枚举
         if (!Enum.TryParse(_options.Version, true, out _version))
             _version = MitsubishiVersion.Qna_3E;
 
         _deviceName = $"Mitsubishi-Q ({_options.IpAddress}:{_options.Port})";
+        _heartbeatAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "M0" : _options.HeartbeatAddress;
 
         // 初始化 IoTClient
         _client = CreateClient();
+
+        // 连接运行时：状态全部交给 ConnectionSupervisor 驱动（唯一事实来源）
+        _stateMachine = new DeviceConnectionStateMachine();
+        _supervisor = new ConnectionSupervisor(_stateMachine, ExecuteConnectAsync, ProbeAsync);
+        _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
+        _bridgeSubscription = CreateEventBridge().Attach(_stateMachine, n => mediator.Publish(n), _deviceName);
+    }
+
+    /// <summary>
+    /// 状态迁移 → MediatR 事件映射表（桥接属于驱动，Supervisor 不认识 MediatR）。
+    /// 沿迁移边触发，重连重试期间不重复发事件。
+    /// </summary>
+    private static TransitionEventBridge CreateEventBridge()
+    {
+        return new TransitionEventBridge()
+            .Map(DeviceConnectionState.Disconnected, DeviceConnectionState.Connecting,
+                (device, _) => new DeviceConnectingEvent(device))
+            .Map(DeviceConnectionState.Connecting, DeviceConnectionState.Connected,
+                (device, _) => new DeviceConnectedEvent(device, DateTime.Now))
+            .Map(DeviceConnectionState.Reconnecting, DeviceConnectionState.Connected,
+                (device, _) => new DeviceConnectedEvent(device, DateTime.Now))
+            .Map(DeviceConnectionState.Connecting, DeviceConnectionState.Reconnecting,
+                (device, reason) => new DeviceConnectionFailedEvent(device, reason ?? "连接失败"))
+            .Map(DeviceConnectionState.Connected, DeviceConnectionState.Reconnecting,
+                (device, reason) => new DeviceDisconnectedEvent(device, reason ?? "心跳丢失/网络异常", DateTime.Now))
+            .Map(DeviceConnectionState.Connected, DeviceConnectionState.Disconnected,
+                (device, reason) => new DeviceDisconnectedEvent(device, reason ?? "主动断开", DateTime.Now))
+            .Map(DeviceConnectionState.Reconnecting, DeviceConnectionState.Disconnected,
+                (device, reason) => new DeviceDisconnectedEvent(device, reason ?? "主动断开", DateTime.Now))
+            .Map(DeviceConnectionState.Connecting, DeviceConnectionState.Disconnected,
+                (device, reason) => new DeviceDisconnectedEvent(device, reason ?? "主动断开", DateTime.Now));
     }
 
     /// <summary>
@@ -84,33 +118,21 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     }
 
     /// <summary>
-    ///     连接方法（首次连接或人工触发）
+    ///     连接方法（首次连接或人工触发）：启动连接监督器，
+    ///     Connecting/Connected/Reconnecting 状态全部由监督器驱动。
     /// </summary>
-    public async Task ConnectAsync(CancellationToken ct = default)
+    public Task ConnectAsync(CancellationToken ct = default)
     {
-        try
-        {
-            // 1. 尝试执行一次真正的连接 (受 Polly 策略保护，比如重试5次)
-            await ExecuteConnectInternalAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "{Device} 首次连接失败，看门狗将在后台接管并持续尝试重连", _deviceName);
-        }
-        finally
-        {
-            // 2. 无论首次连接成功还是失败，都必须把看门狗跑起来！
-            StartWatchdog();
-        }
+        _logger.LogInformation("{Device} 连接监督已启动，心跳地址: {Address}", _deviceName, _heartbeatAddress);
+        _supervisor.Start();
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    ///     连接与握手逻辑（含硬超时保护）
+    ///     连接动作（供监督器调用，含硬超时保护与 Polly 重试）
     /// </summary>
-    private async Task ExecuteConnectInternalAsync(CancellationToken ct)
+    private async Task<ConnectionAttemptResult> ExecuteConnectAsync(CancellationToken ct)
     {
-        await _mediator.Publish(new DeviceConnectingEvent(_deviceName), ct);
-
         try
         {
             await _pipeline.ExecuteAsync(async token =>
@@ -161,10 +183,6 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
                     // 原子替换当前客户端，确保读写操作不会拿到已关闭的实例
                     var oldClient = Interlocked.Exchange(ref _client, newClient);
                     SafeCloseClient(oldClient);
-
-                    _logger.LogInformation("{Device} 已连接: {Ip}:{Port}", _deviceName, _options.IpAddress, _options.Port);
-                    _currentConnectionState = true;
-                    await _mediator.Publish(new DeviceConnectedEvent(_deviceName, DateTime.Now), token);
                 }
                 else
                 {
@@ -172,170 +190,55 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
                     throw new Exception($"连接被拒绝或超时: {result.Err}");
                 }
             }, ct);
+
+            return ConnectionAttemptResult.Ok();
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // 取消语义原样上传，由监督器处理
         }
         catch (Exception ex)
         {
-            _currentConnectionState = false;
-            _logger.LogError(ex, "{Device} 建立连接失败", _deviceName);
-            await _mediator.Publish(new DeviceConnectionFailedEvent(_deviceName, ex.Message), ct);
-            throw; // 向外抛出，让 Polly 重试机制生效
+            return ConnectionAttemptResult.Fail(ex.Message, ex);
         }
     }
 
-    public async Task DisconnectAsync()
-    {
-        StopWatchdog();
-        _currentConnectionState = false;
-        SafeCloseClient(_client);
-        _logger.LogInformation("{Device} 已断开", _deviceName);
-        await _mediator.Publish(new DeviceDisconnectedEvent(
-            _deviceName,
-            "主动断开",
-            DateTime.Now
-        ));
-    }
-
     /// <summary>
-    ///     核心：7x24小时全自动自愈看门狗（含监督者：看门狗循环异常退出会被自动重启）
+    ///     心跳探测动作（供监督器调用）
     /// </summary>
-    private void StartWatchdog()
+    private Task<ConnectionAttemptResult> ProbeAsync(CancellationToken ct)
     {
-        if (_isWatchdogRunning) return;
-        _isWatchdogRunning = true;
-        _watchdogCts = new CancellationTokenSource();
-
-        _ = Task.Run(async () =>
-        {
-            var hbAddress = string.IsNullOrEmpty(_options.HeartbeatAddress) ? "M0" : _options.HeartbeatAddress;
-            _logger.LogInformation("{Device} 看门狗已启动，心跳地址: {Address}", _deviceName, hbAddress);
-
-            // 监督者循环：看门狗循环异常退出时延迟重启，仅取消时真正退出
-            while (!_watchdogCts.IsCancellationRequested)
-            {
-                try
-                {
-                    await RunWatchdogLoopAsync(hbAddress, _watchdogCts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    // 正常取消，退出监督循环
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "{Device} 看门狗循环异常退出，{RestartDelaySec} 秒后由监督者重启", _deviceName, 5);
-                    try
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(5), _watchdogCts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // 正常取消，退出监督循环
-                        break;
-                    }
-                }
-            }
-
-            _logger.LogInformation("{Device} 看门狗已退出", _deviceName);
-            _isWatchdogRunning = false;
-        }, _watchdogCts.Token);
-    }
-
-    /// <summary>
-    ///     看门狗扫描循环：断线重连 + 心跳检测（由监督者托管）
-    /// </summary>
-    private async Task RunWatchdogLoopAsync(string hbAddress, CancellationToken ct)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-
-        while (await timer.WaitForNextTickAsync(ct))
-        {
-            try
-            {
-                // 【状态一：已断线】-> 尝试重连
-                if (!_currentConnectionState)
-                {
-                    _logger.LogDebug("{Device} 处于断开状态，尝试重连", _deviceName);
-                    try
-                    {
-                        await ExecuteConnectInternalAsync(ct);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw; // 交由监督者处理取消
-                    }
-                    catch
-                    {
-                        // 连不上就静默等待下一次 Timer 触发
-                        // 增加退避，避免网络不可达时频繁创建连接线程
-                        await Task.Delay(TimeSpan.FromSeconds(5), ct);
-                    }
-
-                    continue;
-                }
-
-                // 【状态二：已连接】-> 执行心跳检测
-                try
-                {
-                    var result = _client.ReadInt16(hbAddress);
-                    if (!result.IsSucceed)
-                    {
-                        _logger.LogWarning("{Device} 心跳读取失败，判定为掉线，原因: {Reason}", _deviceName, result.Err);
-                        _currentConnectionState = false;
-                        await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "心跳丢失/网络异常", DateTime.Now));
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 重连替换客户端的瞬间可能读到已释放的旧实例：判定掉线即可，
-                    // 重连分支会创建全新客户端，看门狗不再因此退出
-                    _logger.LogWarning("{Device} 客户端已释放，判定为掉线并准备重连", _deviceName);
-                    _currentConnectionState = false;
-                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "客户端已释放", DateTime.Now));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "{Device} 看门狗发生严重通信异常", _deviceName);
-                    _currentConnectionState = false;
-                    await _mediator.Publish(new DeviceDisconnectedEvent(_deviceName, "严重通信异常", DateTime.Now));
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                throw; // 交由监督者处理取消
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "{Device} 看门狗循环体发生未预期异常，继续运行", _deviceName);
-            }
-        }
-    }
-
-    private void StopWatchdog()
-    {
-        if (!_isWatchdogRunning) return;
-
         try
         {
-            _watchdogCts?.Cancel();
-            // 给看门狗线程一点时间优雅退出
-            Thread.Sleep(TimeSpan.FromSeconds(3));
+            var result = _client.ReadInt16(_heartbeatAddress);
+            return Task.FromResult(result.IsSucceed
+                ? ConnectionAttemptResult.Ok()
+                : ConnectionAttemptResult.Fail(result.Err));
+        }
+        catch (ObjectDisposedException)
+        {
+            // 重连替换客户端的瞬间可能读到已释放的旧实例：判定掉线即可
+            return Task.FromResult(ConnectionAttemptResult.Fail("客户端已释放"));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "{Device} 停止看门狗时发生异常", _deviceName);
+            return Task.FromResult(ConnectionAttemptResult.Fail(ex.Message, ex));
         }
-        finally
-        {
-            _watchdogCts?.Dispose();
-            _watchdogCts = null;
-            _isWatchdogRunning = false;
-        }
+    }
+
+    public Task DisconnectAsync()
+    {
+        _supervisor.Stop();
+        // 桥接按 *→Disconnected 映射发布 DeviceDisconnectedEvent
+        _stateMachine.TryTransition(DeviceConnectionState.Disconnected, "主动断开");
+        SafeCloseClient(_client);
+        return Task.CompletedTask;
     }
 
     public Task<bool> IsConnectedAsync()
     {
-        return Task.FromResult(_currentConnectionState);
+        // 单一事实来源：连接状态只从状态机读取
+        return Task.FromResult(_stateMachine.CurrentState == DeviceConnectionState.Connected);
     }
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)

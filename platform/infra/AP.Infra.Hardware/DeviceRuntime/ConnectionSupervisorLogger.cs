@@ -63,6 +63,9 @@ public static class ConnectionSupervisorLogger
             case DeviceConnectionState.Connected:
                 logger.LogInformation("{Device} 已连接", deviceName);
                 break;
+            case DeviceConnectionState.Reconnecting when args.From == DeviceConnectionState.Connecting:
+                logger.LogWarning("{Device} 连接失败，将自动重连，原因: {Reason}", deviceName, args.Reason ?? "未知");
+                break;
             case DeviceConnectionState.Reconnecting:
                 logger.LogWarning("{Device} 连接丢失，将自动重连，原因: {Reason}", deviceName, args.Reason ?? "未知");
                 break;

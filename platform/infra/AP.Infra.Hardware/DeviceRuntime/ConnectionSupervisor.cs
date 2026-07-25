@@ -120,7 +120,8 @@ public sealed class ConnectionSupervisor : IDisposable
     {
         using var timer = new PeriodicTimer(_options.HeartbeatInterval);
 
-        while (await timer.WaitForNextTickAsync(ct))
+        // 启动即先扫一次（首连不等待首个心跳周期），之后按周期扫描
+        do
         {
             switch (_stateMachine.CurrentState)
             {
@@ -133,25 +134,35 @@ public sealed class ConnectionSupervisor : IDisposable
                     break;
 
                 case DeviceConnectionState.Disconnected:
+                case DeviceConnectionState.Connecting:
                 case DeviceConnectionState.Reconnecting:
+                    // 监督器全权驱动连接状态：Disconnected 先转 Connecting，再按结果决定 Connected/Reconnecting。
+                    // Connecting 出现在扫描入口 = 上一轮尝试被中断（如事件订阅方异常导致循环重启），
+                    // 连接动作幂等（每次新建客户端），直接重新尝试即可恢复。
+                    if (_stateMachine.CurrentState == DeviceConnectionState.Disconnected)
+                        _stateMachine.TryTransition(DeviceConnectionState.Connecting, "开始连接");
+
                     var attempt = await ExecuteTimedAsync(_connectAction, ct);
                     ConnectAttempted?.Invoke(this, attempt);
                     if (attempt.Result.Success)
                     {
-                        // 状态机不允许 Disconnected 直达 Connected，先经 Connecting
-                        if (_stateMachine.CurrentState == DeviceConnectionState.Disconnected)
-                            _stateMachine.TryTransition(DeviceConnectionState.Connecting, "开始连接");
                         _stateMachine.TryTransition(DeviceConnectionState.Connected, "连接成功");
                     }
                     else
                     {
+                        // 首连失败由 Connecting 转 Reconnecting；重连期间保持 Reconnecting
+                        if (_stateMachine.CurrentState == DeviceConnectionState.Connecting)
+                            _stateMachine.TryTransition(
+                                DeviceConnectionState.Reconnecting,
+                                attempt.Result.ErrorReason ?? "连接失败");
                         await Task.Delay(_options.ReconnectBackoff, ct);
                     }
                     break;
 
-                // Connecting（首次连接流程）、Disabled（停用）、Faulted（故障）：本循环不介入
+                // Disabled（停用）、Faulted（故障）：本循环不介入，等待外部流程处理
             }
         }
+        while (await timer.WaitForNextTickAsync(ct));
     }
 
     private async Task<ConnectionAttemptedEventArgs> ExecuteTimedAsync(

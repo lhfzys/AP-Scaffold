@@ -45,7 +45,7 @@ public sealed class DeviceConnectionStateMachine
         new Dictionary<DeviceConnectionState, DeviceConnectionState[]>
         {
             [DeviceConnectionState.Disconnected] = [DeviceConnectionState.Connecting, DeviceConnectionState.Disabled],
-            [DeviceConnectionState.Connecting] = [DeviceConnectionState.Connected, DeviceConnectionState.Reconnecting, DeviceConnectionState.Faulted, DeviceConnectionState.Disabled],
+            [DeviceConnectionState.Connecting] = [DeviceConnectionState.Connected, DeviceConnectionState.Reconnecting, DeviceConnectionState.Disconnected, DeviceConnectionState.Faulted, DeviceConnectionState.Disabled],
             [DeviceConnectionState.Connected] = [DeviceConnectionState.Reconnecting, DeviceConnectionState.Disconnected, DeviceConnectionState.Faulted, DeviceConnectionState.Disabled],
             [DeviceConnectionState.Reconnecting] = [DeviceConnectionState.Connected, DeviceConnectionState.Disconnected, DeviceConnectionState.Faulted, DeviceConnectionState.Disabled],
             [DeviceConnectionState.Faulted] = [DeviceConnectionState.Connecting, DeviceConnectionState.Disabled],

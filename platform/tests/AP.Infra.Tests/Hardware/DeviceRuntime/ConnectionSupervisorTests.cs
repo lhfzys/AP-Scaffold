@@ -217,6 +217,46 @@ public class ConnectionSupervisorTests
     }
 
     [Fact]
+    public async Task Start_FromDisconnected_GoesThroughConnectingToConnected()
+    {
+        // 单一事实来源：Disconnected → Connecting → Connected 全部由监督器驱动
+        var sm = new DeviceConnectionStateMachine();
+        var transitions = new List<(DeviceConnectionState From, DeviceConnectionState To)>();
+        sm.Transitioned += (_, args) => transitions.Add((args.From, args.To));
+
+        using var supervisor = new ConnectionSupervisor(
+            sm,
+            _ => Task.FromResult(ConnectionAttemptResult.Ok()),
+            _ => Task.FromResult(ConnectionAttemptResult.Ok()),
+            FastOptions);
+
+        supervisor.Start();
+
+        await WaitUntilAsync(() => sm.CurrentState == DeviceConnectionState.Connected, "应转为 Connected");
+        transitions.Should().Contain((DeviceConnectionState.Disconnected, DeviceConnectionState.Connecting));
+        transitions.Should().Contain((DeviceConnectionState.Connecting, DeviceConnectionState.Connected));
+    }
+
+    [Fact]
+    public async Task FirstConnectFailure_TransitionsConnectingToReconnecting()
+    {
+        var sm = new DeviceConnectionStateMachine();
+        var transitions = new List<(DeviceConnectionState From, DeviceConnectionState To)>();
+        sm.Transitioned += (_, args) => transitions.Add((args.From, args.To));
+
+        using var supervisor = new ConnectionSupervisor(
+            sm,
+            _ => Task.FromResult(ConnectionAttemptResult.Fail("连接被拒绝")),
+            _ => Task.FromResult(ConnectionAttemptResult.Ok()),
+            FastOptions);
+
+        supervisor.Start();
+
+        await WaitUntilAsync(() => sm.CurrentState == DeviceConnectionState.Reconnecting, "首连失败应转 Reconnecting");
+        transitions.Should().Contain((DeviceConnectionState.Connecting, DeviceConnectionState.Reconnecting));
+    }
+
+    [Fact]
     public void Start_Twice_IsIdempotent()
     {
         var sm = new DeviceConnectionStateMachine();

@@ -186,4 +186,15 @@ public class DeviceConnectionStateMachineTests
         exceptions.Should().BeEmpty();
         sm.CurrentState.Should().BeOneOf(DeviceConnectionState.Connected, DeviceConnectionState.Reconnecting);
     }
+
+    [Fact]
+    public void Connecting_CanTransitionToDisconnected()
+    {
+        // DisconnectAsync 可能在连接尝试进行中（Connecting）被调用
+        var sm = new DeviceConnectionStateMachine();
+        sm.Transition(DeviceConnectionState.Connecting);
+
+        sm.TryTransition(DeviceConnectionState.Disconnected, "主动断开").Should().BeTrue();
+        sm.CurrentState.Should().Be(DeviceConnectionState.Disconnected);
+    }
 }
