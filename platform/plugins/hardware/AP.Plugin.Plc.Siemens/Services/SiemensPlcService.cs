@@ -5,6 +5,7 @@ using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Models;
 using AP.Contracts.Hardware.Services;
 using AP.Infra.Hardware.DeviceRuntime;
+using AP.Plugin.Plc.Siemens.Addressing;
 using IoTClient.Clients.PLC;
 using IoTClient.Common.Enums;
 using IoTClient.Enums;
@@ -218,6 +219,9 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 S7AddressException（ArgumentException 子类），合法地址统一为标准表示
+        var normalized = S7Address.Parse(address).Normalized;
+
         var client = _client;
         return await _pipeline.ExecuteAsync(async token =>
         {
@@ -225,29 +229,32 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
             dynamic result;
 
             if (typeof(T) == typeof(bool))
-                result = client.ReadBoolean(address);
+                result = client.ReadBoolean(normalized);
             else if (typeof(T) == typeof(short))
-                result = client.ReadInt16(address);
+                result = client.ReadInt16(normalized);
             else if (typeof(T) == typeof(ushort))
-                result = client.ReadUInt16(address);
+                result = client.ReadUInt16(normalized);
             else if (typeof(T) == typeof(int))
-                result = client.ReadInt32(address);
+                result = client.ReadInt32(normalized);
             else if (typeof(T) == typeof(uint))
-                result = client.ReadUInt32(address);
+                result = client.ReadUInt32(normalized);
             else if (typeof(T) == typeof(float))
-                result = client.ReadFloat(address);
+                result = client.ReadFloat(normalized);
             else if (typeof(T) == typeof(string))
-                result = client.ReadString(address);
+                result = client.ReadString(normalized);
             else
                 throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
             if (result.IsSucceed) return (T)result.Value;
-            throw new Exception($"读取失败 [{address}]: {result.Err}");
+            throw new Exception($"读取失败 [{normalized}]: {result.Err}");
         }, ct);
     }
 
     public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 S7AddressException（ArgumentException 子类）
+        var normalized = S7Address.Parse(address).Normalized;
+
         var client = _client;
         await _pipeline.ExecuteAsync(async token =>
         {
@@ -256,24 +263,28 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
 
             switch (value)
             {
-                case bool b: result = client.Write(address, b); break;
-                case short s: result = client.Write(address, s); break;
-                case ushort us: result = client.Write(address, us); break;
-                case int i: result = client.Write(address, i); break;
-                case uint ui: result = client.Write(address, ui); break;
-                case float f: result = client.Write(address, f); break;
-                case double d: result = client.Write(address, (float)d); break;
-                case string s: result = client.Write(address, s); break;
+                case bool b: result = client.Write(normalized, b); break;
+                case short s: result = client.Write(normalized, s); break;
+                case ushort us: result = client.Write(normalized, us); break;
+                case int i: result = client.Write(normalized, i); break;
+                case uint ui: result = client.Write(normalized, ui); break;
+                case float f: result = client.Write(normalized, f); break;
+                case double d: result = client.Write(normalized, (float)d); break;
+                case string s: result = client.Write(normalized, s); break;
                 default:
                     throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
             }
 
-            if (!result.IsSucceed) throw new Exception($"写入失败 [{address}]: {result.Err}");
+            if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
         }, ct);
     }
 
     public async Task<Dictionary<string, object>> ReadBatchAsync(string[] addresses, CancellationToken ct = default)
     {
+        // 地址预检（保持原样键名调用与返回，非法地址抛 S7AddressException）
+        foreach (var address in addresses)
+            S7Address.Parse(address);
+
         return await _pipeline.ExecuteAsync(async token =>
         {
             await Task.Yield();
@@ -291,6 +302,10 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
+        // 地址预检（非法地址抛 S7AddressException）
+        foreach (var address in data.Keys)
+            S7Address.Parse(address);
+
         await _pipeline.ExecuteAsync(async token =>
         {
             await Task.Yield();

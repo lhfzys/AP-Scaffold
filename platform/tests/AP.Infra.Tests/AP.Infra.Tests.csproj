@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Hardware\AP.Infra.Hardware.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Mitsubishi\AP.Plugin.Plc.Mitsubishi.csproj" />
+    <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Siemens\AP.Plugin.Plc.Siemens.csproj" />
   </ItemGroup>
 
 </Project>

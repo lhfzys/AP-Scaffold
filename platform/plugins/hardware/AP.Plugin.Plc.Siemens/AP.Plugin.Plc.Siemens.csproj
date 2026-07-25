@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="AP.Infra.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
     <ProjectReference Include="..\..\..\infra\AP.Infra.Hardware\AP.Infra.Hardware.csproj" />
     <ProjectReference Include="..\..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
