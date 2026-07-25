@@ -310,6 +310,7 @@ Tests → 被测项目
 | T3.1 | 2026-07-25 | `74ff193` | 设备抽象契约（方案 A）：`IDevice`（Info/State/Transitioned/Connect/Disconnect，**无 IsConnected**、不含读写能力）+ `DeviceInfo`（预留 Group/Description 可选元数据）+ `DeviceType` 粗粒度三值（Plc/Scanner/Other，细分归 DriverType）+ 契约层 `DeviceConnectionTransition` record；纯新增不接线，+3 单测总计 372 全绿 |
 | T3.2 | 2026-07-25 | `7601b4f` | `IDeviceRegistry` 契约 + `DeviceRegistry` 实现（ConcurrentDictionary、ID 大小写不敏感、重复 ID 抛错、注册事件）；单机单设备起步按多设备预留，未接线；+7 单测总计 379 全绿 |
 | T3.3 | 2026-07-25 | `e1799b4` | 三驱动实现 `IDevice`（Info/State/Transitioned 转发，`ConnectAsync`/`DisconnectAsync` 签名天然一致零改动）+ `ActivePlcService.InnerDevice` 探针 + `PlcDeviceAdapter`（惰性订阅转发）+ DI 注册 + Bootstrapper 泛型注册循环；`IPlcService` 解析链不变；+6 单测总计 385 全绿 |
+| T3.4 | 2026-07-25 | `0fd2711` | 扫码枪实现 `IDevice` + 重连监控迁入 `ConnectionSupervisor`（净 -24 行；probe=端口枚举+句柄、connect=关残留重开、5s/0s 对齐原语义）；**A 方案首开保留抛出**（注释说明的例外）；`ErrorReceived` 驱动直驱迁移；T1.6 遗留 emoji 清理；DI 注册自动登记；385 测试全绿。**第四套独立重连消除，全部设备统一监督器** |
 
 ### 演进过程中发现的新问题（停车场）
 
