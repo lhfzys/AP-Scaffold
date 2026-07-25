@@ -183,6 +183,7 @@ public class Bootstrapper : PrismBootstrapper
         services.AddReportFramework(_configuration);
 
         // --- 添加 gRPC 服务 (根据角色) ---
+        // ❄ 封存：Server/Client 分布式模式代码保留但不维护、不验证，解冻需专项评审（docs/EVOLUTION_PLAN.md 0.1 节）
         if (_appRole.HasFlag(AppRole.Server))
         {
             services.AddPlatformGrpcServer(_configuration);
@@ -395,10 +396,10 @@ public class Bootstrapper : PrismBootstrapper
 
                 UpdateSplashStatus("正在启动服务...", 75);
 
-                // --- 3. 启动 gRPC Server (如果是服务端) ---
+                // --- 3. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
 
-                // --- 4. 启动 gRPC Client Worker (如果是客户端) ---
+                // --- 4. 启动 gRPC Client Worker (如果是客户端) --- ❄ 封存，见上文注释
                 if (_appRole.HasFlag(AppRole.Client))
                 {
                     var clientWorker = container.GetService<GrpcClientWorker>();
@@ -507,7 +508,7 @@ public class Bootstrapper : PrismBootstrapper
                 Log.Information("gRPC Server 已停止");
             }
 
-            // 3. 停止 gRPC Client Worker
+            // 3. 停止 gRPC Client Worker ❄ 封存，见上文注释
             if (_appRole.HasFlag(AppRole.Client))
             {
                 var clientWorker = container.GetService<GrpcClientWorker>();
