@@ -301,6 +301,7 @@ Tests → 被测项目
 | T1.2 | 2026-07-25 | `2641cd6` | `ConnectionSupervisor`（纯事件源无日志依赖，`ConnectionAttemptResult` 统一结果、`ConnectAttempted`/`LoopFaulted` 事件）+ `ConnectionSupervisorLogger`（日志作为消费者 Attach）+ 状态机事件更名 `Transitioned`(From/To/Reason/Timestamp)；修复 Disconnected 需经 Connecting 过渡的迁移缺陷；+10 单测，总计 260 全绿，不接线 |
 | T1.3 | 2026-07-25 | `7d29c1e` | 三菱接入 Supervisor：删除复制看门狗（净 -100 行），状态唯一来源、ConnectAsync 仅 Start；新增 `TransitionEventBridge`（声明式 Transition→事件映射，不识 MediatR）；Supervisor 接管完整状态流（启动即首扫、Connecting 中断可恢复）；迁移表补 Connecting→Disconnected；事件改沿迁移边触发（有意差异已记录）；总计 267 测试全绿 |
 | T1.4 | 2026-07-25 | `8837c4b` | 西门子接入 Supervisor（同 T1.3 模式，心跳 ReadBoolean / 默认地址 DB1.0.0）；服务类 -78 行净减；267 测试全绿 |
+| T1.5 | 2026-07-25 | `703373c` | 欧姆龙接入 Supervisor（同 T1.3 模式，心跳 ReadBoolean / 默认地址 D0）；服务类 -78 行净减；267 测试全绿。**三份复制看门狗全部消除** |
 
 ### 演进过程中发现的新问题（停车场）
 
