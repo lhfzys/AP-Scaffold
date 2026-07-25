@@ -6,6 +6,7 @@ using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.Services;
 using AP.Infra.Hardware.DeviceRuntime;
+using AP.Plugin.Plc.Mitsubishi.Addressing;
 using AP.Plugin.Plc.Mitsubishi.Configuration;
 using IoTClient.Clients.PLC;
 using IoTClient.Enums;
@@ -248,6 +249,9 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
 
     public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 MitsubishiAddressException（ArgumentException 子类），合法地址统一为标准表示
+        var normalized = McAddress.Parse(address).Normalized;
+
         // 捕获当前客户端引用，避免重连替换实例后在同一次读写中混用不同客户端
         var client = _client;
 
@@ -260,28 +264,31 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
             await Task.Yield(); // 确保异步上下文
 
             if (typeof(T) == typeof(bool))
-                result = client.ReadBoolean(address);
+                result = client.ReadBoolean(normalized);
             else if (typeof(T) == typeof(short))
-                result = client.ReadInt16(address);
+                result = client.ReadInt16(normalized);
             else if (typeof(T) == typeof(ushort))
-                result = client.ReadUInt16(address);
+                result = client.ReadUInt16(normalized);
             else if (typeof(T) == typeof(int))
-                result = client.ReadInt32(address);
+                result = client.ReadInt32(normalized);
             else if (typeof(T) == typeof(uint))
-                result = client.ReadUInt32(address);
+                result = client.ReadUInt32(normalized);
             else if (typeof(T) == typeof(float))
-                result = client.ReadFloat(address);
+                result = client.ReadFloat(normalized);
             else
                 throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
             if (result.IsSucceed) return (T)result.Value;
 
-            throw new Exception($"读取失败 [{address}]: {result.Err}");
+            throw new Exception($"读取失败 [{normalized}]: {result.Err}");
         }, ct);
     }
 
     public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
+        // 地址预检 + 规范化：非法地址抛 MitsubishiAddressException（ArgumentException 子类）
+        var normalized = McAddress.Parse(address).Normalized;
+
         // 捕获当前客户端引用，避免重连替换实例后在同一次写入中混用不同客户端
         var client = _client;
 
@@ -291,21 +298,21 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
             await Task.Yield();
 
             if (value is bool b)
-                result = client.Write(address, b);
+                result = client.Write(normalized, b);
             else if (value is short s)
-                result = client.Write(address, s);
+                result = client.Write(normalized, s);
             else if (value is ushort us)
-                result = client.Write(address, us);
+                result = client.Write(normalized, us);
             else if (value is int i)
-                result = client.Write(address, i);
+                result = client.Write(normalized, i);
             else if (value is uint ui)
-                result = client.Write(address, ui);
+                result = client.Write(normalized, ui);
             else if (value is float f)
-                result = _client.Write(address, f);
+                result = client.Write(normalized, f);
             else
                 throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
-            if (!result.IsSucceed) throw new Exception($"写入失败 [{address}]: {result.Err}");
+            if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
         }, ct);
     }
 

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Resilience\AP.Infra.Resilience.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Hardware\AP.Infra.Hardware.csproj" />
+    <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Mitsubishi\AP.Plugin.Plc.Mitsubishi.csproj" />
   </ItemGroup>
 
 </Project>
