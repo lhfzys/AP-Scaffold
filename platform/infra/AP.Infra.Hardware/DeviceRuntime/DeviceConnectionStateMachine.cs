@@ -3,23 +3,23 @@ using AP.Contracts.Hardware.DeviceRuntime;
 namespace AP.Infra.Hardware.DeviceRuntime;
 
 /// <summary>
-/// 设备连接状态变更事件参数。
+/// 设备连接状态迁移事件参数。
 /// </summary>
-public sealed class DeviceConnectionStateChangedEventArgs : EventArgs
+public sealed class DeviceConnectionTransitionEventArgs : EventArgs
 {
-    public DeviceConnectionStateChangedEventArgs(DeviceConnectionState oldState, DeviceConnectionState newState, string? reason)
+    public DeviceConnectionTransitionEventArgs(DeviceConnectionState from, DeviceConnectionState to, string? reason)
     {
-        OldState = oldState;
-        NewState = newState;
+        From = from;
+        To = to;
         Reason = reason;
         Timestamp = DateTime.Now;
     }
 
     /// <summary>迁移前状态。</summary>
-    public DeviceConnectionState OldState { get; }
+    public DeviceConnectionState From { get; }
 
     /// <summary>迁移后状态。</summary>
-    public DeviceConnectionState NewState { get; }
+    public DeviceConnectionState To { get; }
 
     /// <summary>迁移原因（可选，如 "心跳丢失"、"主动断开"）。</summary>
     public string? Reason { get; }
@@ -30,9 +30,9 @@ public sealed class DeviceConnectionStateChangedEventArgs : EventArgs
 
 /// <summary>
 /// 设备连接状态机（Device Runtime Model 的第一个运行时组件，协议无关）。
-/// 只做三件事：查询当前状态、校验并执行迁移、发布状态变更通知。
+/// 只做三件事：查询当前状态、校验并执行迁移、发布状态迁移通知。
 /// 不引用任何协议/驱动类型（PLC、串口、相机、MQTT 等均可复用）；
-/// 心跳、重连等设备语义由 ConnectionSupervisor（T1.2）在其上实现。
+/// 心跳、重连等设备语义由 ConnectionSupervisor 在其上实现。
 /// 线程安全：状态读取与迁移均可多线程并发调用。
 /// </summary>
 public sealed class DeviceConnectionStateMachine
@@ -65,7 +65,7 @@ public sealed class DeviceConnectionStateMachine
     /// 状态实际发生迁移后触发（在锁外发布，订阅方回调中可安全再次迁移）。
     /// 未来 Alarm / HealthMonitor / Metrics 的挂点。
     /// </summary>
-    public event EventHandler<DeviceConnectionStateChangedEventArgs>? StateChanged;
+    public event EventHandler<DeviceConnectionTransitionEventArgs>? Transitioned;
 
     /// <summary>判断从 <paramref name="from"/> 到 <paramref name="to"/> 是否为合法迁移（同态迁移视为非法）。</summary>
     public static bool IsValidTransition(DeviceConnectionState from, DeviceConnectionState to)
@@ -78,15 +78,15 @@ public sealed class DeviceConnectionStateMachine
     /// </summary>
     public bool TryTransition(DeviceConnectionState target, string? reason = null)
     {
-        DeviceConnectionStateChangedEventArgs? args = null;
+        DeviceConnectionTransitionEventArgs? args = null;
         lock (_gate)
         {
             if (!IsValidTransition(_currentState, target)) return false;
-            args = new DeviceConnectionStateChangedEventArgs(_currentState, target, reason);
+            args = new DeviceConnectionTransitionEventArgs(_currentState, target, reason);
             _currentState = target;
         }
 
-        StateChanged?.Invoke(this, args);
+        Transitioned?.Invoke(this, args);
         return true;
     }
 

@@ -57,27 +57,27 @@ public class DeviceConnectionStateMachineTests
     }
 
     [Fact]
-    public void StateChanged_ValidTransition_FiresWithOldNewAndReason()
+    public void Transitioned_ValidTransition_FiresWithFromToAndReason()
     {
         var sm = new DeviceConnectionStateMachine();
-        DeviceConnectionStateChangedEventArgs? received = null;
-        sm.StateChanged += (_, args) => received = args;
+        DeviceConnectionTransitionEventArgs? received = null;
+        sm.Transitioned += (_, args) => received = args;
 
         sm.TryTransition(DeviceConnectionState.Connecting, "开始连接");
 
         received.Should().NotBeNull();
-        received!.OldState.Should().Be(DeviceConnectionState.Disconnected);
-        received.NewState.Should().Be(DeviceConnectionState.Connecting);
+        received!.From.Should().Be(DeviceConnectionState.Disconnected);
+        received.To.Should().Be(DeviceConnectionState.Connecting);
         received.Reason.Should().Be("开始连接");
         received.Timestamp.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
-    public void StateChanged_InvalidTransition_DoesNotFire()
+    public void Transitioned_InvalidTransition_DoesNotFire()
     {
         var sm = new DeviceConnectionStateMachine();
         var fired = 0;
-        sm.StateChanged += (_, _) => fired++;
+        sm.Transitioned += (_, _) => fired++;
 
         sm.TryTransition(DeviceConnectionState.Connected);
 
@@ -123,15 +123,15 @@ public class DeviceConnectionStateMachineTests
     }
 
     [Fact]
-    public void StateChanged_SubscriberCanReenter_NoDeadlock()
+    public void Transitioned_SubscriberCanReenter_NoDeadlock()
     {
         // 事件在锁外发布：订阅方回调中读取状态甚至再次迁移都不会死锁
         var sm = new DeviceConnectionStateMachine();
         var reentered = false;
-        sm.StateChanged += (_, args) =>
+        sm.Transitioned += (_, args) =>
         {
             _ = sm.CurrentState; // 锁内读取应安全
-            if (!reentered && args.NewState == DeviceConnectionState.Connecting)
+            if (!reentered && args.To == DeviceConnectionState.Connecting)
             {
                 reentered = true;
                 sm.TryTransition(DeviceConnectionState.Disabled, "回调中停用").Should().BeTrue();
@@ -151,7 +151,7 @@ public class DeviceConnectionStateMachineTests
         // 状态机不知道也不关心设备是 PLC、相机还是 MQTT 客户端
         var cameraState = new DeviceConnectionStateMachine();
         var log = new List<string>();
-        cameraState.StateChanged += (_, args) => log.Add($"{args.OldState}→{args.NewState}({args.Reason})");
+        cameraState.Transitioned += (_, args) => log.Add($"{args.From}→{args.To}({args.Reason})");
 
         cameraState.Transition(DeviceConnectionState.Connecting, "RTSP 握手");
         cameraState.Transition(DeviceConnectionState.Connected, "流已建立");
