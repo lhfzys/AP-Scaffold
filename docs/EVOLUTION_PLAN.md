@@ -255,7 +255,7 @@ Tests → 被测项目
 | T3.1 | 契约层新增设备抽象：`IDevice`/`DeviceInfo`/`DeviceType`/设备状态（复用 T1.1 状态机）；**只新增不修改** | `AP.Contracts.Hardware`（新文件） | 编译；契约评审 |
 | T3.2 | 设备注册表/管理器 `IDeviceRegistry`：单机单设备起步，模型预留多设备；宿主注册 | `AP.Infra.Hardware` | 单测 |
 | T3.3 | PLC 以 Device 身份接入注册表（适配 ActivePlcService，薄封装） | `AP.Infra.Hardware` | 旧 API 路径行为不变 |
-| T3.4 | Scanner 以 Device 身份接入 | `AP.Plugin.Scanner` | 同上 |
+| T3.4 | Scanner 以 Device 身份接入（**含重连机制评估迁入 ConnectionSupervisor、emoji 日志清理**，依据 T1.6 结论） | `AP.Plugin.Scanner` | 同上 |
 | T3.5 | 设备状态事件统一：新事件 + 旧事件桥接（旧事件继续发布，不删） | `AP.Contracts.Hardware`、`AP.Infra.Hardware` | 旧消费者不受影响 |
 
 ### 阶段 4：Tag 系统（框架核心交付）
@@ -302,6 +302,7 @@ Tests → 被测项目
 | T1.3 | 2026-07-25 | `7d29c1e` | 三菱接入 Supervisor：删除复制看门狗（净 -100 行），状态唯一来源、ConnectAsync 仅 Start；新增 `TransitionEventBridge`（声明式 Transition→事件映射，不识 MediatR）；Supervisor 接管完整状态流（启动即首扫、Connecting 中断可恢复）；迁移表补 Connecting→Disconnected；事件改沿迁移边触发（有意差异已记录）；总计 267 测试全绿 |
 | T1.4 | 2026-07-25 | `8837c4b` | 西门子接入 Supervisor（同 T1.3 模式，心跳 ReadBoolean / 默认地址 DB1.0.0）；服务类 -78 行净减；267 测试全绿 |
 | T1.5 | 2026-07-25 | `703373c` | 欧姆龙接入 Supervisor（同 T1.3 模式，心跳 ReadBoolean / 默认地址 D0）；服务类 -78 行净减；267 测试全绿。**三份复制看门狗全部消除** |
+| T1.6 | 2026-07-25 | 本行即记录 | **评估结论：保留现状不接入**。① `OpenAsync` 首开失败同步抛出的契约行为与 Supervisor 单一状态源模型冲突，接入需改公开行为或退回混合双状态源；② 探针语义差异大（端口枚举+错误标志 vs 心跳读）；③ 收益小（~60 行单设备）。**转 T3.4 随 Device 抽象统一改造**，届时一并清理 `SerialPortScannerService.cs:208` 的 emoji 日志存量违规 |
 
 ### 演进过程中发现的新问题（停车场）
 
