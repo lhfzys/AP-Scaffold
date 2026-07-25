@@ -306,6 +306,7 @@ Tests → 被测项目
 | T1.7 | 2026-07-25 | `bc8a258` | `Plc` 节新增 3 个可选键（HeartbeatIntervalSeconds=2 / ReconnectBackoffSeconds=5 / SupervisorRestartDelaySeconds=5，缺省=原硬编码值）；`PlcOptions`/`MitsubishiPlcOptions`+工厂映射、三驱动接线、PLC 设置页 3 个输入框+校验；+2 单测，总计 269 全绿；旧配置不写新键行为不变。**阶段 1 收官** |
 | T2.1 | 2026-07-25 | `2aea6b2` | 按用户定位从"校验"升级为 **Address Object**：`McAddress`（解析/规范化/值相等，X/Y/B/W 十六进制偏移）+ `AddressParseError` 结构化错误码 + `MitsubishiAddressException:ArgumentException`；读写预检接入（合法路径不变）；`InternalsVisibleTo`+测试项目 TFM 调整 net8.0-windows；+36 单测，总计 305 全绿；区间合并/运算留 T4.4 |
 | T2.2 | 2026-07-25 | `2df5ccd` | 西门子 `S7Address`（I/Q/M/DB 区 + DB 号 + 偏移 + 位号 0-7）同构落地；单读写规范化调用、批量预检保持键名；+32 单测，总计 337 全绿 |
+| T2.3 | 2026-07-25 | `f2f5417` | 欧姆龙 `FinsAddress`（D/C/W/H/A/E 区 + E 区体号 + 偏移 + 位号 0-15）同构落地；+32 单测，总计 369 全绿。**阶段 2 收官：三品牌地址全部对象化，业务仍只见字符串、协议语法已全部收敛进驱动内部** |
 
 ### 演进过程中发现的新问题（停车场）
 
