@@ -305,6 +305,7 @@ Tests → 被测项目
 | T1.6 | 2026-07-25 | 本行即记录 | **评估结论：保留现状不接入**。① `OpenAsync` 首开失败同步抛出的契约行为与 Supervisor 单一状态源模型冲突，接入需改公开行为或退回混合双状态源；② 探针语义差异大（端口枚举+错误标志 vs 心跳读）；③ 收益小（~60 行单设备）。**转 T3.4 随 Device 抽象统一改造**，届时一并清理 `SerialPortScannerService.cs:208` 的 emoji 日志存量违规 |
 | T1.7 | 2026-07-25 | `bc8a258` | `Plc` 节新增 3 个可选键（HeartbeatIntervalSeconds=2 / ReconnectBackoffSeconds=5 / SupervisorRestartDelaySeconds=5，缺省=原硬编码值）；`PlcOptions`/`MitsubishiPlcOptions`+工厂映射、三驱动接线、PLC 设置页 3 个输入框+校验；+2 单测，总计 269 全绿；旧配置不写新键行为不变。**阶段 1 收官** |
 | T2.1 | 2026-07-25 | `2aea6b2` | 按用户定位从"校验"升级为 **Address Object**：`McAddress`（解析/规范化/值相等，X/Y/B/W 十六进制偏移）+ `AddressParseError` 结构化错误码 + `MitsubishiAddressException:ArgumentException`；读写预检接入（合法路径不变）；`InternalsVisibleTo`+测试项目 TFM 调整 net8.0-windows；+36 单测，总计 305 全绿；区间合并/运算留 T4.4 |
+| T2.2 | 2026-07-25 | `2df5ccd` | 西门子 `S7Address`（I/Q/M/DB 区 + DB 号 + 偏移 + 位号 0-7）同构落地；单读写规范化调用、批量预检保持键名；+32 单测，总计 337 全绿 |
 
 ### 演进过程中发现的新问题（停车场）
 
