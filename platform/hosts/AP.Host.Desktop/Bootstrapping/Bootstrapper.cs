@@ -396,6 +396,19 @@ public class Bootstrapper : PrismBootstrapper
 
                 UpdateSplashStatus("正在启动服务...", 75);
 
+                // --- 2. 设备注册：全部 IDevice 单例登记进设备注册表（Device Runtime Model） ---
+                try
+                {
+                    var deviceRegistry = container.GetService<AP.Contracts.Hardware.DeviceRuntime.IDeviceRegistry>();
+                    if (deviceRegistry != null)
+                        foreach (var device in container.GetServices<AP.Contracts.Hardware.DeviceRuntime.IDevice>())
+                            deviceRegistry.Register(device);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "设备注册失败");
+                }
+
                 // --- 3. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
 

@@ -22,7 +22,7 @@ namespace AP.Plugin.Plc.Omron.Services;
 /// 注意：IoTClient 欧姆龙客户端未实现字符串读写与批量写入——
 /// 字符串读写抛 <see cref="NotSupportedException"/>，批量写入退化为逐条写入。
 /// </summary>
-public class OmronPlcService : IPlcService, IPlcBatchReadWrite
+public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice
 {
     private OmronFinsClient _client;
     private readonly ResiliencePipeline _pipeline;
@@ -36,6 +36,16 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
     private readonly ConnectionSupervisor _supervisor;
     private readonly IDisposable _loggerSubscription;
     private readonly IDisposable _bridgeSubscription;
+
+    // --- IDevice 视图（Device Runtime Model；连接状态以状态机为唯一事实来源） ---
+    /// <inheritdoc />
+    public DeviceInfo Info { get; }
+
+    /// <inheritdoc />
+    public DeviceConnectionState State => _stateMachine.CurrentState;
+
+    /// <inheritdoc />
+    public event EventHandler<DeviceConnectionTransition>? Transitioned;
 
     public PlcServiceFeatures SupportedFeatures =>
         PlcServiceFeatures.BasicReadWrite |
@@ -67,6 +77,11 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite
         });
         _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
         _bridgeSubscription = CreateEventBridge().Attach(_stateMachine, n => mediator.Publish(n), _deviceName);
+
+        // IDevice 视图初始化：状态机事件转换为契约层 record 转发
+        Info = new DeviceInfo("plc.main", "欧姆龙 PLC", DeviceType.Plc, "Omron");
+        _stateMachine.Transitioned += (_, args) =>
+            Transitioned?.Invoke(this, new DeviceConnectionTransition(args.From, args.To, args.Reason, args.Timestamp));
     }
 
     /// <summary>

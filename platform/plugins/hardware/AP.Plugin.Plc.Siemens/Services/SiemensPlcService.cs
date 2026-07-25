@@ -19,7 +19,7 @@ namespace AP.Plugin.Plc.Siemens.Services;
 /// <summary>
 /// 西门子 PLC 服务实现（基于 IoTClient.SiemensClient）。
 /// </summary>
-public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
+public class SiemensPlcService : IPlcService, IPlcBatchReadWrite, IDevice
 {
     private SiemensClient _client;
     private readonly ResiliencePipeline _pipeline;
@@ -34,6 +34,16 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
     private readonly ConnectionSupervisor _supervisor;
     private readonly IDisposable _loggerSubscription;
     private readonly IDisposable _bridgeSubscription;
+
+    // --- IDevice 视图（Device Runtime Model；连接状态以状态机为唯一事实来源） ---
+    /// <inheritdoc />
+    public DeviceInfo Info { get; }
+
+    /// <inheritdoc />
+    public DeviceConnectionState State => _stateMachine.CurrentState;
+
+    /// <inheritdoc />
+    public event EventHandler<DeviceConnectionTransition>? Transitioned;
 
     public PlcServiceFeatures SupportedFeatures =>
         PlcServiceFeatures.BasicReadWrite |
@@ -67,6 +77,11 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite
         });
         _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
         _bridgeSubscription = CreateEventBridge().Attach(_stateMachine, n => mediator.Publish(n), _deviceName);
+
+        // IDevice 视图初始化：状态机事件转换为契约层 record 转发
+        Info = new DeviceInfo("plc.main", "西门子 PLC", DeviceType.Plc, "Siemens");
+        _stateMachine.Transitioned += (_, args) =>
+            Transitioned?.Invoke(this, new DeviceConnectionTransition(args.From, args.To, args.Reason, args.Timestamp));
     }
 
     /// <summary>

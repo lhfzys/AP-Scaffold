@@ -1,4 +1,5 @@
 using AP.Contracts.Hardware.Capabilities;
+using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.Models;
 using AP.Contracts.Hardware.Services;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,12 @@ public class ActivePlcService : IPlcService, IPlcBatchReadWrite
     }
 
     private IPlcService Inner => _innerLazy.Value;
+
+    /// <summary>
+    /// 真实驱动的 <see cref="IDevice"/> 视图（驱动未实现 IDevice 时为 null）。
+    /// 惰性解析：首次访问时才创建真实驱动。
+    /// </summary>
+    public IDevice? InnerDevice => Inner as IDevice;
 
     public PlcServiceFeatures SupportedFeatures => Inner.SupportedFeatures;
 

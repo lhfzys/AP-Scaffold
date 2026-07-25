@@ -19,7 +19,7 @@ using Polly;
 
 namespace AP.Plugin.Plc.Mitsubishi.Services;
 
-public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
+public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice
 {
     // 客户端实例会在重连时被原子替换，因此不能是 readonly
     private MitsubishiClient _client;
@@ -35,6 +35,16 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
     private readonly ConnectionSupervisor _supervisor;
     private readonly IDisposable _loggerSubscription;
     private readonly IDisposable _bridgeSubscription;
+
+    // --- IDevice 视图（Device Runtime Model；连接状态以状态机为唯一事实来源） ---
+    /// <inheritdoc />
+    public DeviceInfo Info { get; }
+
+    /// <inheritdoc />
+    public DeviceConnectionState State => _stateMachine.CurrentState;
+
+    /// <inheritdoc />
+    public event EventHandler<DeviceConnectionTransition>? Transitioned;
 
     // 声明能力：支持基础读写 + 批量读写 + 自动重连
     public PlcServiceFeatures SupportedFeatures =>
@@ -72,6 +82,11 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite
         });
         _loggerSubscription = ConnectionSupervisorLogger.Attach(_supervisor, _stateMachine, logger, _deviceName);
         _bridgeSubscription = CreateEventBridge().Attach(_stateMachine, n => mediator.Publish(n), _deviceName);
+
+        // IDevice 视图初始化：状态机事件转换为契约层 record 转发
+        Info = new DeviceInfo("plc.main", "三菱 PLC", DeviceType.Plc, "Mitsubishi");
+        _stateMachine.Transitioned += (_, args) =>
+            Transitioned?.Invoke(this, new DeviceConnectionTransition(args.From, args.To, args.Reason, args.Timestamp));
     }
 
     /// <summary>

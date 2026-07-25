@@ -1,11 +1,14 @@
 using AP.Contracts.Hardware.Models;
+using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.Services;
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
+using AP.Infra.Hardware.DeviceRuntime;
 using AP.Infra.Hardware.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AP.Infra.Hardware.Extensions;
 
@@ -39,6 +42,11 @@ public static class ServiceCollectionExtensions
             sp.GetService<IIdentityService>(),
             sp.GetService<ILogger<AuditingPlcServiceDecorator>>()));
         services.AddSingleton<IPlcBatchReadWrite>(sp => (IPlcBatchReadWrite)sp.GetRequiredService<IPlcService>());
+        // Device Runtime Model：设备注册表 + PLC 设备视图（与 IPlcService 并行的只读视图，不改变现有解析关系）
+        services.AddSingleton<IDeviceRegistry, DeviceRegistry>();
+        services.AddSingleton<IDevice>(sp => new PlcDeviceAdapter(
+            sp.GetRequiredService<ActivePlcService>(),
+            sp.GetRequiredService<IOptions<PlcOptions>>()));
         return services;
     }
 }
