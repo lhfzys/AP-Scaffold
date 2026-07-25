@@ -34,6 +34,8 @@ public class MitsubishiPlcPlugin : PluginBase
         // 注册三菱 PLC 驱动工厂
         // 统一的 IPlcService 由 AP.Infra.Hardware.ActivePlcService 根据 Plc:DriverType 转发
         services.AddSingleton<IPlcDriverFactory, MitsubishiPlcDriverFactory>();
+        // 地址验证器：点表加载时校验/解析三菱地址（Address Object 缓存于 ResolvedTag）
+        services.AddSingleton<AP.Contracts.Hardware.DeviceRuntime.IAddressValidator, Addressing.MitsubishiAddressValidator>();
     }
 
     public override async Task StartAsync(CancellationToken ct = default)

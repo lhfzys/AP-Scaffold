@@ -33,6 +33,8 @@ public class SiemensPlcPlugin : PluginBase
 
         // 注册西门子 PLC 驱动工厂
         services.AddSingleton<IPlcDriverFactory, SiemensPlcDriverFactory>();
+        // 地址验证器：点表加载时校验/解析西门子地址（Address Object 缓存于 ResolvedTag）
+        services.AddSingleton<AP.Contracts.Hardware.DeviceRuntime.IAddressValidator, Addressing.SiemensAddressValidator>();
     }
 
     public override async Task StartAsync(CancellationToken ct = default)

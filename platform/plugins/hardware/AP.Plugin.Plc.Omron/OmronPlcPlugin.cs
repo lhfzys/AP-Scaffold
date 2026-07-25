@@ -33,6 +33,8 @@ public class OmronPlcPlugin : PluginBase
 
         // 注册欧姆龙 PLC 驱动工厂
         services.AddSingleton<IPlcDriverFactory, OmronPlcDriverFactory>();
+        // 地址验证器：点表加载时校验/解析欧姆龙地址（Address Object 缓存于 ResolvedTag）
+        services.AddSingleton<AP.Contracts.Hardware.DeviceRuntime.IAddressValidator, Addressing.OmronAddressValidator>();
     }
 
     public override async Task StartAsync(CancellationToken ct = default)

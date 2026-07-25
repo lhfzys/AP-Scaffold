@@ -47,6 +47,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDevice>(sp => new PlcDeviceAdapter(
             sp.GetRequiredService<ActivePlcService>(),
             sp.GetRequiredService<IOptions<PlcOptions>>()));
+        // 点表：启动时加载并校验（快速失败），地址验证器由各驱动插件注册
+        services.AddSingleton<ITagTable>(sp => new TagTable(
+            sp.GetRequiredService<IDeviceRegistry>(),
+            sp.GetServices<IAddressValidator>(),
+            Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json")));
         return services;
     }
 }

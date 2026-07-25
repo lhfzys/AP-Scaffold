@@ -416,7 +416,10 @@ public class Bootstrapper : PrismBootstrapper
                     Log.Error(ex, "设备注册失败");
                 }
 
-                // --- 3. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
+                // --- 3. 点表加载（快速失败：点表非法中止启动，DeviceConfigurationException 如实上抛） ---
+                _ = container.GetService<AP.Contracts.Hardware.DeviceRuntime.ITagTable>();
+
+                // --- 4. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
 
                 // --- 4. 启动 gRPC Client Worker (如果是客户端) --- ❄ 封存，见上文注释

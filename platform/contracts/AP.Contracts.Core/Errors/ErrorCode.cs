@@ -1,4 +1,4 @@
-﻿namespace AP.Contracts.Core.Errors;
+namespace AP.Contracts.Core.Errors;
 
 /// <summary>
 /// 常量定义错误码
@@ -16,4 +16,7 @@ public static class ErrorCode
     public const string DeviceNotConnected = "DEVICE_NOT_CONNECTED";
     public const string DeviceReadFailed = "DEVICE_READ_FAILED";
     public const string DeviceWriteFailed = "DEVICE_WRITE_FAILED";
+
+    // 配置相关
+    public const string ConfigInvalid = "CONFIG_INVALID";
 }
