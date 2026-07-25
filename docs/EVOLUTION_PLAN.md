@@ -313,6 +313,7 @@ Tests → 被测项目
 | T3.4 | 2026-07-25 | `0fd2711` | 扫码枪实现 `IDevice` + 重连监控迁入 `ConnectionSupervisor`（净 -24 行；probe=端口枚举+句柄、connect=关残留重开、5s/0s 对齐原语义）；**A 方案首开保留抛出**（注释说明的例外）；`ErrorReceived` 驱动直驱迁移；T1.6 遗留 emoji 清理；DI 注册自动登记；385 测试全绿。**第四套独立重连消除，全部设备统一监督器** |
 | T3.5 | 2026-07-25 | `941d189` | 统一事件 `DeviceStateChangedEvent(Info, Transition)` + `DeviceStateEventPublisher`（Bootstrapper 注册循环逐设备 Attach）；旧四事件并行不动（退役评估留 T5.x）；+2 单测总计 387 全绿。**阶段 3 收官** |
 | T4.1 | 2026-07-25 | `2f02c8d` | Tag 模型契约（按用户五条调整）：`TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`（Version 语义=最新值表写入时分配/直连为 0）+ `TagDefinition` 纯配置形状（**无 PollIntervalMs**，采集策略归 T4.4 采集配置；Address 为字符串配置、解析缓存归 Infra）+ `TagDataType` 扩展 11 型（Int64/UInt64/Double/ByteArray 预留非 PLC）+ `TagQuality` 三态/`TagAccess`；纯新增，+3 单测总计 390 全绿 |
+| T4.2 | 2026-07-25 | `4d231da` | 点表加载与校验（**A 快速失败**）：`IAddressValidator` 契约（语法留驱动）+ `ResolvedTag` 缓存 **Address Object**（不透明 object，ToString=规范化形）+ `TagTable`（JSON 加载、三项校验聚合抛出 `DeviceConfigurationException`/ErrorCode.CONFIG_INVALID）+ 三驱动薄验证器 + Bootstrapper 强制解析 + `tags.json` 示例；+7 单测总计 397 全绿 |
 
 ### 演进过程中发现的新问题（停车场）
 
