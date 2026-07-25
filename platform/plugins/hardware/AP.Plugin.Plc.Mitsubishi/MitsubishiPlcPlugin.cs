@@ -53,12 +53,12 @@ public class MitsubishiPlcPlugin : PluginBase
             {
                 try
                 {
-                    Logger.LogInformation("🚀 [后台] 开始连接 PLC...");
+                    Logger.LogInformation("后台任务开始连接 PLC");
                     await plcService.ConnectAsync(ct);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "❌ [后台] PLC 连接初始化失败 (Polly 将接管重试)");
+                    Logger.LogError(ex, "PLC 连接初始化失败（Polly 将接管重试）");
                 }
             }, ct);
     }
