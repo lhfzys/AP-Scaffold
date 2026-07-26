@@ -1,6 +1,13 @@
 {
   // 点表（Tag Table）：业务按逻辑点名读写设备数据，点名 → 设备 + 协议地址的映射在此维护。
   // 启动时全量校验（点名唯一 / 设备已注册 / 地址合法），任一非法即中止启动（快速失败）。
+  // Acquisition 为可选采集配置：DefaultIntervalMs 默认采集周期，Overrides 按点名覆盖。
+  "Acquisition": {
+    "DefaultIntervalMs": 1000,
+    "Overrides": {
+      "Plc.Main.HeartbeatValue": 500
+    }
+  },
   // 以下为示例条目（默认配置 DriverType=Mitsubishi），请按现场实际替换。
   "Tags": [
     {

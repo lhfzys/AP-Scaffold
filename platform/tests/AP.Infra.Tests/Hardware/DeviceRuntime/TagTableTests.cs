@@ -101,6 +101,35 @@ public class TagTableTests : IDisposable
             if (File.Exists(file)) File.Delete(file);
     }
 
+    [Fact]
+    public void AcquisitionSection_IsParsed_WithOverrideAndDefault()
+    {
+        var path = WriteTags("""
+            {
+              "Acquisition": { "DefaultIntervalMs": 800, "Overrides": { "A.B": 200 } },
+              "Tags": [ { "Name": "A.B", "DeviceId": "plc.main", "Address": "raw1" } ]
+            }
+            """);
+
+        var table = CreateTable([new FakeValidator("Test")], path);
+
+        table.Acquisition.DefaultIntervalMs.Should().Be(800);
+        table.Acquisition.GetIntervalMs("A.B").Should().Be(200);
+        table.Acquisition.GetIntervalMs("C.D").Should().Be(800);
+    }
+
+    [Fact]
+    public void MissingAcquisitionSection_UsesDefaults()
+    {
+        var path = WriteTags("""
+            { "Tags": [ { "Name": "A.B", "DeviceId": "plc.main", "Address": "raw1" } ] }
+            """);
+
+        var table = CreateTable([new FakeValidator("Test")], path);
+
+        table.Acquisition.DefaultIntervalMs.Should().Be(1000);
+    }
+
     private string WriteTags(string json)
     {
         var path = Path.GetTempFileName();

@@ -31,9 +31,13 @@ public sealed class TagTable : ITagTable
         ArgumentNullException.ThrowIfNull(addressValidators);
 
         var validators = addressValidators.ToDictionary(v => v.DriverType, StringComparer.OrdinalIgnoreCase);
-        var definitions = LoadDefinitions(filePath);
-        _tags = ValidateAndResolve(definitions, deviceRegistry, validators);
+        var file = LoadFile(filePath);
+        Acquisition = file.Acquisition ?? new TagAcquisitionConfig();
+        _tags = ValidateAndResolve(file.Tags, deviceRegistry, validators);
     }
+
+    /// <summary>采集配置（tags.json "Acquisition" 节；缺失=默认值）。</summary>
+    public TagAcquisitionConfig Acquisition { get; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<ResolvedTag> Tags => _tags.Values.ToList();
@@ -46,14 +50,13 @@ public sealed class TagTable : ITagTable
     }
 
     /// <summary>文件缺失视为空点表（合法：设备可纯手动访问）。</summary>
-    private static List<TagDefinition> LoadDefinitions(string filePath)
+    private static TagTableFile LoadFile(string filePath)
     {
-        if (!File.Exists(filePath)) return [];
+        if (!File.Exists(filePath)) return new TagTableFile();
 
         var json = File.ReadAllText(filePath);
-        var file = JsonSerializer.Deserialize<TagTableFile>(json, JsonOptions)
+        return JsonSerializer.Deserialize<TagTableFile>(json, JsonOptions)
             ?? throw new DeviceConfigurationException($"点表文件为空或格式错误: {filePath}");
-        return file.Tags;
     }
 
     private static IReadOnlyDictionary<string, ResolvedTag> ValidateAndResolve(
@@ -107,9 +110,10 @@ public sealed class TagTable : ITagTable
         return resolved;
     }
 
-    /// <summary>点表文件形状：{ "Tags": [ TagDefinition... ] }。</summary>
+    /// <summary>点表文件形状：{ "Acquisition": {...}, "Tags": [ TagDefinition... ] }。</summary>
     private sealed class TagTableFile
     {
+        public TagAcquisitionConfig? Acquisition { get; set; }
         public List<TagDefinition> Tags { get; set; } = [];
     }
 }

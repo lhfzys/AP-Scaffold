@@ -54,6 +54,18 @@ public static class ServiceCollectionExtensions
             Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json")));
         // Tag 服务：业务按点名读写的唯一入口
         services.AddSingleton<ITagService, TagService>();
+        // 采集引擎与最新值表（启动/停止由 Bootstrapper 显式调用）
+        services.AddSingleton<LatestTagValueStore>();
+        services.AddSingleton<TagAcquisitionEngine>(sp =>
+        {
+            var table = (TagTable)sp.GetRequiredService<ITagTable>();
+            return new TagAcquisitionEngine(
+                table,
+                table.Acquisition,
+                sp.GetRequiredService<ITagService>(),
+                sp.GetRequiredService<LatestTagValueStore>(),
+                sp.GetRequiredService<ILogger<TagAcquisitionEngine>>());
+        });
         return services;
     }
 }
