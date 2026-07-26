@@ -1,4 +1,4 @@
-﻿#region
+#region
 
 using AP.Contracts.Hardware.Events;
 using AP.Contracts.Hardware.PrismEvents;
@@ -14,7 +14,8 @@ namespace AP.Host.Desktop.Bootstrapping;
 public class MediatRToPrismBridge :
     INotificationHandler<PlcDataChangedEvent>,
     INotificationHandler<ScanCompletedEvent>,
-    INotificationHandler<DeviceDisconnectedEvent>
+    INotificationHandler<DeviceDisconnectedEvent>,
+    INotificationHandler<AP.Contracts.Hardware.DeviceRuntime.TagValueChangedEvent>
 {
     private readonly IEventAggregator _eventAggregator;
 
@@ -38,6 +39,12 @@ public class MediatRToPrismBridge :
     public Task Handle(DeviceDisconnectedEvent notification, CancellationToken cancellationToken)
     {
         _eventAggregator.GetEvent<PrismDeviceDisconnectedEvent>().Publish(notification);
+        return Task.CompletedTask;
+    }
+
+    public Task Handle(AP.Contracts.Hardware.DeviceRuntime.TagValueChangedEvent notification, CancellationToken cancellationToken)
+    {
+        _eventAggregator.GetEvent<PrismTagValueChangedEvent>().Publish(notification);
         return Task.CompletedTask;
     }
 }

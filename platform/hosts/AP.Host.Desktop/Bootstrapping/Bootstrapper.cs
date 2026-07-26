@@ -419,8 +419,15 @@ public class Bootstrapper : PrismBootstrapper
                 // --- 3. 点表加载（快速失败：点表非法中止启动，DeviceConfigurationException 如实上抛） ---
                 _ = container.GetService<AP.Contracts.Hardware.DeviceRuntime.ITagTable>();
 
-                // --- 3.1 启动 Tag 采集引擎（轮询点表写入最新值表） ---
-                container.GetService<AP.Infra.Hardware.DeviceRuntime.TagAcquisitionEngine>()?.Start();
+                // --- 3.1 启动 Tag 采集引擎（轮询点表写入最新值表），并挂接变化发布（变化才通知） ---
+                var acquisitionEngine = container.GetService<AP.Infra.Hardware.DeviceRuntime.TagAcquisitionEngine>();
+                if (acquisitionEngine != null)
+                {
+                    var mediatorForTags = container.GetService<MediatR.IMediator>();
+                    if (mediatorForTags != null)
+                        new AP.Infra.Hardware.DeviceRuntime.TagValueChangedPublisher(mediatorForTags).Attach(acquisitionEngine);
+                    acquisitionEngine.Start();
+                }
 
                 // --- 4. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
                 if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
