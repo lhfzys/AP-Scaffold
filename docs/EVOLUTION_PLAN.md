@@ -314,6 +314,7 @@ Tests → 被测项目
 | T3.5 | 2026-07-25 | `941d189` | 统一事件 `DeviceStateChangedEvent(Info, Transition)` + `DeviceStateEventPublisher`（Bootstrapper 注册循环逐设备 Attach）；旧四事件并行不动（退役评估留 T5.x）；+2 单测总计 387 全绿。**阶段 3 收官** |
 | T4.1 | 2026-07-25 | `2f02c8d` | Tag 模型契约（按用户五条调整）：`TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`（Version 语义=最新值表写入时分配/直连为 0）+ `TagDefinition` 纯配置形状（**无 PollIntervalMs**，采集策略归 T4.4 采集配置；Address 为字符串配置、解析缓存归 Infra）+ `TagDataType` 扩展 11 型（Int64/UInt64/Double/ByteArray 预留非 PLC）+ `TagQuality` 三态/`TagAccess`；纯新增，+3 单测总计 390 全绿 |
 | T4.2 | 2026-07-25 | `4d231da` | 点表加载与校验（**A 快速失败**）：`IAddressValidator` 契约（语法留驱动）+ `ResolvedTag` 缓存 **Address Object**（不透明 object，ToString=规范化形）+ `TagTable`（JSON 加载、三项校验聚合抛出 `DeviceConfigurationException`/ErrorCode.CONFIG_INVALID）+ 三驱动薄验证器 + Bootstrapper 强制解析 + `tags.json` 示例；+7 单测总计 397 全绿 |
+| T4.3 | 2026-07-25 | `0cdb4f1` | `ITagService` 按点名读写：点名→设备+规范化地址（零解析开销）；通信失败返回 `Quality=Bad` 不抛异常（设备未连接快速失败、驱动异常捕获、类型不支持 Bad），编程错误抛 `ArgumentException`/`InvalidOperationException`；写仍经审计装饰器链；+11 单测总计 408 全绿 |
 
 ### 演进过程中发现的新问题（停车场）
 
