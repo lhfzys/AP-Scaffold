@@ -25,3 +25,10 @@ public class PrismDeviceDisconnectedEvent : PubSubEvent<DeviceDisconnectedEvent>
 public class PrismTagValueChangedEvent : PubSubEvent<TagValueChangedEvent>
 {
 }
+
+/// <summary>
+/// 设备状态迁移（Prism 桥接通道，UI 订阅）。
+/// </summary>
+public class PrismDeviceStateChangedEvent : PubSubEvent<DeviceStateChangedEvent>
+{
+}

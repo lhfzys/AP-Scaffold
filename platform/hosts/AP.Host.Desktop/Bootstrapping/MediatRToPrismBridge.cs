@@ -15,7 +15,8 @@ public class MediatRToPrismBridge :
     INotificationHandler<PlcDataChangedEvent>,
     INotificationHandler<ScanCompletedEvent>,
     INotificationHandler<DeviceDisconnectedEvent>,
-    INotificationHandler<AP.Contracts.Hardware.DeviceRuntime.TagValueChangedEvent>
+    INotificationHandler<AP.Contracts.Hardware.DeviceRuntime.TagValueChangedEvent>,
+    INotificationHandler<AP.Contracts.Hardware.DeviceRuntime.DeviceStateChangedEvent>
 {
     private readonly IEventAggregator _eventAggregator;
 
@@ -45,6 +46,12 @@ public class MediatRToPrismBridge :
     public Task Handle(AP.Contracts.Hardware.DeviceRuntime.TagValueChangedEvent notification, CancellationToken cancellationToken)
     {
         _eventAggregator.GetEvent<PrismTagValueChangedEvent>().Publish(notification);
+        return Task.CompletedTask;
+    }
+
+    public Task Handle(AP.Contracts.Hardware.DeviceRuntime.DeviceStateChangedEvent notification, CancellationToken cancellationToken)
+    {
+        _eventAggregator.GetEvent<PrismDeviceStateChangedEvent>().Publish(notification);
         return Task.CompletedTask;
     }
 }
