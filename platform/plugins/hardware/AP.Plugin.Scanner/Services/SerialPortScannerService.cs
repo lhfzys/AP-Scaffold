@@ -185,7 +185,7 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
     }
 
     /// <summary>
-    /// 在锁内安全关闭串口（忽略异常）
+    /// 在锁内安全关闭串口（有界等待：Close 为无界同步调用，超过 2 秒放弃等待直接继续；忽略异常）
     /// </summary>
     private void SafeClosePort()
     {
@@ -194,7 +194,7 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
             try
             {
                 if (_serialPort.IsOpen)
-                    _serialPort.Close();
+                    Task.Run(() => _serialPort.Close()).Wait(TimeSpan.FromSeconds(2));
             }
             catch (Exception ex)
             {
@@ -334,7 +334,7 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
             _barcodeChannel?.Writer.TryComplete();
 
             if (_serialPort.IsOpen)
-                _serialPort.Close();
+                Task.Run(() => _serialPort.Close()).Wait(TimeSpan.FromSeconds(2));
 
             _serialPort.Dispose();
             _processCts?.Dispose();

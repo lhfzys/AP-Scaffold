@@ -123,14 +123,15 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice
     }
 
     /// <summary>
-    /// 安全关闭并释放客户端
+    /// 安全关闭并释放客户端（有界等待：Close 为无界同步调用，曾阻塞关闭流程；
+    /// 超过 2 秒放弃等待直接继续——被放弃的线程仅做关闭动作，放弃是安全的）
     /// </summary>
     private static void SafeCloseClient(MitsubishiClient? client)
     {
         if (client == null) return;
         try
         {
-            client.Close();
+            Task.Run(() => client.Close()).Wait(TimeSpan.FromSeconds(2));
         }
         catch
         {

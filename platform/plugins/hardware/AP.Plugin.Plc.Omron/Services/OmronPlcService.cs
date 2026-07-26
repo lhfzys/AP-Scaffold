@@ -118,10 +118,13 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice
             _options.Timeout > 0 ? _options.Timeout : 1500);
     }
 
+    /// <summary>
+    /// 安全关闭并释放客户端（有界等待：Close 为无界同步调用，超过 2 秒放弃等待直接继续）
+    /// </summary>
     private static void SafeCloseClient(OmronFinsClient? client)
     {
         if (client == null) return;
-        try { client.Close(); }
+        try { Task.Run(() => client.Close()).Wait(TimeSpan.FromSeconds(2)); }
         catch { /* 关闭时可能已断开，忽略 */ }
     }
 
