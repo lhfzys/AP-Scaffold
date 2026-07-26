@@ -50,7 +50,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | 项目 | 说明 |
 |------|------|
 | `AP.Contracts.Core` | `OperationResult<T>`、错误模型（`ErrorCode`、`PlatformException`）、`AppInitializedEvent`（Prism PubSubEvent） |
-| `AP.Contracts.Hardware` | 硬件服务接口（`IPlcService`、`IPlcBatchReadWrite`、`IScannerService`、`IPlcDriverFactory`）、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR record + Prism 桥接事件）、`ConnectDeviceCommand` |
+| `AP.Contracts.Hardware` | 硬件服务接口（`IPlcService`、`IPlcBatchReadWrite`、`IScannerService`、`IPlcDriverFactory`）、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR record + Prism 桥接事件）、`ConnectDeviceCommand`；**DeviceRuntime/**（2026-07-25 起）：`IDevice`/`IDeviceRegistry`/`IDeviceStateChangedEvent` 等设备抽象、`TagDefinition`/`TagValue`/`ITagService`/`ITagTable`/`IAddressValidator` 等 Tag 契约、`DeviceConnectionState` 六态枚举 |
 | `AP.Contracts.Communication` | 仅 proto 文件（`automation_gate.proto`、`common.proto`），`AutomationGate` 服务（`StreamPlcData` 服务端流 + `Heartbeat`） |
 | `AP.Contracts.System` | 系统服务接口（`ILoginService`、`ISettingsDialogService`、`ISystemMonitorService`）、`SystemMetrics` |
 | `AP.Contracts.Security` | 安全/权限契约：`IIdentityService`、`IUserRepository`、`IRoleRepository`、`IPermissionRepository`、`IPasswordHasher`、`ISecurityDbInitializer`、审计 `IAuditService` / `AuditLogEntry` / `AuditActionType`、用户/角色/权限模型 |
@@ -63,7 +63,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 |------|------|
 | `AP.Infra.Database` | `AddPlatformDatabase(config, appRole)`：FreeSql 配置（`UseAutoSyncStructure(false)`）、SQLite 启动前自动备份 + WAL 优化、`IRepository<T>` / `FreeSqlRepository<T>`、`BaseEntity` |
 | `AP.Infra.Grpc` | `GrpcGateService`（proto 生成基类实现）、`StreamBroadcaster`（Channel 背压广播）、`GrpcClientWorker`、`GrpcChannelFactory`、`LoggingInterceptor` |
-| `AP.Infra.Hardware` | `AddPlcHardware`：`PlcDriverRegistry`（按 DriverType 索引工厂）+ `ActivePlcService`（懒加载代理，统一 `IPlcService`） |
+| `AP.Infra.Hardware` | `AddPlcHardware`：`PlcDriverRegistry`（按 DriverType 索引工厂）+ `ActivePlcService`（懒加载代理，统一 `IPlcService`）；**DeviceRuntime/**（2026-07-25 起）：`DeviceConnectionStateMachine`、`ConnectionSupervisor`（全部硬件共享的连接监督器）、`DeviceRegistry`、`PlcDeviceAdapter`、`TagTable`（点表加载/快速失败校验）、`TagService`（按点名读写）、`TagAcquisitionEngine`（采集引擎）、`LatestTagValueStore`（最新值表）、事件发布器 |
 | `AP.Infra.Logging` | Serilog 配置（控制台 + 按天滚动文件，含 MachineName/ThreadId/ProcessId 增强器）、`LogCleanupHelper`（启动时清理过期日志） |
 | `AP.Infra.Resilience` | `ResiliencePipelineFactory`（Keys：`Database-Retry` / `PLC-Retry` / `Grpc-CircuitBreaker`）、扁平配置键 `Resilience:*RetryCount` 等 |
 | `AP.Infra.Security` | 安全模块实现：用户/角色/权限 Repository、PBKDF2-SHA256 密码哈希（10 万次迭代）、`IdentityService` / `AnonymousIdentityService`、`AuditService` / `NullAuditService`、`SecurityDbInitializer`（12 权限 + 3 角色 + admin 种子数据） |
@@ -82,7 +82,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 | 插件 | Priority | 功能 | 导航菜单（Order/权限） | 视图注册门控 |
 |------|---------|------|----------------------|-------------|
-| `AP.Plugin.Layout` | 10 | 布局（Standard/SinglePage）、Sidebar、顶部状态栏、仪表盘 | 仪表板（100，无权限，IsDefault） | 无 |
+| `AP.Plugin.Layout` | 10 | 布局（Standard/SinglePage）、Sidebar、顶部状态栏、仪表盘（2026-07-26 起全部为真实数据） | 仪表板（100，无权限，IsDefault） | 无 |
 | `AP.Plugin.Login` | 1 | 登录窗口、强制改密、重新登录、登录/登出审计 | 无 | 无 |
 | `AP.Plugin.SystemSettings` | 5 | 系统配置中心（设置贡献者收集 + 统一保存/备份） | 系统配置（1000，`system.settings`） | 无 |
 | `AP.Plugin.UserManagement` | 5 | 用户列表、新增/编辑/删除/重置密码 | 用户管理（4000，`user.manage`） | `Security:Enabled` + `user.manage` |
@@ -101,9 +101,10 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 | 插件 | Priority | 角色 | 功能 |
 |------|---------|------|------|
-| `AP.Plugin.Plc.Mitsubishi` | 20 | Server\|Standalone | 三菱 MC 协议（IoTClient），注册 `IPlcDriverFactory`；看门狗 2 秒心跳 + 自动重连；读写 bool/short/ushort/int/uint/float；批量为循环单点 |
-| `AP.Plugin.Plc.Siemens` | 21 | Server\|Standalone | 西门子 S7 协议（IoTClient），注册 `IPlcDriverFactory`；看门狗 + 自动重连；额外支持 string；`BatchRead`/`BatchWrite` 真批量 |
-| `AP.Plugin.Scanner` | 20 | Client\|Standalone | 串口扫码枪（System.IO.Ports），DataReceived → Channel → MediatR `ScanCompletedEvent` |
+| `AP.Plugin.Plc.Mitsubishi` | 20 | Server\|Standalone | 三菱 MC 协议（IoTClient），注册 `IPlcDriverFactory`；连接管理经共享 `ConnectionSupervisor`（心跳 ReadInt16）；实现 `IDevice`；内置 `McAddress` 地址对象 + 地址验证器；读写 bool/short/ushort/int/uint/float；批量为循环单点 |
+| `AP.Plugin.Plc.Siemens` | 21 | Server\|Standalone | 西门子 S7 协议（IoTClient），注册 `IPlcDriverFactory`；连接管理经共享 `ConnectionSupervisor`（心跳 ReadBoolean）；实现 `IDevice`；内置 `S7Address` 地址对象 + 地址验证器；额外支持 string；`BatchRead`/`BatchWrite` 真批量（仅 Int16） |
+| `AP.Plugin.Plc.Omron` | 22 | Server\|Standalone | 欧姆龙 FINS/TCP（IoTClient），注册 `IPlcDriverFactory`；连接管理经共享 `ConnectionSupervisor`；实现 `IDevice`；内置 `FinsAddress` 地址对象 + 地址验证器；字符串不支持、批量写退化逐条 |
+| `AP.Plugin.Scanner` | 20 | Client\|Standalone | 串口扫码枪（System.IO.Ports），DataReceived → Channel → MediatR `ScanCompletedEvent`；实现 `IDevice`（重连经共享 `ConnectionSupervisor`；首开失败仍同步抛出——A 方案例外） |
 
 ### 8. 启动宿主 `platform/hosts/AP.Host.Desktop`
 
@@ -119,7 +120,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 |------|-------|--------------------------------|----------|
 | `AP.Core.Tests` | 9 | 130 | 状态机、生命周期、事件总线、插件框架、Capability |
 | `AP.Shared.Tests` | 4 | 48 | PluginBase、导航菜单构建器、序列化、配置更新 |
-| `AP.Infra.Tests` | 9 | 59 | 报表选项/实体、弹性策略选项、PLC 驱动注册表/激活服务、DB 仓储/PLC 审计装饰器/韧性注册 |
+| `AP.Infra.Tests` | 26 | 247 | 报表/弹性/DB 仓储/PLC 注册表与激活服务；**Device Runtime 全套**（连接状态机、监督器、桥接、设备注册表、适配器、点表、Tag 服务、采集引擎、最新值表、发布器）；**三品牌地址对象**（经 `InternalsVisibleTo` 测试插件 internal） |
 
 ---
 
@@ -138,10 +139,12 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | AP.Infra.Recipe / AP.Plugin.RecipeManagement | 骨架 | 配方 CRUD、版本、默认配方 UI 已有；切换联动业务待补 |
 | AP.Infra.Report / AP.Plugin.ReportCenter | 骨架 | 报表归档查询/生成/导出 UI 已有，数据提供者仅示例实现 |
 | AP.Plugin.DeviceConfiguration | 可用 | 扫码枪设置页完整（校验 + 写回配置） |
-| AP.Plugin.Plc.Mitsubishi / Siemens | 可用 | 硬件驱动实现较完整，通过 `IPlcDriverFactory` 统一切换 |
-| AP.Plugin.Scanner | 可用 | 硬件驱动实现较完整 |
+| Device Runtime Model（设备运行时） | 完善 | 六态状态机 + 统一连接监督器（全部硬件共享、测试覆盖）+ 设备抽象/注册表/统一状态事件（2026-07-25） |
+| Tag 系统 | 可用 | 点表校验/`ITagService`/采集引擎/最新值表/变化事件端到端贯通；点表目前为示例条目，批量合并待带类型批量契约（2026-07-25） |
+| AP.Plugin.Plc.Mitsubishi / Siemens / Omron | 完善 | 三品牌驱动统一：共享连接监督器 + `IDevice` + 地址对象/验证器（2026-07-25 重构） |
+| AP.Plugin.Scanner | 可用 | 重连已迁入统一监督器；首开失败保留同步抛出（A 方案例外） |
 | gRPC Server/Client | ❄ 冻结 | 已实现但范围外（Standalone 不启用）；不再投入验证与改进 |
-| Dashboard 仪表盘 | 骨架 | 欢迎页 UI 完整，统计数据为硬编码占位 |
+| Dashboard 仪表盘 | 可用 | 全部真实数据：设备状态/采集点/Tag 变化/真实事件流（2026-07-26） |
 
 ---
 
@@ -151,10 +154,12 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 近期（当前 Sprint）
 
+> **架构演进（2026-07-25/26）**：阶段 0~4 已全部完成——规范先行（错误处理/日志规范、三驱动日志清理、gRPC 封存标注）→ 连接监督收敛（`ConnectionSupervisor`，四套独立看门狗/重连全部消除）→ 地址对象化（`McAddress`/`S7Address`/`FinsAddress`+`IAddressValidator`）→ Device 抽象（`IDevice`/注册表/统一状态事件，PLC+扫码枪接入）→ Tag 系统（点表/按点名读写/采集引擎/最新值表/变化事件/Dashboard 真实数据）。任务清单、执行铁律与完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**；阶段 5（业务迁移与防线）待启动。
+
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
 1. **报表中心完善**
-   - [ ] 接入真实业务报表数据提供者（如设备运行日报）
+   - [ ] 接入真实业务报表数据提供者（如设备运行日报；Tag 系统已就绪，可直接经 `ITagService` 取数）
    - [x] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理（2026-07-22，`5c98faf`）
    - [ ] 报表模板化支持验证、手动生成/补档端到端测试
 
@@ -181,12 +186,12 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 - [x] 韧性管道接线（DB 操作接 `Database-Retry`；2026-07-22 完成，含移除误导性 Empty 注册）
 - [x] `IReportDataProvider` 移至契约层（2026-07-22 完成；`AP.Contracts` 前缀强制共享保证类型标识，首个真实 Provider 落地时做端到端验证）
 - [x] PLC 写操作审计 + 配置修改审计 + 审计拦截器化（2026-07-22 完成：`AuditingPlcServiceDecorator` + `SettingsService` 审计）
-- [x] PLC 看门狗监督重启 + Scanner 断线重连（2026-07-22 完成，真机验证待现场）
+- [x] PLC 看门狗监督重启 + Scanner 断线重连（2026-07-22 完成；2026-07-25 进一步统一为共享 `ConnectionSupervisor`，真机验证待现场）
 - [x] 托盘重启单实例 Mutex（2026-07-22 完成）
 - [x] 仓库示例连接串占位符化（2026-07-22 完成，3d0dd97）
 - [x] UI 一致性五批次（2026-07-22 完成：Dashboard 移除快捷入口、编辑窗 Owner 居中、视图级权限防线统一、LoadingSpinner 浅色遮罩收敛+补齐忙碌反馈、DataGrid 全局样式收敛；Splash 深色保留并移除英文公司行）
 - [x] UI 一致性第二批次（2026-07-24 完成：DataGrid 单元格模板覆写垂直居中——MD 原模板不消费 `VerticalContentAlignment`；`RaisedButton.Primary` 深蓝底白字按钮替换 14 处 Raised 引用；Header 用户区随 `Security:Enabled` 显隐；配方「更新时间」列加宽）
-- [ ] Dashboard 接入真实统计数据（在线设备、今日事件等）
+- [x] Dashboard 接入真实统计数据（2026-07-26，T4.6：在线设备=设备注册表、采集点=点表+引擎、今日变化=Tag 变化计数、最近事件=真实事件流）
 - [ ] （可选）列表页 CRUD 交互统一（Recipe 行内按钮 vs User/Role 工具栏）；SettingsShell 补页头标题；AuditLog/Report 工具栏补刷新按钮
 - [x] 欧姆龙 PLC 协议支持（2026-07-24 完成：`AP.Plugin.Plc.Omron`，FINS/TCP；字符串读写不支持抛 NotSupportedException、批量写退化为逐条写入）
 
@@ -222,9 +227,9 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
    - 表清单：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`、`recipes`、`report_archives`。
 
 4. **PLC 品牌切换机制**
-   - 统一通过 `Plc` 配置节（`Plc:DriverType` 等）切换三菱/西门子，三菱/西门子插件只注册 `IPlcDriverFactory`。
+   - 统一通过 `Plc` 配置节（`Plc:DriverType` 等）切换三菱/西门子/欧姆龙，各品牌插件只注册 `IPlcDriverFactory`。
    - `ActivePlcService` 懒加载代理按 DriverType 转发；驱动不支持批量时抛 `NotSupportedException`。
-   - 系统设置中的 PLC 配置页编辑同一 `Plc` 节，保存后需重启。
+   - 系统设置中的 PLC 配置页编辑同一 `Plc` 节（含心跳/重连/监督重启三项连接参数），保存后需重启。
 
 5. **安全模块可关闭（当前默认关闭）**
    - 随附配置默认 `Security:Enabled=false`（2026-07-22 起）：跳过登录窗口、注入匿名身份（全部权限），Sidebar 按 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单过滤菜单。
@@ -247,6 +252,12 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 9. **配置文件大小写**
    - `appsettings.server.json` 文件名是小写 server（Linux 上与 `appsettings.Server.json` 不匹配；Windows 无碍）。
 
+10. **Device Runtime / Tag 系统（2026-07-25/26 落地）**
+    - 连接状态唯一事实来源是 `DeviceConnectionStateMachine`（六态）；全部硬件共享 `ConnectionSupervisor`，新设备/新品牌**不允许再写独立看门狗**。
+    - 业务按逻辑点名读写（`ITagService`），点名→设备+地址在 `Configuration/tags.json` 点表配置；点表非法即**中止启动**（快速失败），这是有意策略。
+    - 启动时序约束：**设备注册与点表加载必须先于插件初始化**（Bootstrapper 1.0/1.1 段）——视图在插件初始化时即可能解析 `ITagTable`（2026-07-26 踩坑修复）。
+    - 驱动 internal 地址对象经 `InternalsVisibleTo` 对 `AP.Infra.Tests` 开放测试（测试项目 TFM 为 `net8.0-windows`）。
+
 ---
 
-**最后更新**: 2026-07-24
+**最后更新**: 2026-07-26
