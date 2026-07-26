@@ -52,6 +52,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IDeviceRegistry>(),
             sp.GetServices<IAddressValidator>(),
             Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json")));
+        // Tag 服务：业务按点名读写的唯一入口
+        services.AddSingleton<ITagService, TagService>();
         return services;
     }
 }
