@@ -317,6 +317,7 @@ Tests → 被测项目
 | T4.3 | 2026-07-25 | `0cdb4f1` | `ITagService` 按点名读写：点名→设备+规范化地址（零解析开销）；通信失败返回 `Quality=Bad` 不抛异常（设备未连接快速失败、驱动异常捕获、类型不支持 Bad），编程错误抛 `ArgumentException`/`InvalidOperationException`；写仍经审计装饰器链；+11 单测总计 408 全绿 |
 | T4.4 | 2026-07-25 | `f5ee39d` | 采集引擎（**方案 A 按点逐个读取**，批量合并待带类型批量契约后单独立项——已记入停车场）：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点、单点异常不炸组）+ `LatestTagValueStore`（Version 按点递增、变化=值或质量戳变化）+ `TagAcquisitionConfig`（tags.json `Acquisition` 节，默认 1000ms+按点覆盖）+ Bootstrapper 启动/停止接线；+14 单测总计 422 全绿 |
 | T4.5 | 2026-07-25 | `bef343d` | `TagValueChangedEvent` + `TagValueChangedPublisher`（仅 Changed 发布）+ Prism 桥接（`PrismTagValueChangedEvent`，MediatRToPrismBridge 第四通道）；Bootstrapper Attach；+3 单测总计 425 全绿 |
+| T4.6 | 2026-07-25 | `f1b098c` | Dashboard 全部真实数据：在线设备=注册表实时（在线/总数）、活跃用户卡→采集点卡（点数+引擎状态）、今日事件卡→今日变化（Tag 变化计数）、RecentEvents=真实事件流（设备状态/Tag 变化/扫码，封顶 10 条）；占位数据与 TODO(sample) 清零；Host 桥接第五通道 `PrismDeviceStateChangedEvent`；425 测试全绿，端到端人工验证待现场。**阶段 4 收官** |
 
 ### 演进过程中发现的新问题（停车场）
 
