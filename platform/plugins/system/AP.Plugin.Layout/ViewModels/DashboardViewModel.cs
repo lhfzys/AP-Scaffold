@@ -125,12 +125,18 @@ public partial class DashboardViewModel : ViewModelBase
         _ => state.ToString(),
     };
 
+    /// <summary>
+    /// 在 UI 线程执行事件处理。必须用 BeginInvoke（火忘排队）：
+    /// 事件经由"驱动 Transitioned → MediatR.Publish 同步前缀 → Prism"在发布方线程同步触达本方法，
+    /// 若用 Invoke 同步等待 UI，关闭流程中 UI 线程阻塞于 OnExit 等待关闭任务时会形成双向等待死锁
+    /// （2026-07-26 优雅关闭卡死的真实根因）。
+    /// </summary>
     private static void RunOnUi(Action action)
     {
         if (Application.Current?.Dispatcher.CheckAccess() == true)
             action();
         else
-            Application.Current?.Dispatcher.Invoke(action);
+            Application.Current?.Dispatcher.BeginInvoke(action);
     }
 
     private void RefreshGreeting()
