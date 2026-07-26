@@ -382,21 +382,9 @@ public class Bootstrapper : PrismBootstrapper
 
                 UpdateSplashStatus("正在初始化插件...", 50);
 
-                // --- 1. 初始化并启动插件（通过生命周期管理器，带状态机跟踪） ---
-                await _lifecycleManager!.InitializePluginsAsync(container);
-                await _lifecycleManager.StartPluginsAsync();
-
-                // --- 1.1 Required 插件初始化/启动失败时中止启动 ---
-                var requiredFailed = _lifecycleManager.GetFailedPlugins()
-                    .Where(p => p.Metadata.Required)
-                    .Select(p => $"必需插件 {p.Metadata.Name} 初始化/启动失败")
-                    .ToList();
-                if (requiredFailed.Count > 0)
-                    AbortStartup("必需插件启动失败，系统无法启动", requiredFailed);
-
-                UpdateSplashStatus("正在启动服务...", 75);
-
-                // --- 2. 设备注册：全部 IDevice 单例登记进设备注册表，并挂接统一状态事件发布（Device Runtime Model） ---
+                // --- 1.0 设备注册：全部 IDevice 单例登记进设备注册表，并挂接统一状态事件发布（Device Runtime Model）。
+                // 必须先于插件初始化：视图（如 Dashboard）在插件初始化/Region 创建时即可能解析 ITagTable，
+                // 而点表校验依赖注册表已填充（2026-07-26 时序缺陷修复）。
                 try
                 {
                     var deviceRegistry = container.GetService<AP.Contracts.Hardware.DeviceRuntime.IDeviceRegistry>();
@@ -416,8 +404,22 @@ public class Bootstrapper : PrismBootstrapper
                     Log.Error(ex, "设备注册失败");
                 }
 
-                // --- 3. 点表加载（快速失败：点表非法中止启动，DeviceConfigurationException 如实上抛） ---
+                // --- 1.1 点表加载（快速失败：点表非法中止启动，DeviceConfigurationException 如实上抛） ---
                 _ = container.GetService<AP.Contracts.Hardware.DeviceRuntime.ITagTable>();
+
+                // --- 1. 初始化并启动插件（通过生命周期管理器，带状态机跟踪） ---
+                await _lifecycleManager!.InitializePluginsAsync(container);
+                await _lifecycleManager.StartPluginsAsync();
+
+                // --- 1.1 Required 插件初始化/启动失败时中止启动 ---
+                var requiredFailed = _lifecycleManager.GetFailedPlugins()
+                    .Where(p => p.Metadata.Required)
+                    .Select(p => $"必需插件 {p.Metadata.Name} 初始化/启动失败")
+                    .ToList();
+                if (requiredFailed.Count > 0)
+                    AbortStartup("必需插件启动失败，系统无法启动", requiredFailed);
+
+                UpdateSplashStatus("正在启动服务...", 75);
 
                 // --- 3.1 启动 Tag 采集引擎（轮询点表写入最新值表），并挂接变化发布（变化才通知） ---
                 var acquisitionEngine = container.GetService<AP.Infra.Hardware.DeviceRuntime.TagAcquisitionEngine>();
