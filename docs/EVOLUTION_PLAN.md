@@ -315,12 +315,14 @@ Tests → 被测项目
 | T4.1 | 2026-07-25 | `2f02c8d` | Tag 模型契约（按用户五条调整）：`TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`（Version 语义=最新值表写入时分配/直连为 0）+ `TagDefinition` 纯配置形状（**无 PollIntervalMs**，采集策略归 T4.4 采集配置；Address 为字符串配置、解析缓存归 Infra）+ `TagDataType` 扩展 11 型（Int64/UInt64/Double/ByteArray 预留非 PLC）+ `TagQuality` 三态/`TagAccess`；纯新增，+3 单测总计 390 全绿 |
 | T4.2 | 2026-07-25 | `4d231da` | 点表加载与校验（**A 快速失败**）：`IAddressValidator` 契约（语法留驱动）+ `ResolvedTag` 缓存 **Address Object**（不透明 object，ToString=规范化形）+ `TagTable`（JSON 加载、三项校验聚合抛出 `DeviceConfigurationException`/ErrorCode.CONFIG_INVALID）+ 三驱动薄验证器 + Bootstrapper 强制解析 + `tags.json` 示例；+7 单测总计 397 全绿 |
 | T4.3 | 2026-07-25 | `0cdb4f1` | `ITagService` 按点名读写：点名→设备+规范化地址（零解析开销）；通信失败返回 `Quality=Bad` 不抛异常（设备未连接快速失败、驱动异常捕获、类型不支持 Bad），编程错误抛 `ArgumentException`/`InvalidOperationException`；写仍经审计装饰器链；+11 单测总计 408 全绿 |
+| T4.4 | 2026-07-25 | `f5ee39d` | 采集引擎（**方案 A 按点逐个读取**，批量合并待带类型批量契约后单独立项——已记入停车场）：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点、单点异常不炸组）+ `LatestTagValueStore`（Version 按点递增、变化=值或质量戳变化）+ `TagAcquisitionConfig`（tags.json `Acquisition` 节，默认 1000ms+按点覆盖）+ Bootstrapper 启动/停止接线；+14 单测总计 422 全绿 |
 
 ### 演进过程中发现的新问题（停车场）
 
 > 执行中发现的、不属于当前 Task 的问题记录在此，另行立项，不顺手修改。
 
-- （暂无）
+- `IPlcBatchReadWrite` 语义统一为**带类型的批量契约**（当前三驱动只支持全 Int16 批量，S3 语义分裂）；落地后采集引擎接入批量合并（T4.4 已预留，方案 A 先行）。
+- 设备掉线/恢复是否进审计日志（合规视角的独立议题，T3.5 时暂缓）。
 
 ---
 
