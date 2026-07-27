@@ -33,8 +33,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ReportService>();
         services.AddSingleton<IReportCenterService, ReportCenterService>();
 
-        // 注册示例报表数据提供者（骨架演示用）
-        services.AddReportDataProvider<SampleReportDataProvider>();
+        // 注册报表数据提供者：操作审计日报（真实数据源：审计日志）。
+        // SampleReportDataProvider 保留作开发参考（不注册，假数据不上产品界面）。
+        services.AddReportDataProvider<AuditDailyReportProvider>();
 
         // 注册后台服务（宿主不自动启动 IHostedService，由 Bootstrapper 显式解析启动；
         // 单例 + 转发注册，保证解析到同一实例）

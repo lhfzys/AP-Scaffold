@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\contracts\AP.Contracts.Report\AP.Contracts.Report.csproj" />
+    <ProjectReference Include="..\..\contracts\AP.Contracts.Security\AP.Contracts.Security.csproj" />
     <ProjectReference Include="..\..\core\AP.Core\AP.Core.csproj" />
     <ProjectReference Include="..\..\shared\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
   </ItemGroup>

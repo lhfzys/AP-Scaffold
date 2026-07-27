@@ -5,7 +5,8 @@ namespace AP.Infra.Report.Reporting;
 
 /// <summary>
 /// 示例报表数据提供者
-/// 用于报表中心骨架演示，后续可由业务插件替换为真实数据提供者
+/// 仅作开发参考（展示 IReportDataProvider 的实现方式），不在 DI 注册；
+/// 生产环境使用 AuditDailyReportProvider（审计日报）及后续业务提供者。
 /// </summary>
 public class SampleReportDataProvider : IReportDataProvider
 {
