@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,8 +8,5 @@
 
   <ItemGroup>
     <PackageReference Include="Prism.Core" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\core\AP.Core\AP.Core.csproj" />
   </ItemGroup>
 </Project>
