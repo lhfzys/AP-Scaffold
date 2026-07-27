@@ -26,8 +26,10 @@ public sealed class TagPolledEventArgs : EventArgs
 }
 
 /// <summary>
-/// Tag 采集引擎：按采集配置的生效间隔分组轮询点表（只读点跳过只写点），
-/// 结果写入最新值表。按点逐个读取（批量合并待带类型的批量契约落地后单独立项接入）。
+/// Tag 采集引擎：按采集配置的生效间隔分组轮询点表（只写点跳过），结果写入最新值表。
+/// PLC 设备且在线时优先**带类型批量读**（每周期一次往返）；
+/// 驱动不支持批量 → 永久降级逐点；整批失败 → 本轮降级逐点（部分坏点不拖死整组）；
+/// 设备未连接 → 直接逐点（TagService 快速返回 Bad，不在注定失败的批量上空等重试）。
 /// 只写最新值表，不发布事件——变化通知是 T4.5 的职责（经 <see cref="TagPolled"/> 钩子）。
 /// </summary>
 public sealed class TagAcquisitionEngine : IDisposable
@@ -35,23 +37,30 @@ public sealed class TagAcquisitionEngine : IDisposable
     private readonly ITagTable _tagTable;
     private readonly TagAcquisitionConfig _config;
     private readonly ITagService _tagService;
+    private readonly IPlcTypedBatchRead _typedBatchRead;
+    private readonly IDeviceRegistry _deviceRegistry;
     private readonly LatestTagValueStore _store;
-    private readonly Microsoft.Extensions.Logging.ILogger<TagAcquisitionEngine> _logger;
+    private readonly ILogger<TagAcquisitionEngine> _logger;
 
     private readonly object _lifecycleGate = new();
     private CancellationTokenSource? _cts;
     private List<Task> _loops = [];
+    private volatile bool _batchDisabled;
 
     public TagAcquisitionEngine(
         ITagTable tagTable,
         TagAcquisitionConfig config,
         ITagService tagService,
+        IPlcTypedBatchRead typedBatchRead,
+        IDeviceRegistry deviceRegistry,
         LatestTagValueStore store,
-        Microsoft.Extensions.Logging.ILogger<TagAcquisitionEngine> logger)
+        ILogger<TagAcquisitionEngine> logger)
     {
         _tagTable = tagTable;
         _config = config;
         _tagService = tagService;
+        _typedBatchRead = typedBatchRead;
+        _deviceRegistry = deviceRegistry;
         _store = store;
         _logger = logger;
     }
@@ -73,7 +82,8 @@ public sealed class TagAcquisitionEngine : IDisposable
             // 只写点不参与轮询；按生效间隔分组，每组一个周期循环
             var groups = _tagTable.Tags
                 .Where(t => t.Definition.Access != TagAccess.WriteOnly)
-                .GroupBy(t => _config.GetIntervalMs(t.Definition.Name));
+                .GroupBy(t => _config.GetIntervalMs(t.Definition.Name))
+                .ToList();
 
             foreach (var group in groups)
             {
@@ -83,7 +93,7 @@ public sealed class TagAcquisitionEngine : IDisposable
             }
 
             _logger.LogInformation("Tag 采集引擎已启动: {TagCount} 个点 / {GroupCount} 个采集组",
-                _loops.Count == 0 ? 0 : groups.Sum(g => g.Count()), _loops.Count);
+                groups.Sum(g => g.Count()), _loops.Count);
         }
     }
 
@@ -118,28 +128,92 @@ public sealed class TagAcquisitionEngine : IDisposable
         // 启动即先采一轮，之后按周期采集
         do
         {
-            foreach (var tag in tags)
-            {
-                if (ct.IsCancellationRequested) return;
-                try
-                {
-                    var value = await _tagService.ReadAsync(tag.Definition.Name, ct);
-                    var (stored, changed) = _store.Update(
-                        tag.Definition.Name, value.Value, value.Quality, value.Error);
-                    TagPolled?.Invoke(this, new TagPolledEventArgs(tag.Definition.Name, stored, changed));
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    // 单点异常不影响整组采集（TagService 通信失败已返回 Bad，此处兜底意外）
-                    _logger.LogWarning(ex, "Tag 采集异常: {Tag}", tag.Definition.Name);
-                }
-            }
+            if (ct.IsCancellationRequested) return;
+            await PollOnceAsync(tags, ct);
         }
         while (await timer.WaitForNextTickAsync(ct));
+    }
+
+    /// <summary>一轮采集：在线 PLC 点优先批量，其余逐点。</summary>
+    private async Task PollOnceAsync(List<ResolvedTag> tags, CancellationToken ct)
+    {
+        var batchCandidates = new List<ResolvedTag>();
+        var individual = new List<ResolvedTag>();
+
+        foreach (var tag in tags)
+        {
+            var device = _deviceRegistry.Find(tag.Definition.DeviceId);
+            if (!_batchDisabled && device is { Info.Type: DeviceType.Plc }
+                && device.State == DeviceConnectionState.Connected)
+                batchCandidates.Add(tag);
+            else
+                individual.Add(tag);
+        }
+
+        if (batchCandidates.Count > 0)
+        {
+            try
+            {
+                var items = batchCandidates
+                    .Select(t => new BatchReadItem(t.NormalizedAddress, t.Definition.DataType))
+                    .ToList();
+                var values = await _typedBatchRead.ReadBatchAsync(items, ct);
+
+                foreach (var tag in batchCandidates)
+                {
+                    if (values.TryGetValue(tag.NormalizedAddress, out var value))
+                        Publish(tag.Definition.Name, value, TagQuality.Good, null);
+                    else
+                        Publish(tag.Definition.Name, null, TagQuality.Bad, "批量结果缺少该地址");
+                }
+            }
+            catch (NotSupportedException)
+            {
+                _batchDisabled = true;
+                _logger.LogInformation("当前 PLC 驱动不支持带类型批量读取，采集降级为逐点读取");
+                individual.AddRange(batchCandidates);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Tag 批量读取失败，本轮降级为逐点读取");
+                individual.AddRange(batchCandidates);
+            }
+        }
+
+        foreach (var tag in individual)
+        {
+            if (ct.IsCancellationRequested) return;
+            await PollSingleAsync(tag, ct);
+        }
+    }
+
+    private async Task PollSingleAsync(ResolvedTag tag, CancellationToken ct)
+    {
+        try
+        {
+            var value = await _tagService.ReadAsync(tag.Definition.Name, ct);
+            Publish(tag.Definition.Name, value.Value, value.Quality, value.Error);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 单点异常不影响整组采集（TagService 通信失败已返回 Bad，此处兜底意外）
+            _logger.LogWarning(ex, "Tag 采集异常: {Tag}", tag.Definition.Name);
+        }
+    }
+
+    /// <summary>写入最新值表并触发采集完成钩子。</summary>
+    private void Publish(string name, object? value, TagQuality quality, string? error)
+    {
+        var (stored, changed) = _store.Update(name, value, quality, error);
+        TagPolled?.Invoke(this, new TagPolledEventArgs(name, stored, changed));
     }
 
     public void Dispose() => Stop();

@@ -25,7 +25,7 @@ public class TagAcquisitionEngineTests
     [Fact]
     public async Task WriteOnlyTags_AreSkipped()
     {
-        var (engine, store, tagService) = Create(
+        var (engine, store, fakes) = Create(
             [Tag("T1"), Tag("T2", TagAccess.WriteOnly)], intervalMs: 20);
 
         engine.Start();
@@ -33,14 +33,14 @@ public class TagAcquisitionEngineTests
         await Task.Delay(150);
 
         store.Get("T2").Should().BeNull();
-        tagService.ReadNames.Should().NotContain("T2");
+        fakes.TagService.ReadNames.Should().NotContain("T2");
         engine.Dispose();
     }
 
     [Fact]
     public async Task TagPolled_FiresWithChangedFlag()
     {
-        var (engine, _, _) = Create([Tag("T1")], intervalMs: 20);
+        var (engine, store, _) = Create([Tag("T1")], intervalMs: 20);
         var events = new List<TagPolledEventArgs>();
         engine.TagPolled += (_, args) => events.Add(args);
 
@@ -56,8 +56,8 @@ public class TagAcquisitionEngineTests
     [Fact]
     public async Task BadValues_AreWrittenToStore()
     {
-        var (engine, store, tagService) = Create([Tag("T1")], intervalMs: 20);
-        tagService.Responder = _ => TagValue.Bad("设备未连接");
+        var (engine, store, fakes) = Create([Tag("T1")], intervalMs: 20);
+        fakes.TagService.Responder = _ => TagValue.Bad("设备未连接");
 
         engine.Start();
         await WaitUntilAsync(() => store.Get("T1") != null, "Bad 值也应写入最新值表");
@@ -70,16 +70,16 @@ public class TagAcquisitionEngineTests
     [Fact]
     public async Task Stop_StopsPolling()
     {
-        var (engine, _, tagService) = Create([Tag("T1")], intervalMs: 20);
+        var (engine, _, fakes) = Create([Tag("T1")], intervalMs: 20);
 
         engine.Start();
-        await WaitUntilAsync(() => tagService.ReadNames.Count >= 1, "应已开始采集");
+        await WaitUntilAsync(() => fakes.TagService.ReadNames.Count >= 1, "应已开始采集");
         engine.Stop();
 
-        var countAfterStop = tagService.ReadNames.Count;
+        var countAfterStop = fakes.TagService.ReadNames.Count;
         await Task.Delay(150);
 
-        tagService.ReadNames.Count.Should().Be(countAfterStop);
+        fakes.TagService.ReadNames.Count.Should().Be(countAfterStop);
         engine.IsRunning.Should().BeFalse();
     }
 
@@ -97,28 +97,121 @@ public class TagAcquisitionEngineTests
         await Task.CompletedTask;
     }
 
-    // --- 测试基础设施 ---
+    // --- TP3：批量合并读 ---
 
-    private static (TagAcquisitionEngine Engine, LatestTagValueStore Store, FakeTagService TagService) Create(
-        ResolvedTag[] tags, int intervalMs)
+    [Fact]
+    public async Task ConnectedPlc_UsesTypedBatchRead_OncePerCycle()
     {
-        var table = new FakeTagTable(tags);
-        var tagService = new FakeTagService();
-        var store = new LatestTagValueStore();
-        var engine = new TagAcquisitionEngine(
-            table,
-            new TagAcquisitionConfig { DefaultIntervalMs = intervalMs },
-            tagService,
-            store,
-            Substitute.For<ILogger<TagAcquisitionEngine>>());
-        return (engine, store, tagService);
+        var (engine, store, fakes) = Create([Tag("T1"), Tag("T2")], intervalMs: 20, plcConnected: true);
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1")?.Version >= 2, "应批量采集");
+
+        fakes.TypedBatch.CallCount.Should().BeGreaterThan(0);
+        fakes.TagService.ReadNames.Should().BeEmpty(); // 在线 PLC 不走逐点
+        store.Get("T1")!.Value.Should().Be((short)42);
+        engine.Dispose();
     }
 
-    private static ResolvedTag Tag(string name, TagAccess access = TagAccess.ReadWrite)
+    [Fact]
+    public async Task BatchResultMissingAddress_WritesBad()
     {
+        var (engine, store, fakes) = Create([Tag("T1"), Tag("T2")], intervalMs: 20, plcConnected: true);
+        // 批量成功但缺 T2(D1) 的结果
+        fakes.TypedBatch.Responder = items =>
+        {
+            var dict = new Dictionary<string, object> { ["D0"] = (short)42 }; // 只有 D0(T1)，缺 D1(T2)
+            return Task.FromResult(dict);
+        };
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T2") != null, "T2 应被写入");
+
+        store.Get("T1")!.Quality.Should().Be(TagQuality.Good);
+        store.Get("T2")!.Quality.Should().Be(TagQuality.Bad);
+        store.Get("T2")!.Error.Should().Contain("缺少");
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task BatchFailure_FallsBackToIndividualThisCycle()
+    {
+        var (engine, store, fakes) = Create([Tag("T1")], intervalMs: 20, plcConnected: true);
+        fakes.TypedBatch.Responder = _ => throw new Exception("批量失败");
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1") != null, "降级后逐点应采集到值");
+
+        fakes.TypedBatch.CallCount.Should().BeGreaterThan(0);      // 尝试过批量
+        fakes.TagService.ReadNames.Should().Contain("T1");          // 本轮降级逐点
+        store.Get("T1")!.Value.Should().Be((short)42);
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task NotSupportedBatch_PermanentlyFallsBack()
+    {
+        var (engine, store, fakes) = Create([Tag("T1")], intervalMs: 20, plcConnected: true);
+        fakes.TypedBatch.Responder = _ => throw new NotSupportedException("不支持批量");
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1")?.Version >= 3, "应持续逐点采集");
+        await Task.Delay(100);
+
+        fakes.TypedBatch.CallCount.Should().Be(1); // 只尝试一次批量便永久降级
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task DisconnectedDevice_SkipsBatch_GoesIndividual()
+    {
+        var (engine, store, fakes) = Create([Tag("T1")], intervalMs: 20, plcConnected: false);
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1") != null, "应逐点采集");
+
+        fakes.TypedBatch.CallCount.Should().Be(0); // 未连接不尝试批量
+        fakes.TagService.ReadNames.Should().Contain("T1");
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task NonPlcDevice_GoesIndividual()
+    {
+        var (engine, store, fakes) = Create([Tag("T1", deviceId: "scanner.com3")], intervalMs: 20,
+            plcConnected: true, deviceType: DeviceType.Scanner);
+
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1") != null, "应逐点采集");
+
+        fakes.TypedBatch.CallCount.Should().Be(0);
+        engine.Dispose();
+    }
+
+    // --- 测试基础设施 ---
+
+    private static (TagAcquisitionEngine Engine, LatestTagValueStore Store, Fakes Fakes) Create(
+        ResolvedTag[] tags, int intervalMs, bool plcConnected = false, DeviceType deviceType = DeviceType.Plc)
+    {
+        var fakes = new Fakes(deviceType, plcConnected);
+        var store = new LatestTagValueStore();
+        var engine = new TagAcquisitionEngine(
+            new FakeTagTable(tags),
+            new TagAcquisitionConfig { DefaultIntervalMs = intervalMs },
+            fakes.TagService,
+            fakes.TypedBatch,
+            fakes.Registry,
+            store,
+            Substitute.For<ILogger<TagAcquisitionEngine>>());
+        return (engine, store, fakes);
+    }
+
+    private static ResolvedTag Tag(string name, TagAccess access = TagAccess.ReadWrite, string deviceId = "plc.main")
+    {
+        var address = name == "T2" ? "D1" : "D0";
         return new ResolvedTag(
-            new TagDefinition { Name = name, DeviceId = "plc.main", Address = "D0", DataType = TagDataType.Int16, Access = access },
-            new FakeParsedAddress("D0"));
+            new TagDefinition { Name = name, DeviceId = deviceId, Address = address, DataType = TagDataType.Int16, Access = access },
+            new FakeParsedAddress(address));
     }
 
     private sealed record FakeParsedAddress(string Address)
@@ -131,6 +224,25 @@ public class TagAcquisitionEngineTests
         public IReadOnlyCollection<ResolvedTag> Tags => tags;
         public ResolvedTag? Find(string name) =>
             tags.FirstOrDefault(t => string.Equals(t.Definition.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class Fakes
+    {
+        public Fakes(DeviceType deviceType, bool connected)
+        {
+            TagService = new FakeTagService();
+            TypedBatch = new FakeTypedBatchRead();
+
+            var device = Substitute.For<IDevice>();
+            device.Info.Returns(new DeviceInfo("plc.main", "主 PLC", deviceType, "Test"));
+            device.State.Returns(connected ? DeviceConnectionState.Connected : DeviceConnectionState.Reconnecting);
+            Registry = Substitute.For<IDeviceRegistry>();
+            Registry.Find(Arg.Any<string>()).Returns(device);
+        }
+
+        public FakeTagService TagService { get; }
+        public FakeTypedBatchRead TypedBatch { get; }
+        public IDeviceRegistry Registry { get; }
     }
 
     private sealed class FakeTagService : ITagService
@@ -146,6 +258,19 @@ public class TagAcquisitionEngineTests
 
         public Task<TagValue> WriteAsync(string name, object? value, CancellationToken ct = default) =>
             Task.FromResult(TagValue.Good(value));
+    }
+
+    private sealed class FakeTypedBatchRead : IPlcTypedBatchRead
+    {
+        public int CallCount;
+        public Func<IReadOnlyList<BatchReadItem>, Task<Dictionary<string, object>>> Responder = items =>
+            Task.FromResult(items.ToDictionary(i => i.Address, i => (object)(short)42));
+
+        public Task<Dictionary<string, object>> ReadBatchAsync(IReadOnlyList<BatchReadItem> items, CancellationToken ct = default)
+        {
+            Interlocked.Increment(ref CallCount);
+            return Responder(items);
+        }
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, string because, int timeoutMs = 5000)

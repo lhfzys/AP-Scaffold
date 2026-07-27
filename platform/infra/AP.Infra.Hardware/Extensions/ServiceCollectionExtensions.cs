@@ -65,6 +65,8 @@ public static class ServiceCollectionExtensions
                 table,
                 table.Acquisition,
                 sp.GetRequiredService<ITagService>(),
+                sp.GetRequiredService<IPlcTypedBatchRead>(),
+                sp.GetRequiredService<IDeviceRegistry>(),
                 sp.GetRequiredService<LatestTagValueStore>(),
                 sp.GetRequiredService<ILogger<TagAcquisitionEngine>>());
         });

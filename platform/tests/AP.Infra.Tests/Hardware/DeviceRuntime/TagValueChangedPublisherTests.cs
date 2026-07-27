@@ -72,10 +72,14 @@ public class TagValueChangedPublisherTests
             new TagDefinition { Name = "T1", DeviceId = "plc.main", Address = "D0", DataType = TagDataType.Int16 },
             new object());
         var tagService = new FakeTagService();
+        var registry = Substitute.For<IDeviceRegistry>();
+        registry.Find(Arg.Any<string>()).Returns((IDevice?)null); // 无设备 → 逐点路径
         var engine = new TagAcquisitionEngine(
             new FakeTagTable(tag),
             new TagAcquisitionConfig { DefaultIntervalMs = 20 },
             tagService,
+            Substitute.For<IPlcTypedBatchRead>(),
+            registry,
             new LatestTagValueStore(),
             Substitute.For<ILogger<TagAcquisitionEngine>>());
         return (engine, tagService);
