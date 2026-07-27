@@ -159,7 +159,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
 1. **报表中心完善**
-   - [ ] 接入真实业务报表数据提供者（如设备运行日报；Tag 系统已就绪，可直接经 `ITagService` 取数）
+   - [x] 接入真实业务报表数据提供者（2026-07-28：操作审计日报 `AuditDailyReportProvider`，数据源=审计日志，替换示例注册）
    - [x] 修复 `ReportScheduler` / `ReportCleanupService`（IHostedService）不启动问题，恢复定时归档/清理（2026-07-22，`5c98faf`）
    - [ ] 报表模板化支持验证、手动生成/补档端到端测试
 

@@ -331,6 +331,7 @@ Tests → 被测项目
 
 - ~~`IPlcBatchReadWrite` 语义统一为**带类型的批量契约**~~（2026-07-28 完成：TP1 契约 `IPlcTypedBatchRead`/`BatchReadItem`（`1c04cde`）→ TP2 三品牌实现（西门子 `e162d21` / 欧姆龙 `030a797` / 三菱 `afae2fd`）→ TP3 采集引擎合并读（`49bd22c`，在线每周期一次往返+三级降级）。旧 `IPlcBatchReadWrite` 保留，退役评估归 T5.3）。
 - 设备掉线/恢复是否进审计日志（合规视角的独立议题，T3.5 时暂缓）。
+- Tag 值持久化通道（采集历史入库）：设备运行日报/Tag 历史报表的前置；需评估存储方案（SQLite 时序表 vs 文件归档）（2026-07-28，审计日报落地时登记）。
 - PLC 连接超时丢弃后台任务时产生 `SocketException (995)` 未观察异常噪音（每个失败周期约 6 条 💥 后台线程日志，归类正确但刷屏）；需评估在丢弃路径完整观察 Socket 内部任务（2026-07-26 发现）。
 - ~~停止路径无界同步 `Close()` 导致优雅关闭卡死~~（2026-07-26 已修复，`98e6520`：四驱动统一 2s 有界等待——有效加固但非根因；**真实根因为 `DashboardViewModel.RunOnUi` 的 `Dispatcher.Invoke` 与 OnExit 形成双向等待死锁**，`779b5d3` 改 `BeginInvoke` 修复）。教训：事件处理器永不应用 `Dispatcher.Invoke` 同步等 UI；MediatR.Publish 同步前缀会在发布方线程执行订阅者。
 
