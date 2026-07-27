@@ -120,7 +120,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 |------|-------|--------------------------------|----------|
 | `AP.Core.Tests` | 9 | 130 | 状态机、生命周期、事件总线、插件框架、Capability |
 | `AP.Shared.Tests` | 4 | 48 | PluginBase、导航菜单构建器、序列化、配置更新 |
-| `AP.Infra.Tests` | 26 | 247 | 报表/弹性/DB 仓储/PLC 注册表与激活服务；**Device Runtime 全套**（连接状态机、监督器、桥接、设备注册表、适配器、点表、Tag 服务、采集引擎、最新值表、发布器）；**三品牌地址对象**（经 `InternalsVisibleTo` 测试插件 internal） |
+| `AP.Infra.Tests` | 31 | 287 | 报表/弹性/DB 仓储/PLC 注册表与激活服务；**Device Runtime 全套**（连接状态机、监督器、桥接、设备注册表、适配器、点表、Tag 服务、采集引擎+批量合并、最新值表、发布器、审计日报）；**三品牌地址对象与批量类型映射**（经 `InternalsVisibleTo` 测试插件 internal） |
 
 ---
 
@@ -154,7 +154,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 近期（当前 Sprint）
 
-> **架构演进（2026-07-25/26）**：阶段 0~4 已全部完成——规范先行（错误处理/日志规范、三驱动日志清理、gRPC 封存标注）→ 连接监督收敛（`ConnectionSupervisor`，四套独立看门狗/重连全部消除）→ 地址对象化（`McAddress`/`S7Address`/`FinsAddress`+`IAddressValidator`）→ Device 抽象（`IDevice`/注册表/统一状态事件，PLC+扫码枪接入）→ Tag 系统（点表/按点名读写/采集引擎/最新值表/变化事件/Dashboard 真实数据）。任务清单、执行铁律与完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**；阶段 5（业务迁移与防线）待启动。
+> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 24 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**此后不接新框架功能，等真实外包项目驱动需求**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**。
 
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
@@ -260,4 +260,4 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ---
 
-**最后更新**: 2026-07-26
+**最后更新**: 2026-07-28

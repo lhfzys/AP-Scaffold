@@ -2,6 +2,8 @@
 
 > 本文档面向 Kimi / Cursor / Copilot 等 AI 编码助手。当你在一个新 Session 中接手本项目时，请先完整阅读本文件，再继续处理用户请求。
 > 本文档以**实际代码**为准整理（已核对全部 36 个项目）。
+>
+> **新 Session 阅读顺序（避免重复探索）**：① 本文件（现状与约定）→ ② `docs/EVOLUTION_PLAN.md`（架构演进史、任务铁律、停车场）→ ③ `docs/conventions/`（四份规范：ERROR_HANDLING / LOGGING / LAYERING / DEPENDENCIES）。读完这三处即具备完整上下文，无需再扫描全仓库。
 
 ---
 
@@ -21,8 +23,9 @@
 
 ### 2.1 分支与提交
 
-- **当前分支**: `main`
-- **最近提交主题**: 架构演进阶段 0~4 全部完成（`docs/EVOLUTION_PLAN.md` 主控）：规范先行（错误处理/日志规范、三驱动日志清理、gRPC 封存标注）→ 连接监督收敛（`DeviceConnectionStateMachine`+`ConnectionSupervisor`+`TransitionEventBridge`，三套复制看门狗消除）→ 地址对象化（`McAddress`/`S7Address`/`FinsAddress`+`IAddressValidator`）→ Device 抽象（`IDevice`/`IDeviceRegistry`/PLC+扫码枪接入/统一状态事件）→ Tag 系统（点表 `tags.json`/`ITagService`/采集引擎/最新值表/变化事件/Dashboard 真实数据）；启动时序修复（设备注册必须先于插件初始化）
+- **当前分支**: `main`（已与远程同步）
+- **演进状态**: **`docs/EVOLUTION_PLAN.md` 全部 24 个任务（阶段 0~6）+ 停车场第一项已完成**。阶段：规范先行 → 连接监督收敛（四套看门狗归一为 `ConnectionSupervisor`）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING 规范、契约层死引用删除）。附加交付：带类型批量契约 `IPlcTypedBatchRead` + 采集引擎合并读；首个真实报表（操作审计日报 AuditDaily）。关键热修复：启动时序、优雅关闭死锁（`Dispatcher.Invoke`→`BeginInvoke`）
+- **验证状态**: 西门子仿真环境真机验证通过（连接/掉线/重连/混合类型批量/Dashboard 联动/优雅关闭）；三菱/欧姆龙待真机
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
 ### 2.2 已完成功能
@@ -38,24 +41,24 @@
 - 全浅色统一视觉主题（`Industrial.Teal.MD3.xaml`，文件名保留但内容已是浅色）
 - 系统托盘、启动画面（Splash）、全局异常崩溃日志
 - **Device Runtime Model（设备运行时模型，见 5.12）**：协议无关连接状态机 + 统一连接监督器（全部 4 个硬件驱动共享）、`IDevice`/`IDeviceRegistry` 设备抽象、统一状态事件 `DeviceStateChangedEvent`
-- **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅
-- **横切规范文档**：`docs/conventions/ERROR_HANDLING.md`（Result/异常分层规则）、`docs/conventions/LOGGING.md`（日志级别/模板/防刷屏）
+- **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅、**带类型批量读**（`IPlcTypedBatchRead`，在线每周期一次往返+三级降级）
+- **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
+- **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
 
 ### 2.3 活跃问题 / 待办
 
 > **范围决策（2026-07-21）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**。Server/Client（gRPC 技术栈）与 PostgreSQL/SQL Server 支持**冻结**——代码保留但不维护、不验证、不投入改进；`AppRole.Server`/`AppRole.Client` 保留但视为"未支持"。除非用户明确要求解冻，不要在这些方向做改动。详见 `docs/IMPROVEMENT_PLAN.md` 1.3 节与第八章末「冻结事项清单」。
 >
-> **架构演进主控文档**：`docs/EVOLUTION_PLAN.md`——阶段 0~4（规范/连接监督/地址对象/Device 抽象/Tag 系统）已完成，阶段 5（业务迁移与防线）待启动。所有架构级改动必须遵守其中的"任务执行铁律"（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
+> **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。唯一建议提前做的是点表编辑界面（现场高频动作）。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
 
-- [ ] 报表中心接入更多真实业务数据提供者（2026-07-28 已落地首个：**操作审计日报 AuditDaily**，数据源=审计日志；Tag 历史报表待 Tag 值持久化议题）
-- [ ] 配方管理完善校验与版本历史；`IRecipeManager.SwitchAsync` 的事件发布仍是 TODO
-- [ ] 审计日志导出（PLC 写操作与配置修改审计已于 2026-07-22 接入）
-- [x] 西门子 PLC 协议支持
-- [x] 欧姆龙 PLC 协议支持（2026-07-24，`AP.Plugin.Plc.Omron`，FINS/TCP）
-- [ ] OpenTelemetry 可观测性
-- [x] Dashboard 接入真实数据（2026-07-26，T4.6：设备状态/采集点/Tag 变化/真实事件流）
+- [ ] 点表编辑界面（`tags.json` 可视化编辑，复用 `IAddressValidator` 校验；外包现场高频需求，建议提前做）
+- [ ] 配方管理完善（**等真实项目配方需求再动**：参数校验/版本历史/`SwitchAsync` 事件 TODO，避免返工）
+- [ ] Tag 值持久化（停车场议题，设备运行日报/历史报表前置；等客户提历史数据需求再选型）
+- [x] 报表中心首个真实数据提供者（2026-07-28，操作审计日报 AuditDaily）
+- [ ] 三菱/欧姆龙真机验证（西门子仿真已验证，其余品牌随项目进场验证）
 - [ ] `RequiresCapabilitiesAttribute` 目前仅有声明，无运行时强制检查
-- [ ] 停车场（`EVOLUTION_PLAN.md`）：`IPlcBatchReadWrite` 带类型批量契约统一（采集引擎批量合并的前置）；设备掉线/恢复是否进审计
+- [ ] 停车场（`EVOLUTION_PLAN.md`）：SocketException(995) 未观察异常噪音；设备掉线/恢复是否进审计
+- [ ] OpenTelemetry（**已判定单机外包场景不做**，仅保留记录）
 
 ---
 
@@ -104,10 +107,10 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（39 个测试文件 / 425 个测试）
+│   └── tests/                            # xUnit 测试（44 个测试文件 / 465 个测试）
 │       ├── AP.Core.Tests                 # 9 文件 / 130 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 48 测试
-│       └── AP.Infra.Tests                # 26 文件 / 247 测试（含 DeviceRuntime/驱动地址对象全套）
+│       └── AP.Infra.Tests                # 31 文件 / 287 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
 ├── docs/                                 # 架构/使用/测试/状态文档
 ├── installer/setup.iss                   # Inno Setup 6 安装包脚本
 ├── AGENTS.md                             # 本文件
@@ -183,6 +186,7 @@ bin/Release/AP.Host.Desktop.exe
 - **欧姆龙驱动差异**（IoTClient `OmronFinsClient` 限制，代码已注释）：字符串读写未实现（调用抛 `NotSupportedException`）；批量写入退化为逐条写入；批量读为真批量（`BatchRead` 第二参数无实际效果，传 0）；字节序默认 CDAB；`Model` 不解析（保留 "FinsTcp"）。
 - `PlcDriverRegistry` 为单例，**首次解析时从 DI 收集所有 `IPlcDriverFactory`**（`AddPlcHardware` 中的工厂委托完成，2026-07-22 修复了注册表恒为空的缺陷）；不要在插件里手动 `new PlcDriverRegistry()` 或调 `Register`。
 - 新增品牌只需实现 `IPlcDriverFactory` 并注册到 DI，业务代码无需修改（欧姆龙即按此方式接入）；插件的 `StartAsync`/`StopAsync` 需按 `IsActiveDriver()` 门控（仅激活品牌发起/断开连接，参考三菱/西门子/欧姆龙插件），避免多品牌插件重复连接同一 `ActivePlcService` 代理。
+- **带类型批量读（2026-07-28 起）**：`IPlcTypedBatchRead.ReadBatchAsync(IReadOnlyList<BatchReadItem>)`——每个地址携带 `TagDataType`（西门子/欧姆龙真批量 11 型全映射，三菱循环同契约）；采集引擎在线时每周期一次批量往返（三级降级：不支持永久逐点/整批失败本轮逐点/断连直接逐点）。旧 `IPlcBatchReadWrite` 保留为内部通道，不新增调用点。
 - 西门子地址格式与三菱不同，业务插件中的地址应通过**点表 `tags.json`** 配置（见 5.13），避免硬编码。
 - 系统设置中已有 PLC 配置编辑页（`PlcConfigurationContributor`，DriverType 切换自动填默认值，含连接参数三项，RequiresRestart）。
 
@@ -286,9 +290,11 @@ bin/Release/AP.Host.Desktop.exe
 |------|------|
 | `README.md` | 项目概览、快速开始、技术栈 |
 | `docs/ARCHITECTURE.md` | 分层架构、设计模式、数据流 |
-| `docs/EVOLUTION_PLAN.md` | **架构演进主控文档**（现状诊断、任务执行铁律、7 阶段任务清单与完成记录、问题停车场） |
+| `docs/EVOLUTION_PLAN.md` | **架构演进主控文档**（现状诊断、任务执行铁律、全部任务完成记录、问题停车场） |
 | `docs/conventions/ERROR_HANDLING.md` | 错误处理与 Result 使用规范（分层规则、ErrorCode 规划、反模式清单） |
 | `docs/conventions/LOGGING.md` | 日志使用规范（级别约定、消息模板、防刷屏、应用日志 vs 审计） |
+| `docs/conventions/LAYERING.md` | 设备访问分层防线（UI/业务只许 ITagService+IDeviceRegistry+事件；地址纪律） |
+| `docs/conventions/DEPENDENCIES.md` | 项目依赖方向规范（目标规则、现状例外登记、评审清单） |
 | `docs/GETTING_STARTED.md` | 环境准备、配置、插件开发示例 |
 | `docs/TESTING.md` | 测试规范与运行方式 |
 | `docs/PROJECT_STATUS.md` | 项目状态与工作计划 |
@@ -300,11 +306,11 @@ bin/Release/AP.Host.Desktop.exe
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 425 个测试通过。
+2. 运行三个测试项目确认 465 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办；**架构演进任务以 `docs/EVOLUTION_PLAN.md` 为准**（含任务执行铁律：一次一个 Task、单独提交可回滚、不改公开 API 除非必须、提交后回填状态）。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。
 
 ---
 
-**最后更新**: 2026-07-26
+**最后更新**: 2026-07-28
