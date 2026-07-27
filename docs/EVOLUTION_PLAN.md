@@ -324,6 +324,9 @@ Tests → 被测项目
 | T5.2 | 2026-07-28 | 本行即记录 | **评估结论：零迁移**。业务/UI 对 `IPlcService` 族调用点=0，协议地址字面量=0（T5.1 审计）；`IPlcService` 已定性为 DeviceRuntime 内部通道（LAYERING.md 第 7 节） |
 | T5.3 | 2026-07-28 | 本行即记录 | **决策：不打 `[Obsolete]`**（用户拍板）。理由：合法内部使用处需 `#pragma` 豁免污染代码且 0 警告纪律受损；文档防线（LAYERING.md）已生效且无调用点。旧 `IPlcService`/`IPlcBatchReadWrite` 保留为内部通道，不新增业务调用点 |
 | T5.4 | 2026-07-28 | `e1acd6b` | 评审发现 `Contracts.Core→AP.Core` 为**死引用**（零代码使用，Prism 独立引用）；直接删除 csproj 引用，全量 Rebuild 证明无传递依赖；契约层回到依赖图最底层。**阶段 5 收官** |
+| 审计日报 | 2026-07-28 | `5e59c79` | 首个真实报表 `AuditDailyReportProvider`（数据源=审计日志，替换示例注册）；+4 单测总计 465 全绿 |
+| T6.1 | 2026-07-28 | `8582fe8` | 删除三个 PLC 插件对 `AP.Shared.UI` 的死引用（零代码使用，Rebuild 验证）；消除 C3 中 UI 渗漏 |
+| T6.2 | 2026-07-28 | `ebf27b3` | 新增 `docs/conventions/DEPENDENCIES.md`：依赖方向目标规则 + 现状例外登记（不强改）+ 评审清单。**阶段 6 收官，演进计划全部 24 任务 + 停车场第一项完成** |
 
 ### 演进过程中发现的新问题（停车场）
 
