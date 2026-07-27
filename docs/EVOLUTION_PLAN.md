@@ -323,6 +323,7 @@ Tests → 被测项目
 | T5.1 | 2026-07-28 | `142bdad` | 新增 `docs/conventions/LAYERING.md`：设备访问分层防线（UI/业务只许 `ITagService`+`IDeviceRegistry`+事件；地址纪律；附 2026-07-28 现状审计零越界证据与评审清单） |
 | T5.2 | 2026-07-28 | 本行即记录 | **评估结论：零迁移**。业务/UI 对 `IPlcService` 族调用点=0，协议地址字面量=0（T5.1 审计）；`IPlcService` 已定性为 DeviceRuntime 内部通道（LAYERING.md 第 7 节） |
 | T5.3 | 2026-07-28 | 本行即记录 | **决策：不打 `[Obsolete]`**（用户拍板）。理由：合法内部使用处需 `#pragma` 豁免污染代码且 0 警告纪律受损；文档防线（LAYERING.md）已生效且无调用点。旧 `IPlcService`/`IPlcBatchReadWrite` 保留为内部通道，不新增业务调用点 |
+| T5.4 | 2026-07-28 | `e1acd6b` | 评审发现 `Contracts.Core→AP.Core` 为**死引用**（零代码使用，Prism 独立引用）；直接删除 csproj 引用，全量 Rebuild 证明无传递依赖；契约层回到依赖图最底层。**阶段 5 收官** |
 
 ### 演进过程中发现的新问题（停车场）
 
