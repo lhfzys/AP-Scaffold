@@ -19,7 +19,7 @@ using Polly;
 
 namespace AP.Plugin.Plc.Mitsubishi.Services;
 
-public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice
+public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcTypedBatchRead
 {
     // 客户端实例会在重连时被原子替换，因此不能是 readonly
     private MitsubishiClient _client;
@@ -353,6 +353,33 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice
             return result;
         }, ct);
     }
+
+    /// <summary>
+    /// 带类型批量读取（三菱为循环逐条按类型读，对外与真批量同一契约）。
+    /// 整批中任一条失败即抛出（与驱动单读语义一致），由调用方决定降级策略。
+    /// </summary>
+    public async Task<Dictionary<string, object>> ReadBatchAsync(IReadOnlyList<BatchReadItem> items, CancellationToken ct = default)
+    {
+        var result = new Dictionary<string, object>();
+        foreach (var item in items)
+        {
+            var normalized = McAddress.Parse(item.Address).Normalized;
+            result[normalized] = await ReadByTypeAsync(normalized, item.DataType, ct);
+        }
+        return result;
+    }
+
+    /// <summary>按 TagDataType 分发单点读取（internal 供测试）。</summary>
+    internal async Task<object> ReadByTypeAsync(string address, TagDataType type, CancellationToken ct) => type switch
+    {
+        TagDataType.Bool => await ReadAsync<bool>(address, ct),
+        TagDataType.Int16 => await ReadAsync<short>(address, ct),
+        TagDataType.UInt16 => await ReadAsync<ushort>(address, ct),
+        TagDataType.Int32 => await ReadAsync<int>(address, ct),
+        TagDataType.UInt32 => await ReadAsync<uint>(address, ct),
+        TagDataType.Float => await ReadAsync<float>(address, ct),
+        _ => throw new NotSupportedException($"三菱驱动暂不支持类型: {type}"),
+    };
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
