@@ -12,7 +12,7 @@ namespace AP.Infra.Hardware.Services;
 /// 根据 <see cref="PlcOptions.DriverType"/> 从 <see cref="PlcDriverRegistry"/> 中选择真实驱动，
 /// 并转发所有 <see cref="IPlcService"/> / <see cref="IPlcBatchReadWrite"/> 调用。
 /// </summary>
-public class ActivePlcService : IPlcService, IPlcBatchReadWrite
+public class ActivePlcService : IPlcService, IPlcBatchReadWrite, IPlcTypedBatchRead
 {
     private readonly Lazy<IPlcService> _innerLazy;
 
@@ -65,4 +65,10 @@ public class ActivePlcService : IPlcService, IPlcBatchReadWrite
         => Inner is IPlcBatchReadWrite batch
             ? batch.WriteBatchAsync(data, ct)
             : throw new NotSupportedException("当前 PLC 驱动不支持批量写入");
+
+    /// <summary>带类型批量读取转发（驱动未实现 IPlcTypedBatchRead 时抛 NotSupportedException）。</summary>
+    public Task<Dictionary<string, object>> ReadBatchAsync(IReadOnlyList<BatchReadItem> items, CancellationToken ct = default)
+        => Inner is IPlcTypedBatchRead typed
+            ? typed.ReadBatchAsync(items, ct)
+            : throw new NotSupportedException("当前 PLC 驱动不支持带类型批量读取");
 }

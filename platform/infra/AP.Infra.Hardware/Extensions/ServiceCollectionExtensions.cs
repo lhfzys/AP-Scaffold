@@ -42,6 +42,8 @@ public static class ServiceCollectionExtensions
             sp.GetService<IIdentityService>(),
             sp.GetService<ILogger<AuditingPlcServiceDecorator>>()));
         services.AddSingleton<IPlcBatchReadWrite>(sp => (IPlcBatchReadWrite)sp.GetRequiredService<IPlcService>());
+        // 带类型批量读取（驱动逐个接入，未接入的驱动经此调用抛 NotSupportedException）
+        services.AddSingleton<IPlcTypedBatchRead>(sp => sp.GetRequiredService<ActivePlcService>());
         // Device Runtime Model：设备注册表 + PLC 设备视图（与 IPlcService 并行的只读视图，不改变现有解析关系）
         services.AddSingleton<IDeviceRegistry, DeviceRegistry>();
         services.AddSingleton<IDevice>(sp => new PlcDeviceAdapter(
