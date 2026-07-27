@@ -22,7 +22,7 @@ namespace AP.Plugin.Plc.Omron.Services;
 /// 注意：IoTClient 欧姆龙客户端未实现字符串读写与批量写入——
 /// 字符串读写抛 <see cref="NotSupportedException"/>，批量写入退化为逐条写入。
 /// </summary>
-public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice
+public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcTypedBatchRead
 {
     private OmronFinsClient _client;
     private readonly ResiliencePipeline _pipeline;
@@ -329,6 +329,49 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice
             return response.Value ?? new Dictionary<string, object>();
         }, ct);
     }
+
+    /// <summary>
+    /// 带类型批量读取（真批量，每个地址按各自类型读取；IoTClient 批量读第二参数无实际效果，传 0）。
+    /// 整批失败抛异常，由调用方决定降级策略。
+    /// </summary>
+    public async Task<Dictionary<string, object>> ReadBatchAsync(IReadOnlyList<BatchReadItem> items, CancellationToken ct = default)
+    {
+        var client = _client;
+        return await _pipeline.ExecuteAsync(async token =>
+        {
+            await Task.Yield();
+            var request = new Dictionary<string, DataTypeEnum>();
+            foreach (var item in items)
+            {
+                // 地址预检 + 规范化（非法地址抛 FinsAddressException）
+                request[FinsAddress.Parse(item.Address).Normalized] = ToDataTypeEnum(item.DataType);
+            }
+
+            // IoTClient 欧姆龙批量读第二参数无实际效果，传 0
+            var response = client.BatchRead(request, 0);
+            if (!response.IsSucceed)
+                throw new Exception($"批量读取失败: {response.Err}");
+
+            return response.Value ?? new Dictionary<string, object>();
+        }, ct);
+    }
+
+    /// <summary>TagDataType → IoTClient DataTypeEnum 映射（internal 供测试）。</summary>
+    internal static DataTypeEnum ToDataTypeEnum(TagDataType type) => type switch
+    {
+        TagDataType.Bool => DataTypeEnum.Bool,
+        TagDataType.Int16 => DataTypeEnum.Int16,
+        TagDataType.UInt16 => DataTypeEnum.UInt16,
+        TagDataType.Int32 => DataTypeEnum.Int32,
+        TagDataType.UInt32 => DataTypeEnum.UInt32,
+        TagDataType.Int64 => DataTypeEnum.Int64,
+        TagDataType.UInt64 => DataTypeEnum.UInt64,
+        TagDataType.Float => DataTypeEnum.Float,
+        TagDataType.Double => DataTypeEnum.Double,
+        TagDataType.String => DataTypeEnum.String,
+        TagDataType.ByteArray => DataTypeEnum.Byte,
+        _ => throw new NotSupportedException($"不支持的类型: {type}"),
+    };
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
