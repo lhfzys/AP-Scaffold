@@ -321,6 +321,8 @@ Tests → 被测项目
 | 热修复 | 2026-07-26 | `35d886d`/`98e6520`/`779b5d3` | 启动时序修复（设备注册先于插件初始化）；停止路径 Close 有界化（加固）；**优雅关闭死锁真因修复**（`Dispatcher.Invoke`→`BeginInvoke`，真机验证通过） |
 | TP1~TP3 | 2026-07-28 | `1c04cde`/`e162d21`/`030a797`/`afae2fd`/`49bd22c` | 停车场第一项：带类型批量契约 `IPlcTypedBatchRead` + 三品牌实现 + 采集引擎合并读（每周期一次往返+三级降级）；461 测试全绿，西门子仿真环境真机验证通过（混合类型批量正常） |
 | T5.1 | 2026-07-28 | `142bdad` | 新增 `docs/conventions/LAYERING.md`：设备访问分层防线（UI/业务只许 `ITagService`+`IDeviceRegistry`+事件；地址纪律；附 2026-07-28 现状审计零越界证据与评审清单） |
+| T5.2 | 2026-07-28 | 本行即记录 | **评估结论：零迁移**。业务/UI 对 `IPlcService` 族调用点=0，协议地址字面量=0（T5.1 审计）；`IPlcService` 已定性为 DeviceRuntime 内部通道（LAYERING.md 第 7 节） |
+| T5.3 | 2026-07-28 | 本行即记录 | **决策：不打 `[Obsolete]`**（用户拍板）。理由：合法内部使用处需 `#pragma` 豁免污染代码且 0 警告纪律受损；文档防线（LAYERING.md）已生效且无调用点。旧 `IPlcService`/`IPlcBatchReadWrite` 保留为内部通道，不新增业务调用点 |
 
 ### 演进过程中发现的新问题（停车场）
 
