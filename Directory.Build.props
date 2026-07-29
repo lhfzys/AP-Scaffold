@@ -29,6 +29,11 @@
     <OutputPath>$(BuildRoot)</OutputPath>
   </PropertyGroup>
 
+  <!-- 测试项目输出隔离：避免 TestPlatform/xunit/语言卫星目录污染发布根目录（须置于通用规则之后以覆盖） -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <OutputPath>$(MSBuildThisFileDirectory)bin\Tests\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
   <ItemDefinitionGroup Condition="'$(IsPluginProject)' == 'true'">
     <ProjectReference>
       <Private>false</Private>
