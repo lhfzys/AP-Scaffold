@@ -7,6 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- 发布（方案 A：框架依赖，现场装 .NET 8 桌面运行时 + ASP.NET Core 运行时）：
+         RID 与 self-contained 由发布命令行传入，避免污染日常开发构建；
+         发布命令须带 -p:AppendRuntimeIdentifierToOutputPath=true，让 RID 构建落入 win-x64 子目录，不污染 bin/Release 根。
+         勿开 PublishReadyToRun：R2R 与 WPF 内部混合程序集（DirectWriteForwarder）冲突，
+         启动即 TypeLoadException（FixedAddressValueTypeAttribute），2026-07-29 实测踩坑。 -->
+    <PublishDir>$(BuildRoot)publish\</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>

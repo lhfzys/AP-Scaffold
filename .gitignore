@@ -253,3 +253,6 @@ local_data.db-*
 
 # Serilog log output directory
 logs/
+
+# Inno Setup 编译产物
+installer/Output/

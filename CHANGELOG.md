@@ -9,6 +9,21 @@
 
 ## [Unreleased]
 
+### 打包治理（方案 A：框架依赖发布，2026-07-29）
+
+变更：
+
+- **测试产物输出隔离**：3 个 `.Tests` 项目输出从共享的 `bin/Release` 根迁到 `bin/Tests/{项目名}/`（`Directory.Build.props` 新增覆盖规则），发布根目录不再混入 TestPlatform/xunit/coverlet 与 12 个语言卫星目录；465 测试复跑全绿
+- **发布形态定为 win-x64 框架依赖**：发布目录 26MB/227 文件、安装包 7.7MB（自包含方案 217MB 否决——体积观感差）；宿主 csproj 固定 `PublishDir=bin\Release\publish\`；发布命令带 `-p:AppendRuntimeIdentifierToOutputPath=true`，RID 构建落入 `bin/Release/win-x64/` 子目录，不再污染开发目录（此前混入自包含文件导致 `bin/Release` 下 exe 无法启动）
+- **`setup.iss`**：运行时检测从仅桌面运行时扩展为**桌面 + ASP.NET Core 双运行时**（宿主经 `FrameworkReference Microsoft.AspNetCore.App` 声明，只装桌面运行时会启动失败），缺失项在提示中列出；**修复检测恒判缺失的隐患**——.NET 版本是以"值"（值名=版本号）挂在注册表键下的而非子键，原脚本 `RegGetSubkeyNames` 永远数不到，已改 `RegGetValueNames` 并补 `HKLM64` 64 位视图兜底（原版即带此缺陷，本机实测复现+探针验证修复）；简体中文语言文件 `ChineseSimplified.isl` 改为随仓库携带（`installer/Languages/`，官方发行版不含中文，要求 Inno ≥ 6.5）；头部注释更新为两步构建流程
+- `.gitignore` 补 `installer/Output/`；`installer/README.md` 重写（两步流程、现场装机两个运行时及静默安装命令、体积数据、禁项清单）
+- 框架依赖发布产物已冒烟验证：ISCC 编译通过、publish exe 启动至主窗口存活、13 插件全部初始化、无致命异常
+
+禁项（2026-07-29 实测踩坑，已记入 README/AGENTS）：
+
+- 勿开 `PublishReadyToRun`：R2R 与 WPF 混合程序集 `DirectWriteForwarder` 冲突，启动即 `TypeLoadException`
+- 暂勿自包含发布：`PluginLoadContext`（可回收）会把 `DirectWriteForwarder` 装入插件上下文崩溃（`Collectible type '<Module>' ... FixedAddressValueTypeAttribute`）；框架依赖因该文件不在应用目录、解析回退默认上下文而规避。如需自包含，须先修插件加载上下文框架程序集回退策略
+
 ### 架构演进（2026-07-25 ~ 2026-07-28，阶段 0~6 全部 33 个任务 + 停车场第一项）
 
 新增：

@@ -282,6 +282,17 @@ bin/Release/AP.Host.Desktop.exe
 - **采集**：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点）→ `LatestTagValueStore`（Version 按点递增；订阅者读最新值不打设备）→ 变化检测（值或质量戳变化）→ `TagValueChangedEvent`（MediatR）/ `PrismTagValueChangedEvent`（UI）；设备状态走 `DeviceStateChangedEvent` / `PrismDeviceStateChangedEvent`。
 - **错误处理与日志规范**：新代码必须遵守 `docs/conventions/ERROR_HANDLING.md` 与 `LOGGING.md`（禁止裸 `Exception`、禁止 emoji、状态迁移记录法、通信字段结构化）。
 
+### 5.14 打包与发布（框架依赖）
+
+> 2026-07-29 起。面向外包现场，发布形态为 **win-x64 框架依赖**（体积小；现场初次装机装一次运行时，后续只发应用）。
+
+- **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 26MB/227 文件；安装包约 7.7MB）。详见 `installer/README.md`。
+- **现场需装两个 .NET 8 运行时**：桌面运行时 + ASP.NET Core 运行时（宿主编译期 `FrameworkReference Microsoft.AspNetCore.App`，缺失启动即失败）；`setup.iss` 安装时按注册表主版本精确检测并列出缺失项（仅装 9/10 拦截）。
+- 宿主 csproj 仅固定 `PublishDir=$(BuildRoot)publish\`；**RID 与 self-contained 只走命令行**，且必须带 `-p:AppendRuntimeIdentifierToOutputPath=true`（否则 RID 构建产物混入 `bin/Release` 根，2026-07-29 实测导致开发版 exe 无法启动）。
+- **测试产物隔离**：`Directory.Build.props` 中 `.Tests` 结尾的项目输出到 `bin/Tests/{项目名}/`，`bin/Release` 根目录不再有 TestPlatform/xunit/语言目录污染。
+- `installer/Languages/ChineseSimplified.isl` 随仓库携带（官方发行版不含中文，要求 Inno ≥ 6.5）；`installer/Output/` 已 gitignore。
+- **禁项（均实测踩坑）**：勿开 `PublishReadyToRun`（R2R 与 WPF 混合程序集 DirectWriteForwarder 冲突，启动即 TypeLoadException）；**暂勿自包含发布**（`PluginLoadContext` 可回收上下文装载 DirectWriteForwarder 崩溃，框架依赖因该文件不在应用目录而规避；如需自包含须先让框架程序集回退 `AssemblyLoadContext.Default`）；勿 Trim/NativeAOT；单文件发布无收益。
+
 ---
 
 ## 6. 文档索引
@@ -299,6 +310,7 @@ bin/Release/AP.Host.Desktop.exe
 | `docs/TESTING.md` | 测试规范与运行方式 |
 | `docs/PROJECT_STATUS.md` | 项目状态与工作计划 |
 | `docs/IMPROVEMENT_PLAN.md` | 五维度差距分析与改进计划（稳定/复用/安全/可持续/通用） |
+| `installer/README.md` | 安装包构建说明（框架依赖两步流程、现场运行时要求、体积数据、禁项清单） |
 | `CHANGELOG.md` | 版本变更日志 |
 
 ---
@@ -313,4 +325,4 @@ bin/Release/AP.Host.Desktop.exe
 
 ---
 
-**最后更新**: 2026-07-28
+**最后更新**: 2026-07-29
