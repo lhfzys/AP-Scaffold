@@ -137,7 +137,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | AP.Plugin.Login / UserManagement / RoleManagement | 可用 | 登录、用户/角色管理 UI 已落地，按权限显示 |
 | AP.Plugin.AuditLog | 可用 | 查询/筛选/分页 UI 已有，数据来自真实审计日志 |
 | AP.Infra.Recipe / AP.Plugin.RecipeManagement | 骨架 | 配方 CRUD、版本、默认配方 UI 已有；切换联动业务待补 |
-| AP.Infra.Report / AP.Plugin.ReportCenter | 骨架 | 报表归档查询/生成/导出 UI 已有，数据提供者仅示例实现 |
+| AP.Infra.Report / AP.Plugin.ReportCenter | 可用 | 报表归档查询/生成/导出 UI 已有；数据提供者有真实实现（操作审计日报，数据源=审计日志），示例实现保留未注册 |
 | AP.Plugin.DeviceConfiguration | 可用 | 扫码枪设置页完整（校验 + 写回配置） |
 | Device Runtime Model（设备运行时） | 完善 | 六态状态机 + 统一连接监督器（全部硬件共享、测试覆盖）+ 设备抽象/注册表/统一状态事件（2026-07-25） |
 | Tag 系统 | 可用 | 点表校验/`ITagService`/采集引擎/最新值表/变化事件端到端贯通；点表目前为示例条目，批量合并待带类型批量契约（2026-07-25） |
@@ -154,7 +154,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 近期（当前 Sprint）
 
-> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 24 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**此后不接新框架功能，等真实外包项目驱动需求**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**。
+> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 33 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**此后不接新框架功能，等真实外包项目驱动需求**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**。
 
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 

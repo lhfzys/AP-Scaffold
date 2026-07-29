@@ -24,7 +24,7 @@
 ### 2.1 分支与提交
 
 - **当前分支**: `main`（已与远程同步）
-- **演进状态**: **`docs/EVOLUTION_PLAN.md` 全部 24 个任务（阶段 0~6）+ 停车场第一项已完成**。阶段：规范先行 → 连接监督收敛（四套看门狗归一为 `ConnectionSupervisor`）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING 规范、契约层死引用删除）。附加交付：带类型批量契约 `IPlcTypedBatchRead` + 采集引擎合并读；首个真实报表（操作审计日报 AuditDaily）。关键热修复：启动时序、优雅关闭死锁（`Dispatcher.Invoke`→`BeginInvoke`）
+- **演进状态**: **`docs/EVOLUTION_PLAN.md` 全部 33 个任务（阶段 0~6）+ 停车场第一项已完成**。阶段：规范先行 → 连接监督收敛（四套看门狗归一为 `ConnectionSupervisor`）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING 规范、契约层死引用删除）。附加交付：带类型批量契约 `IPlcTypedBatchRead` + 采集引擎合并读；首个真实报表（操作审计日报 AuditDaily）。关键热修复：启动时序、优雅关闭死锁（`Dispatcher.Invoke`→`BeginInvoke`）
 - **验证状态**: 西门子仿真环境真机验证通过（连接/掉线/重连/混合类型批量/Dashboard 联动/优雅关闭）；三菱/欧姆龙待真机
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
@@ -259,7 +259,7 @@ bin/Release/AP.Host.Desktop.exe
 - **单实例**：`App.OnStartup` 用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 检查（非首实例弹提示退出；该互斥体同时供 Inno `AppMutex` 检测）；托盘重启给新进程传 `--restart`，新进程等待旧实例释放互斥体（最长 60s，含 `AbandonedMutexException` 处理）后再启动。
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
-- **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-26，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
+- **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
 
 ### 5.12 Device Runtime Model（设备运行时模型）
 

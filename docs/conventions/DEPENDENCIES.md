@@ -31,6 +31,7 @@ Tests        → 被测项目（含经 InternalsVisibleTo 开放的插件 intern
 | 引用 | 现状 | 备注 |
 |------|------|------|
 | PLC/Scanner 插件 → `AP.Infra.Hardware` | 容忍 | DeviceRuntime 组件（Supervisor/状态机）落位 Infra 所致；长期可评估拆分 `AP.Infra.Devices` 或下沉契约 |
+| `AP.Plugin.Layout` → `AP.Infra.Hardware` | 容忍 | Dashboard 直接解析 `TagAcquisitionEngine` 具体类（采集状态展示）；长期可评估引擎状态抽象下沉契约 |
 | PLC 插件 → `AP.Infra.Resilience` | 容忍 | 驱动工厂取 Polly 管道；更优形态是宿主注入管道抽象 |
 | `AP.Infra.Database` → `AP.Infra.Resilience`、`AP.Core` | 容忍 | 仓储接重试管道；Core 引用为历史遗留 |
 | `AP.Infra.Hardware` → `AP.Infra.Resilience` | 容忍 | 同上 |

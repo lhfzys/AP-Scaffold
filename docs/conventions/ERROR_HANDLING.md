@@ -55,7 +55,7 @@
 
 现状（`AP.Contracts.Core/Errors/ErrorCode.cs`，共 9 个 + `None`）：
 
-`SystemError`、`InvalidParameter`、`NotFound`、`Timeout`、`Unauthorized`、`DeviceNotConnected`、`DeviceReadFailed`、`DeviceWriteFailed`。
+`SystemError`、`InvalidParameter`、`NotFound`、`Timeout`、`Unauthorized`、`DeviceNotConnected`、`DeviceReadFailed`、`DeviceWriteFailed`、`ConfigInvalid`（T4.2 已落地）。
 
 扩充规划（**新增为增量、不改现有常量值**；按演进任务落地，不一次性全加）：
 

@@ -9,6 +9,29 @@
 
 ## [Unreleased]
 
+### 架构演进（2026-07-25 ~ 2026-07-28，阶段 0~6 全部 33 个任务 + 停车场第一项）
+
+新增：
+
+- **Tag 系统（阶段 4）**：业务层按逻辑点名访问设备数据——Tag 模型契约（`TagValue` 质量戳/`TagDefinition`/`TagAccess`）、点表 JSON 加载+启动快速失败校验（`IAddressValidator`）、`ITagService` 按名读写（通信失败返回 Bad 质量戳不抛异常）、采集引擎+最新值表（按生效间隔分组轮询）、`TagValueChangedEvent` 变化才通知；Dashboard 全部接真实数据（设备状态/采集点/Tag 变化/真实事件流），占位数据清零
+- **Device 抽象（阶段 3）**：`IDevice`/`DeviceInfo`/`DeviceType` 契约、`DeviceRegistry`（大小写不敏感）、PLC 经 `PlcDeviceAdapter` 接入、扫码枪迁入统一监督器（第四套独立重连消除）、统一 `DeviceStateChangedEvent`（旧四事件经迁移边桥接并行保留）
+- **连接监督收敛（阶段 1）**：`DeviceConnectionStateMachine`（六态）+ `ConnectionSupervisor`（心跳/重连退避/监督自愈，纯事件源），三菱/西门子/欧姆龙三驱动接入并删除逐行复制的看门狗；看门狗参数配置化（`Plc` 节 3 个可选键）
+- **地址领域对象（阶段 2）**：`McAddress`/`S7Address`/`FinsAddress`（解析/规范化/结构化错误/值相等），读写预检接入；地址语法只允许存在于驱动内部
+- **带类型批量读（停车场 TP1~TP3）**：`IPlcTypedBatchRead` 契约 + 三品牌实现（西门子/欧姆龙真批量，三菱循环逐条按类型分发）+ 采集引擎在线 PLC 每周期一次往返（三级降级）
+- **首个真实报表**：操作审计日报 `AuditDailyReportProvider`（数据源=审计日志），替换示例注册
+- **规范文档（阶段 0/5/6）**：`docs/conventions/` 新增 ERROR_HANDLING / LOGGING / LAYERING / DEPENDENCIES 四份规范
+
+修复：
+
+- **优雅关闭死锁真因**：Dashboard 事件处理器 `Dispatcher.Invoke` 双向等待 → `BeginInvoke`；停止路径无界同步 `Close` 套 2 秒有界等待
+- **启动时序缺陷**：设备注册/点表加载必须先于插件初始化
+
+变更：
+
+- gRPC/Server/Client 封存代码显式标注 ❄（行为不变）；三 PLC 驱动日志按 LOGGING.md 规范清理
+- 删除死引用：`Contracts.Core→AP.Core`、三 PLC 插件→`AP.Shared.UI`
+- 测试规模：237 → 465（3 个测试项目）
+
 ### 系统设置（2026-07-24）
 
 修复：

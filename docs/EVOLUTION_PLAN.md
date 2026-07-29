@@ -58,7 +58,7 @@ UI 插件 → 应用服务（业务语义） → Tag 服务（逻辑点名，带
 
 - 运行时：.NET 8 + WPF + Prism 9 + DryIoc；消息：MediatR（桥接 Prism EventAggregator）；ORM：FreeSql(SQLite)；容错：Polly v8；日志：Serilog。
 - 插件通过 `PluginLoadContext` 隔离加载，宿主 `Bootstrapper` 手动构建容器（IHostedService 不自动启动）。
-- 测试：xUnit + NSubstitute + FluentAssertions，3 个测试项目 / 237 个测试。
+- 测试：xUnit + NSubstitute + FluentAssertions，3 个测试项目 / 237 个测试（基线快照；演进收官时 465 个）。
 
 ## 2. 每个模块职责
 
@@ -75,7 +75,7 @@ UI 插件 → 应用服务（业务语义） → Tag 服务（逻辑点名，带
 
 | 模块 | 职责 |
 |------|------|
-| `AP.Contracts.Core` | `OperationResult<T>`、`ErrorCode`（仅 9 码）、`PlatformException`、`AppInitializedEvent` |
+| `AP.Contracts.Core` | `OperationResult<T>`、`ErrorCode`（基线仅 9 码；T4.2 起新增 `CONFIG_INVALID`）、`PlatformException`、`AppInitializedEvent` |
 | `AP.Contracts.Hardware` | `IPlcService`/`IPlcBatchReadWrite`（**裸地址字符串 API**）、`IPlcDriverFactory`、`IScannerService`、`PlcOptions`、设备连接事件、`PlcValue` |
 | `AP.Contracts.Communication` | gRPC proto 契约 ❄ 封存 |
 | `AP.Contracts.System` | `ILoginService`、`ISettingsDialogService`、`ISystemMonitorService` |
