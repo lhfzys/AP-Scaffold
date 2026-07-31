@@ -4,12 +4,15 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:audit="clr-namespace:AP.Contracts.Security.Audit;assembly=AP.Contracts.Security"
+             xmlns:converters="clr-namespace:AP.Plugin.AuditLog.Converters"
              xmlns:spinner="clr-namespace:AP.Shared.UI.Controls.LoadingSpinner;assembly=AP.Shared.UI"
              mc:Ignorable="d"
              d:DesignHeight="600"
              d:DesignWidth="900"
               Background="Transparent">
+    <UserControl.Resources>
+        <converters:AuditActionTypeDisplayConverter x:Key="AuditActionTypeDisplayConverter"/>
+    </UserControl.Resources>
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -53,10 +56,11 @@
                              Margin="0,0,12,0"
                              VerticalAlignment="Center"/>
 
-                    <ComboBox ItemsSource="{Binding Source={x:Type audit:AuditActionType}, Mode=OneTime}"
-                              SelectedItem="{Binding SelectedActionType}"
-                              md:HintAssist.Hint="操作类型（留空表示全部）"
-                              Width="160"
+                    <ComboBox ItemsSource="{Binding ActionTypeOptions}"
+                              DisplayMemberPath="Display"
+                              SelectedItem="{Binding SelectedActionTypeOption}"
+                              md:HintAssist.Hint="操作类型"
+                              Width="140"
                               Margin="0,0,12,0"
                               VerticalAlignment="Center"/>
 
@@ -90,7 +94,7 @@
                                         Binding="{Binding UserName}"
                                         Width="120"/>
                     <DataGridTextColumn Header="操作类型"
-                                        Binding="{Binding ActionType}"
+                                        Binding="{Binding ActionType, Converter={StaticResource AuditActionTypeDisplayConverter}}"
                                         Width="100"/>
                     <DataGridTextColumn Header="操作名称"
                                         Binding="{Binding ActionName}"

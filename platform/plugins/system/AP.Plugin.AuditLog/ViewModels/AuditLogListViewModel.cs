@@ -1,8 +1,9 @@
-﻿#region
+#region
 
 using System.Collections.ObjectModel;
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
+using AP.Plugin.AuditLog.Models;
 using AP.Shared.UI.Base;
 using AP.Shared.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -35,8 +36,11 @@ public partial class AuditLogListViewModel : ViewModelBase
     [ObservableProperty]
     private string _searchUserName = string.Empty;
 
+    /// <summary>操作类型筛选项（首项为"全部"）。</summary>
+    public IReadOnlyList<ActionTypeOption> ActionTypeOptions => ActionTypeOption.All;
+
     [ObservableProperty]
-    private AuditActionType? _selectedActionType;
+    private ActionTypeOption _selectedActionTypeOption = ActionTypeOption.All[0];
 
     [ObservableProperty]
     private int _pageIndex = 1;
@@ -92,7 +96,7 @@ public partial class AuditLogListViewModel : ViewModelBase
         StartTime = DateTime.Today.AddDays(-6);
         EndTime = DateTime.Today.AddDays(1).AddTicks(-1);
         SearchUserName = string.Empty;
-        SelectedActionType = null;
+        SelectedActionTypeOption = ActionTypeOption.All[0];
         PageIndex = 1;
         await LoadLogsAsync();
     }
@@ -125,11 +129,12 @@ public partial class AuditLogListViewModel : ViewModelBase
         try
         {
             var skip = (PageIndex - 1) * PageSize;
+            var actionType = SelectedActionTypeOption?.Value;
             var logs = await _auditService.QueryAsync(
                 StartTime,
                 EndTime,
                 string.IsNullOrWhiteSpace(SearchUserName) ? null : SearchUserName.Trim(),
-                SelectedActionType,
+                actionType,
                 skip,
                 PageSize);
 
@@ -137,7 +142,7 @@ public partial class AuditLogListViewModel : ViewModelBase
                 StartTime,
                 EndTime,
                 string.IsNullOrWhiteSpace(SearchUserName) ? null : SearchUserName.Trim(),
-                SelectedActionType);
+                actionType);
 
             Logs = new ObservableCollection<AuditLogEntry>(logs);
             UpdatePageState();
