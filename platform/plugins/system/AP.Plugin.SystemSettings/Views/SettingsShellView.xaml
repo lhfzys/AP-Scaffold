@@ -36,9 +36,10 @@
                 </TabControl.ItemTemplate>
                 <TabControl.ContentTemplate>
                     <DataTemplate>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      Padding="24">
-                            <ContentControl Content="{Binding Editor}"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <!-- 内边距放内容上（ScrollViewer.Padding 未必生效）；
+                                 右侧 40 保证滚动条出现后仍与内容有约 26px 净距 -->
+                            <ContentControl Content="{Binding Editor}" Margin="24,24,40,24"/>
                         </ScrollViewer>
                     </DataTemplate>
                 </TabControl.ContentTemplate>

@@ -37,7 +37,7 @@
 
         <Grid Grid.Row="0" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="驱动类型"/>
@@ -48,7 +48,7 @@
 
         <Grid Grid.Row="1" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="IP 地址"/>
@@ -57,7 +57,7 @@
 
         <Grid Grid.Row="2" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="端口"/>
@@ -66,7 +66,7 @@
 
         <Grid Grid.Row="3" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="超时(ms)"/>
@@ -75,7 +75,7 @@
 
         <Grid Grid.Row="4" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="型号/版本"/>
@@ -84,7 +84,7 @@
 
         <Grid Grid.Row="5" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="心跳地址"/>
@@ -93,7 +93,7 @@
 
         <Grid Grid.Row="6" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="心跳周期(秒)"/>
@@ -102,7 +102,7 @@
 
         <Grid Grid.Row="7" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="重连退避(秒)"/>
@@ -111,7 +111,7 @@
 
         <Grid Grid.Row="8" Margin="0,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="监督重启延迟(秒)"/>
