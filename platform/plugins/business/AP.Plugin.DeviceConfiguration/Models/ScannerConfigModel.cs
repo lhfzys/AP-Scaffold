@@ -1,4 +1,4 @@
-﻿using System.IO.Ports;
+using System.IO.Ports;
 
 namespace AP.Plugin.DeviceConfiguration.Models;
 
@@ -9,6 +9,9 @@ namespace AP.Plugin.DeviceConfiguration.Models;
 public class ScannerConfigModel
 {
     public const string SectionName = "Plugins:Configuration:AP.Plugin.Scanner";
+
+    /// <summary>是否启用扫码枪（false 时重启后不再连接该设备）。</summary>
+    public bool Enabled { get; set; } = true;
 
     public string PortName { get; set; } = "COM1";
     public int BaudRate { get; set; } = 9600;

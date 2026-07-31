@@ -17,6 +17,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -38,13 +39,25 @@
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="启用扫码枪"/>
+            <CheckBox Grid.Column="1"
+                      IsChecked="{Binding Enabled}"
+                      Content="取消勾选并重启后，不再连接扫码枪（状态栏也不再显示该设备）"
+                      VerticalAlignment="Center"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="通信串口"/>
             <TextBox Grid.Column="1"
                      md:HintAssist.Hint="例如：COM1"
                      Text="{Binding PortName, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 
-        <Grid Grid.Row="1" Margin="0,8">
+        <Grid Grid.Row="2" Margin="0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -59,7 +72,7 @@
             </ComboBox>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="0,8">
+        <Grid Grid.Row="3" Margin="0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -68,7 +81,7 @@
             <TextBox Grid.Column="1" Text="{Binding DataBits, UpdateSourceTrigger=PropertyChanged}"/>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="0,8">
+        <Grid Grid.Row="4" Margin="0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -83,7 +96,7 @@
             </ComboBox>
         </Grid>
 
-        <Grid Grid.Row="4" Margin="0,8">
+        <Grid Grid.Row="5" Margin="0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -96,7 +109,7 @@
             </ComboBox>
         </Grid>
 
-        <Grid Grid.Row="5" Margin="0,8">
+        <Grid Grid.Row="6" Margin="0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -111,7 +124,7 @@
             </ComboBox>
         </Grid>
 
-        <TextBlock Grid.Row="6"
+        <TextBlock Grid.Row="7"
                    Text="* 修改以上配置后需要重新连接扫码枪才能生效"
                    Foreground="{DynamicResource MaterialDesignBodyLight}"
                    FontSize="12"

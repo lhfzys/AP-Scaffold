@@ -1,4 +1,4 @@
-﻿using System.IO.Ports;
+using System.IO.Ports;
 using AP.Plugin.DeviceConfiguration.Models;
 using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.UI.Base;
@@ -13,6 +13,7 @@ namespace AP.Plugin.DeviceConfiguration.ViewModels;
 /// </summary>
 public partial class ScannerSettingsViewModel : ViewModelBase, ISettingsEditorViewModel
 {
+    [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private string _portName = "COM1";
     [ObservableProperty] private int _baudRate = 9600;
     [ObservableProperty] private int _dataBits = 8;
@@ -36,6 +37,7 @@ public partial class ScannerSettingsViewModel : ViewModelBase, ISettingsEditorVi
 
     private void LoadFromOptions(ScannerConfigModel options)
     {
+        Enabled = options.Enabled;
         PortName = options.PortName ?? "COM1";
         BaudRate = options.BaudRate > 0 ? options.BaudRate : 9600;
         DataBits = options.DataBits > 0 ? options.DataBits : 8;
@@ -77,6 +79,7 @@ public partial class ScannerSettingsViewModel : ViewModelBase, ISettingsEditorVi
 
         return new ScannerConfigModel
         {
+            Enabled = Enabled,
             PortName = PortName,
             BaudRate = BaudRate,
             DataBits = DataBits,

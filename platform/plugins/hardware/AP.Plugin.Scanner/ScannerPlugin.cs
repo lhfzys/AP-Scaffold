@@ -31,6 +31,13 @@ public class ScannerPlugin : PluginBase
     {
         base.ConfigureServices(services, configuration);
 
+        // 无扫码枪的项目可整体禁用：不注册服务与设备视图（状态栏/设备注册表均不出现）
+        if (!configuration.GetValue($"{SerialPortOptions.SectionName}:Enabled", true))
+        {
+            Logger.LogInformation("扫码枪已禁用（{Section}:Enabled=false），跳过服务注册", SerialPortOptions.SectionName);
+            return;
+        }
+
         var configSection = configuration.GetSection(SerialPortOptions.SectionName);
         services.Configure<SerialPortOptions>(configSection);
 
@@ -45,9 +52,16 @@ public class ScannerPlugin : PluginBase
     {
         await base.InitializeAsync(serviceProvider, ct);
 
+        // Enabled=false 时服务未注册，直接跳过（不开口、不报初始化失败）
+        var scanner = serviceProvider.GetService<IScannerService>();
+        if (scanner == null)
+        {
+            Logger.LogInformation("扫码枪未注册（已禁用），跳过启动");
+            return;
+        }
+
         try
         {
-            var scanner = serviceProvider.GetRequiredService<IScannerService>();
             await scanner.OpenAsync();
         }
         catch (Exception ex)
