@@ -104,7 +104,7 @@ public class SettingsService
             return new SaveSettingsResult
             {
                 Success = false,
-                Errors = new List<string> { $"保存配置失败: {ex.Message}" }
+                Errors = new List<string> { $"保存配置失败：{ex.Message}" }
             };
         }
     }
@@ -127,7 +127,7 @@ public class SettingsService
                 ActionType = AuditActionType.Update,
                 ActionName = "修改系统配置",
                 TargetId = sections,
-                Description = $"更新配置节: {sections}；需要重启: {requiresRestart}",
+                Description = $"更新配置节：{sections}；需要重启：{requiresRestart}",
                 Succeeded = succeeded,
                 ErrorMessage = error
             });

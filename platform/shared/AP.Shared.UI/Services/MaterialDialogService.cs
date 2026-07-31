@@ -1,6 +1,7 @@
-﻿using AP.Shared.UI.Dialogs.ViewModels;
+using AP.Shared.UI.Dialogs.ViewModels;
 using AP.Shared.UI.Dialogs.Views;
 using MaterialDesignThemes.Wpf;
+using System.Windows;
 using System.Windows.Media;
 using AP.Shared.Utilities.Constants;
 
@@ -16,7 +17,7 @@ public class MaterialDialogService : ICustomDialogService
             Message = message,
             IsConfirmMode = false,
             Icon = PackIconKind.Information,
-            IconColor = Brushes.DodgerBlue
+            IconColor = ResolveThemeBrush("Brush.Info", Brushes.DodgerBlue)
         };
         await DialogHost.Show(new ConfirmDialogView { DataContext = vm }, AppConstants.Dialogs.RootIdentifier);
     }
@@ -29,7 +30,7 @@ public class MaterialDialogService : ICustomDialogService
             Message = message,
             IsConfirmMode = true,
             Icon = PackIconKind.QuestionMarkCircle,
-            IconColor = Brushes.Orange
+            IconColor = ResolveThemeBrush("Brush.Warning", Brushes.Orange)
         };
 
         var result = await DialogHost.Show(new ConfirmDialogView { DataContext = vm },
@@ -48,9 +49,13 @@ public class MaterialDialogService : ICustomDialogService
             Message = message,
             IsConfirmMode = false,
             Icon = PackIconKind.AlertCircle,
-            IconColor = Brushes.Red
+            IconColor = ResolveThemeBrush("Brush.Error", Brushes.Red)
         };
 
         await DialogHost.Show(new ConfirmDialogView { DataContext = vm }, AppConstants.Dialogs.RootIdentifier);
     }
+
+    /// <summary>从应用资源取主题画刷，取不到（如主题未加载）时回退到指定色。</summary>
+    private static Brush ResolveThemeBrush(string resourceKey, Brush fallback)
+        => Application.Current?.TryFindResource(resourceKey) as Brush ?? fallback;
 }

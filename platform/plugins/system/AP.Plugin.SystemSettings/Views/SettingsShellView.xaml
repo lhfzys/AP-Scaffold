@@ -53,7 +53,7 @@
 
             <!-- 底部操作栏 -->
             <Border Grid.Row="2"
-                    BorderBrush="{DynamicResource MaterialDesignDivider}"
+                    BorderBrush="{DynamicResource Brush.Outline}"
                     BorderThickness="0,1,0,0"
                     Background="{DynamicResource Brush.Surface}"
                     Padding="24,16">

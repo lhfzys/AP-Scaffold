@@ -26,7 +26,7 @@
         <!-- 标题栏 -->
         <Border Grid.Row="0"
                 Background="{DynamicResource Brush.Surface}"
-                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderBrush="{DynamicResource Brush.Outline}"
                 BorderThickness="0,0,0,1"
                 Padding="24,18">
             <StackPanel Orientation="Horizontal">
@@ -93,7 +93,7 @@
                           SelectedItem="{Binding SelectedParameter}"
                           CanUserAddRows="True"
                           BorderThickness="1"
-                          BorderBrush="{DynamicResource MaterialDesignDivider}"
+                          BorderBrush="{DynamicResource Brush.Outline}"
                           Height="220">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="参数名"
@@ -115,7 +115,7 @@
 
         <!-- 底部按钮 -->
         <Border Grid.Row="2"
-                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderBrush="{DynamicResource Brush.Outline}"
                 BorderThickness="0,1,0,0"
                 Background="{DynamicResource Brush.Surface}"
                 Padding="24,16">

@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="AP.Plugin.DeviceConfiguration.Views.ScannerSettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -40,7 +40,7 @@
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="通信串口"/>
             <TextBox Grid.Column="1"
-                     md:HintAssist.Hint="例如: COM1"
+                     md:HintAssist.Hint="例如：COM1"
                      Text="{Binding PortName, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 

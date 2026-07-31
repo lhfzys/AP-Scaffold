@@ -139,7 +139,7 @@ public partial class UserListViewModel : ViewModelBase
         }
 
         var confirm = await _dialogService.ShowConfirmAsync(
-            $"确定要删除用户 {SelectedUser.DisplayName}({SelectedUser.UserName}) 吗？",
+            $"确定要删除用户 {SelectedUser.DisplayName}（{SelectedUser.UserName}）吗？",
             "删除确认");
 
         if (!confirm) return;
@@ -170,7 +170,7 @@ public partial class UserListViewModel : ViewModelBase
         if (SelectedUser == null) return;
 
         var confirm = await _dialogService.ShowConfirmAsync(
-            $"确定要重置用户 {SelectedUser.DisplayName}({SelectedUser.UserName}) 的密码吗？\n重置后密码为：admin123",
+            $"确定要重置用户 {SelectedUser.DisplayName}（{SelectedUser.UserName}）的密码吗？\n重置后密码为：admin123",
             "重置密码确认");
 
         if (!confirm) return;

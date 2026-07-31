@@ -16,7 +16,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.Sidebar.Selected.Foreground}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListBoxItem}, Path=IsSelected}" Value="False">
                     <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurfaceDark}"/>
@@ -31,7 +31,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.Sidebar.Selected.Foreground}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListBoxItem}, Path=IsSelected}" Value="False">
                     <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurfaceDark}"/>
@@ -94,11 +94,11 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.Primary}"/>
+                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.Sidebar.Selected.Background}"/>
                                         <Setter TargetName="SelectionIndicator" Property="Background" Value="{DynamicResource Brush.Accent}"/>
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.NavHover}"/>
+                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.Sidebar.Hover.Background}"/>
                                     </Trigger>
                                     <MultiTrigger>
                                         <MultiTrigger.Conditions>

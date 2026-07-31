@@ -92,7 +92,7 @@ public partial class DashboardViewModel : ViewModelBase
             }));
 
         _scanToken = _eventAggregator.GetEvent<PrismScanCompletedEvent>().Subscribe(e =>
-            RunOnUi(() => AddRecentEvent($"扫码完成: {e.Barcode}", e.Timestamp)));
+            RunOnUi(() => AddRecentEvent($"扫码完成：{e.Barcode}", e.Timestamp)));
     }
 
     private void RefreshDevices()

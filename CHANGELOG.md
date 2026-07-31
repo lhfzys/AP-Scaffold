@@ -9,6 +9,20 @@
 
 ## [Unreleased]
 
+### UI 一致性优化·第四批次（2026-07-29，审计筛选修复与主题归位）
+
+修复：
+
+- **审计日志操作类型筛选实际失效**：下拉 `ItemsSource` 误绑枚举 `Type` 对象（恒显示类型全名、选中值无法回传），改为 `ActionTypeOption` 列表（首项"全部"+ 10 个中文项），筛选与重置恢复正常
+- 审计列表"操作类型"列直绑枚举显示英文，新增 `AuditActionTypeDisplayConverter` 统一中文显示（映射与筛选项共用 `AuditActionTypeDisplay`）
+
+变更：
+
+- **弹窗图标色归位主题**：`MaterialDialogService` 三处硬编码 `Brushes.DodgerBlue/Orange/Red` 改取 `Brush.Info/Warning/Error`（主题未加载时回退原色）
+- **分隔线统一**：`MaterialDesignDivider` 13 处（7 个文件：用户/角色/配方编辑窗、设置中心两处、报表中心、Dashboard）全部改 `Brush.Outline`
+- **Sidebar 选中/悬停色归位既有主题键**：选中背景 `Brush.Sidebar.Selected.Background`、选中前景 `Brush.Sidebar.Selected.Foreground`（原字面量 `White`）、悬停 `Brush.Sidebar.Hover.Background`；删除第三批次引入的重复键 `Color.NavHover/Brush.NavHover`（与 `Sidebar.Hover.Background` 同值）
+- 界面文案标点全角化扫尾 9 处：设置保存失败/审计描述、扫码完成事件、用户/配方删除确认括号、头部用户名括号、扫码枪/PLC 配置示例冒号
+
 ### UI 一致性优化·第三批次（2026-07-29，头部时间位与状态栏）
 
 新增：
@@ -18,7 +32,7 @@
 变更：
 
 - **免登录匿名标识清零**：Sidebar 底部用户卡按 `Security:Enabled` 显隐（此前免登录显示 `anonymous/Administrator`，头部已隐藏此处漏改）；Dashboard 问候语 anonymous 回退"操作员"，"你好, " 半角逗号改全角，问候语去 emoji（工业统一视觉）
-- 主题新增语义键 `Color.Outline/Brush.Outline`（#DDE2E8 分隔线）、`Color.NavHover/Brush.NavHover`（#D1DDE8 导航悬停）；`SinglePageLayoutView`/`StandardLayoutView`/`SidebarView` 四处硬编码颜色全部归位主题键
+- 主题新增语义键 `Color.Outline/Brush.Outline`（#DDE2E8 分隔线）；`SinglePageLayoutView`/`StandardLayoutView`/`SidebarView` 四处硬编码颜色全部归位主题键（导航悬停直接使用既有 `Brush.Sidebar.Hover.Background`）
 
 ### 打包治理（方案 A：框架依赖发布，2026-07-29）
 

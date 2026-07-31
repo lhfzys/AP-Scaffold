@@ -119,7 +119,7 @@
         </Grid>
 
         <TextBlock Grid.Row="9"
-                   Text="* 切换 PLC 驱动类型后需要重启应用才能生效&#13;&#10;三菱示例: Version=Qna_3E, Port=6000, 心跳=D0.0&#13;&#10;西门子示例: Model=S7_1200, Port=102, 心跳=DB1.0.0"
+                   Text="* 切换 PLC 驱动类型后需要重启应用才能生效&#13;&#10;三菱示例：Version=Qna_3E, Port=6000, 心跳=D0.0&#13;&#10;西门子示例：Model=S7_1200, Port=102, 心跳=DB1.0.0"
                    Foreground="{DynamicResource MaterialDesignBodyLight}"
                    FontSize="12"
                    Margin="0,24,0,0"

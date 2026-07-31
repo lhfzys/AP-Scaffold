@@ -143,7 +143,7 @@ public partial class RecipeListViewModel : ViewModelBase
         }
 
         var confirm = await _dialogService.ShowConfirmAsync(
-            $"确定要删除配方 {SelectedRecipe.Name}({SelectedRecipe.Code}) 吗？",
+            $"确定要删除配方 {SelectedRecipe.Name}（{SelectedRecipe.Code}）吗？",
             "删除确认");
         if (!confirm) return;
 

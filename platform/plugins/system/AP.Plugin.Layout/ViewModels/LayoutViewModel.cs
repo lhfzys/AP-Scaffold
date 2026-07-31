@@ -121,7 +121,7 @@ public partial class LayoutViewModel : ViewModelBase
             return;
         }
 
-        CurrentUserName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : $"{user.DisplayName}({user.UserName})";
+        CurrentUserName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : $"{user.DisplayName}（{user.UserName}）";
         IsAuthenticated = true;
     }
 
