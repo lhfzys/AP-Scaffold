@@ -33,27 +33,19 @@
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- 右侧 时间 + 用户 + 设置 + 退出 -->
+            <!-- 右侧 公司名（免登录时）+ 用户 + 退出 -->
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
                         VerticalAlignment="Center">
 
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="0,0,16,0"
-                            Opacity="0.9">
-                    <md:PackIcon Kind="ClockTimeFourOutline"
-                                 Width="18"
-                                 Height="18"
-                                 Foreground="White"
-                                 VerticalAlignment="Center"
-                                 Margin="0,0,6,0"/>
-                    <TextBlock Text="{Binding CurrentTime}"
-                               FontSize="14"
-                               Foreground="White"
-                               VerticalAlignment="Center"
-                               FontFamily="Consolas, Microsoft YaHei"/>
-                </StackPanel>
+                <!-- 免登录填充：公司名（登录模式下由用户区占据右侧，不显示） -->
+                <TextBlock Text="{Binding CompanyName}"
+                           FontSize="13"
+                           Foreground="White"
+                           Opacity="0.75"
+                           VerticalAlignment="Center"
+                           Margin="0,0,4,0"
+                           Visibility="{Binding CanLogout, Converter={StaticResource InverseBoolToVis}}"/>
 
                 <!-- 用户标识 + 退出登录（仅登录模式显示；CanLogout 即 Security:Enabled） -->
                 <StackPanel Orientation="Horizontal"

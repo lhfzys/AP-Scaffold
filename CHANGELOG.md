@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### UI 一致性优化·第三批次（2026-07-29，头部时间位与状态栏）
+
+新增：
+
+- **底部状态栏 `StatusBarView`**（两个布局共用，DataContext 继承布局 VM）：左=设备在线 X/Y + 四态状态点（全在线/部分/全离线/无设备，真实数据 `IDeviceRegistry` + `PrismDeviceStateChangedEvent` 实时刷新）、中=公司名、右=当前时间；头部右上角秒级跳表移除（时间归位状态栏，工业 HMI 标准布局），免登录时头部右侧改显公司名（启用原死属性 `CompanyName`）
+
+变更：
+
+- **免登录匿名标识清零**：Sidebar 底部用户卡按 `Security:Enabled` 显隐（此前免登录显示 `anonymous/Administrator`，头部已隐藏此处漏改）；Dashboard 问候语 anonymous 回退"操作员"，"你好, " 半角逗号改全角，问候语去 emoji（工业统一视觉）
+- 主题新增语义键 `Color.Outline/Brush.Outline`（#DDE2E8 分隔线）、`Color.NavHover/Brush.NavHover`（#D1DDE8 导航悬停）；`SinglePageLayoutView`/`StandardLayoutView`/`SidebarView` 四处硬编码颜色全部归位主题键
+
 ### 打包治理（方案 A：框架依赖发布，2026-07-29）
 
 变更：

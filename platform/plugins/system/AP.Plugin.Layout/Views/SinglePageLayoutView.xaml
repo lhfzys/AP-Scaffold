@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AP.Plugin.Layout.Views.SinglePageLayoutView"
+<UserControl x:Class="AP.Plugin.Layout.Views.SinglePageLayoutView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AP.Plugin.Layout.Views"
@@ -9,12 +9,15 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <local:HeaderView Grid.Row="0" />
 
         <ContentControl Grid.Row="1"
-                        Background="#F0F2F5"
+                        Background="{DynamicResource Brush.SurfaceVariant}"
                         prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />
+
+        <local:StatusBarView Grid.Row="2" />
     </Grid>
 </UserControl>

@@ -243,7 +243,8 @@ bin/Release/AP.Host.Desktop.exe
 - **弹窗双轨**：确认/提示/错误走 `ICustomDialogService`（DialogHost 弹层）；新增/编辑走插件自带模态 Window——`ShowDialog()` 前必须 `window.Owner = Application.Current.MainWindow`，XAML 用 `WindowStartupLocation="CenterOwner"`。
 - **DataGrid**：不要显式 `Style="{StaticResource MaterialDesignDataGrid}"`——`App.xaml` 隐式样式已 `BasedOn` 它，并全局并入虚拟化 4 项 + `AutoGenerateColumns=False`/`GridLinesVisibility=Horizontal`/`BorderThickness=0`/背景/前景；页面只写差异属性（`ItemsSource`/`IsReadOnly`/`BorderThickness` 等）。**单元格模板已全局覆写**（MD 原模板的 ContentPresenter 不消费 `VerticalContentAlignment`，44px 行高下文本贴顶；覆写后 ContentPresenter 垂直居中、水平保持 Stretch 供编辑控件填满），文本/按钮列自动垂直居中，新页面无需处理。
 - **主题按钮**：Raised 按钮统一用 `App.xaml` 的 `RaisedButton.Primary`（BasedOn `MaterialDesignRaisedButton`，`Brush.Primary` 深蓝底 + `Brush.OnPrimary` 白字；OnPrimary 语义键在主题文件定义为 `#FFFFFF`）。不要直接用 MD3 原生 Raised 键（浅色主题下灰白底、白字看不清）；**不要**用同名键 BasedOn 覆写 MD 样式——自引用会被静默置空丢模板，必须另起新键名。
-- **Header 用户区**：右上角用户标识+退出按钮整体按 `CanLogout`（即 `Security:Enabled`）显隐，免登录场景不显示；深色 Header 上的图标/文字用白色前景，用户标识底衬为 `PrimaryHueDarkBrush` 圆角 Border。
+- **Header 用户区**：右上角用户标识+退出按钮整体按 `CanLogout`（即 `Security:Enabled`）显隐，免登录时改显公司名（`CompanyName` 淡白字）；深色 Header 上的图标/文字用白色前景，用户标识底衬为 `PrimaryHueDarkBrush` 圆角 Border。**Sidebar 底部用户卡**同样按 `Security:Enabled` 显隐（`SidebarViewModel.IsUserCardVisible`），免登录不再露出 `anonymous`。
+- **底部状态栏**（2026-07-29 起）：`StatusBarView` 挂在两个布局的 HeaderView 之外（Standard/SinglePage 第三行），DataContext 继承布局的 `LayoutViewModel`（与 HeaderView 同模式，无独立 VM、无需 DI 注册）；左=设备在线 X/Y + 状态点（`DeviceStatusLevel`：ok/warn/error/none → Success/Warning/Error/Inactive），中=公司名，右=当前时间。头部不再放时钟。
 - **深色例外**（刻意不走浅色主题）：Splash 启动页（深色硬编码品牌页，仅显示中文软件名）；Login/ChangePassword 的蓝色 `ColorZone PrimaryMid` 横幅页头。其余窗口一律浅色主题键。
 
 ### 5.11 其他坑点

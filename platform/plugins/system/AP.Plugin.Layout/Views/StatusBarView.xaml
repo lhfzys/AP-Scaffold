@@ -1,0 +1,65 @@
+<UserControl x:Class="AP.Plugin.Layout.Views.StatusBarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Border Height="28"
+            Background="{DynamicResource Brush.SurfaceDark}"
+            BorderBrush="{DynamicResource Brush.Outline}"
+            BorderThickness="0,1,0,0"
+            Padding="16,0">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左：设备在线状态（真实数据，IDeviceRegistry + 状态事件实时刷新） -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                <!-- 状态点：全在线=Success / 部分在线=Warning / 全离线=Error / 无设备=Inactive（默认） -->
+                <Ellipse Width="8" Height="8"
+                         VerticalAlignment="Center"
+                         Margin="0,0,6,0">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource Brush.Inactive}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DeviceStatusLevel}" Value="ok">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Success}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DeviceStatusLevel}" Value="warn">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DeviceStatusLevel}" Value="error">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Error}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Text="{Binding DeviceStatusText}"
+                           FontSize="11"
+                           Foreground="{DynamicResource Brush.OnSurfaceDark}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- 中：公司名 -->
+            <TextBlock Grid.Column="1"
+                       Text="{Binding CompanyName}"
+                       FontSize="11"
+                       Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+
+            <!-- 右：当前时间 -->
+            <TextBlock Grid.Column="2"
+                       Text="{Binding CurrentTime}"
+                       FontSize="11"
+                       FontFamily="Consolas, Microsoft YaHei"
+                       Foreground="{DynamicResource Brush.OnSurfaceDark}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+    </Border>
+</UserControl>

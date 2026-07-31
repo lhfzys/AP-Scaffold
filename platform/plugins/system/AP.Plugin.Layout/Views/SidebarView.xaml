@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AP.Plugin.Layout.Views.SidebarView"
+<UserControl x:Class="AP.Plugin.Layout.Views.SidebarView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -98,11 +98,7 @@
                                         <Setter TargetName="SelectionIndicator" Property="Background" Value="{DynamicResource Brush.Accent}"/>
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="RootBorder" Property="Background">
-                                            <Setter.Value>
-                                                <SolidColorBrush Color="#D1DDE8"/>
-                                            </Setter.Value>
-                                        </Setter>
+                                        <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource Brush.NavHover}"/>
                                     </Trigger>
                                     <MultiTrigger>
                                         <MultiTrigger.Conditions>
@@ -131,12 +127,13 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- 底部用户信息区 - 浅色 -->
+        <!-- 底部用户信息区 - 浅色（仅登录模式显示，免登录隐藏整卡） -->
         <Border Grid.Row="2"
                 Background="{DynamicResource Brush.SurfaceVariant}"
-                BorderBrush="#DDE2E8"
+                BorderBrush="{DynamicResource Brush.Outline}"
                 BorderThickness="0,1,0,0"
-                Padding="16,14">
+                Padding="16,14"
+                Visibility="{Binding IsUserCardVisible, Converter={StaticResource BoolToVis}}">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <md:PackIcon Kind="AccountCircle"
                              Width="34"

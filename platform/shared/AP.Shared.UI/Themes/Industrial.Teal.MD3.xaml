@@ -52,6 +52,14 @@
     <Color x:Key="Color.OnPrimary">#FFFFFF</Color>
     <SolidColorBrush x:Key="Brush.OnPrimary" Color="{StaticResource Color.OnPrimary}"/>
 
+    <!-- 分隔线 / 边框（浅色主题下的中性描边） -->
+    <Color x:Key="Color.Outline">#DDE2E8</Color>
+    <SolidColorBrush x:Key="Brush.Outline" Color="{StaticResource Color.Outline}"/>
+
+    <!-- 导航项悬停底（浅蓝，浅底上的主色淡色阶） -->
+    <Color x:Key="Color.NavHover">#D1DDE8</Color>
+    <SolidColorBrush x:Key="Brush.NavHover" Color="{StaticResource Color.NavHover}"/>
+
     <!-- ============================================================
          表面颜色 — 全浅色系统
          Surface         = 内容区纯白底

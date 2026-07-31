@@ -144,11 +144,11 @@ public partial class DashboardViewModel : ViewModelBase
         var hour = DateTime.Now.Hour;
         GreetingText = hour switch
         {
-            < 6 => "夜深了，注意休息 🌙",
-            < 12 => "早上好，今天也是高效的一天 ☀️",
-            < 14 => "中午好，别忘了按时吃饭 🍜",
-            < 18 => "下午好，继续加油 💪",
-            _ => "晚上好，总结一下今天的成果 🌟"
+            < 6 => "夜深了，注意休息",
+            < 12 => "早上好，今天也是高效的一天",
+            < 14 => "中午好，别忘了按时吃饭",
+            < 18 => "下午好，继续加油",
+            _ => "晚上好，总结一下今天的成果"
         };
 
         CurrentDate = DateTime.Now.ToString("yyyy年M月d日 dddd");
@@ -157,10 +157,14 @@ public partial class DashboardViewModel : ViewModelBase
     private void RefreshUser()
     {
         var user = _identityService.CurrentUser;
-        if (user != null)
+        if (user == null || string.Equals(user.UserName, "anonymous", StringComparison.OrdinalIgnoreCase))
         {
-            DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
+            // 免登录场景（AnonymousIdentityService）：不展示英文匿名标识
+            DisplayName = "操作员";
+            return;
         }
+
+        DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
     }
 
     private void RefreshUptime()

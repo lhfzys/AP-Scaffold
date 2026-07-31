@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AP.Plugin.Layout.Views.StandardLayoutView"
+<UserControl x:Class="AP.Plugin.Layout.Views.StandardLayoutView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AP.Plugin.Layout.Views"
@@ -9,6 +9,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <local:HeaderView Grid.Row="0"/>
@@ -22,7 +23,7 @@
 
              <Border Grid.Column="0"
                     Background="{DynamicResource Brush.SurfaceDark}"
-                    BorderBrush="#DDE2E8"
+                    BorderBrush="{DynamicResource Brush.Outline}"
                     BorderThickness="0,0,1,0">
                 <ContentControl x:Name="SidebarContainer" />
             </Border>
@@ -30,5 +31,7 @@
             <ContentControl Grid.Column="1"
                             prism:RegionManager.RegionName="{x:Static constants:GlobalConstants+RegionNames.ContentRegion}" />
         </Grid>
+
+        <local:StatusBarView Grid.Row="2"/>
     </Grid>
 </UserControl>

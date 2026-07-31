@@ -36,6 +36,10 @@ public partial class SidebarViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserRole = string.Empty;
 
+    /// <summary>底部用户卡可见性：仅登录模式显示（免登录下 CurrentUser 恒为 anonymous，无展示价值）</summary>
+    [ObservableProperty]
+    private bool _isUserCardVisible;
+
     public SidebarViewModel(
         IRegionManager regionManager,
         IIdentityService identityService,
@@ -51,6 +55,7 @@ public partial class SidebarViewModel : ViewModelBase
 
         var defaultTarget = configuration["AppConfiguration:DefaultNavigationTarget"];
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
+        IsUserCardVisible = securityEnabled;
         var allowedWhenSecurityDisabled = configuration
             .GetSection("AppConfiguration:NavigationWhenSecurityDisabled")
             .Get<string[]>() ?? Array.Empty<string>();
