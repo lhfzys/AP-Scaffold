@@ -32,6 +32,7 @@
   <Folder Name="/platform/plugins/" />
   <Folder Name="/platform/plugins/business/">
     <Project Path="platform/plugins/business/AP.Plugin.DeviceConfiguration/AP.Plugin.DeviceConfiguration.csproj" Id="45a1f71f-6fc8-42e8-af30-1129b6a16989" />
+    <Project Path="platform/plugins/business/AP.Plugin.TagConfiguration/AP.Plugin.TagConfiguration.csproj" Id="7c2e9a41-3f5b-4d8e-9a6c-1e0b2d4f6a80" />
   </Folder>
   <Folder Name="/platform/plugins/hardware/">
     <Project Path="platform/plugins/hardware/AP.Plugin.Plc.Mitsubishi/AP.Plugin.Plc.Mitsubishi.csproj" Id="ea8d91ba-be96-427c-b55d-54adef7aec6f" />

@@ -9,6 +9,21 @@
 
 ## [Unreleased]
 
+### 点表可视化编辑（2026-07-31，AP.Plugin.TagConfiguration）
+
+新增：
+
+- **点表配置插件**（第 13 个插件，`plugins/business/`）：菜单"点表配置"（Order=1100，权限 `device.config`，免登录白名单已加入）——tags.json 列表查看/新增/编辑/删除/保存，设备下拉取自 `IDeviceRegistry`，默认采集周期与按点覆盖可编辑（改名/删除自动清理孤儿覆盖项）；保存前经 `ITagTableValidator` 全量校验（**与启动加载同一规则，非法点表不落盘**），原子写入并补写头部标准注释，保存写审计日志，重启后生效；编辑窗确定时即对候选点表预检，错误留在窗内提示
+- **契约 `ITagTableValidator`** + Infra `TagTableValidator` 实现：`TagTable` 的校验逻辑抽取为共用的 internal `TagTableValidation`（规则与错误文案不变，启动快速失败行为不变），编辑器与启动加载零重复
+
+变更：
+
+- 免登录导航白名单（`appsettings.json` / `appsettings.Standalone.json`）加入 `TagTableListView`
+
+测试：465 → 471（新增 `TagTableValidatorTests` 6 项；`TagTable` 现有测试不动全绿）
+
+明确不做：保存后热重载（采集引擎重建链，记停车场）；点表导入导出
+
 ### UI 一致性优化·第四批次（2026-07-29，审计筛选修复与主题归位）
 
 修复：

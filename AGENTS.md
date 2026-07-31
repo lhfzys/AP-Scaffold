@@ -44,14 +44,15 @@
 - **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅、**带类型批量读**（`IPlcTypedBatchRead`，在线每周期一次往返+三级降级）
 - **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
 - **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
+- **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**重启后生效**
 
 ### 2.3 活跃问题 / 待办
 
 > **范围决策（2026-07-21）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**。Server/Client（gRPC 技术栈）与 PostgreSQL/SQL Server 支持**冻结**——代码保留但不维护、不验证、不投入改进；`AppRole.Server`/`AppRole.Client` 保留但视为"未支持"。除非用户明确要求解冻，不要在这些方向做改动。详见 `docs/IMPROVEMENT_PLAN.md` 1.3 节与第八章末「冻结事项清单」。
 >
-> **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。唯一建议提前做的是点表编辑界面（现场高频动作）。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
+> **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
 
-- [ ] 点表编辑界面（`tags.json` 可视化编辑，复用 `IAddressValidator` 校验；外包现场高频需求，建议提前做）
+- [ ] 点表热重载（点表编辑器保存后免重启：采集引擎分组重建+最新值表失效+视图刷新链，停车场议题）
 - [ ] 配方管理完善（**等真实项目配方需求再动**：参数校验/版本历史/`SwitchAsync` 事件 TODO，避免返工）
 - [ ] Tag 值持久化（停车场议题，设备运行日报/历史报表前置；等客户提历史数据需求再选型）
 - [x] 报表中心首个真实数据提供者（2026-07-28，操作审计日报 AuditDaily）
@@ -89,14 +90,15 @@ AP-Scaffold/
 │   │   ├── AP.Shared.PluginSDK           # PluginBase、INavigationContributor、ISettingsContributor
 │   │   ├── AP.Shared.UI                  # LoadingSpinner、对话框服务、PermissionBehavior、浅色主题
 │   │   └── AP.Shared.Utilities           # ConfigurationHelper、SerializationHelper、常量
-│   ├── plugins/                          # 插件（12 个）
+│   ├── plugins/                          # 插件（13 个）
 │   │   ├── hardware/
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi  # Priority=20，Server|Standalone
 │   │   │   ├── AP.Plugin.Plc.Siemens     # Priority=21，Server|Standalone
 │   │   │   ├── AP.Plugin.Plc.Omron       # Priority=22，Server|Standalone
 │   │   │   └── AP.Plugin.Scanner         # Priority=20，Client|Standalone
 │   │   ├── business/
-│   │   │   └── AP.Plugin.DeviceConfiguration  # Priority=100，ISettingsContributor（扫码枪配置）
+│   │   │   ├── AP.Plugin.DeviceConfiguration  # Priority=100，ISettingsContributor（扫码枪配置）
+│   │   │   └── AP.Plugin.TagConfiguration     # Priority=100，INavigationContributor（点表编辑，Order=1100，device.config）
 │   │   └── system/
 │   │       ├── AP.Plugin.Layout          # Priority=10，布局/Sidebar/仪表盘
 │   │       ├── AP.Plugin.Login           # Priority=1，登录窗口（ILoginService）
@@ -107,7 +109,7 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（44 个测试文件 / 465 个测试）
+│   └── tests/                            # xUnit 测试（45 个测试文件 / 471 个测试）
 │       ├── AP.Core.Tests                 # 9 文件 / 130 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 48 测试
 │       └── AP.Infra.Tests                # 31 文件 / 287 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
@@ -148,7 +150,7 @@ bin/Release/AP.Host.Desktop.exe
 - 相关配置键：
   - `AppConfiguration:DefaultNavigationTarget`（当前 `"DashboardView"`）
   - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / RecipeListView / ReportListView`）
-- 当前菜单 Order：仪表板 100 → 系统配置 1000 → 配方管理 2000 → 报表中心 3000 → 用户管理 4000 → 角色管理 4100 → 审计日志 4200。
+- 当前菜单 Order：仪表板 100 → 系统配置 1000 → 点表配置 1100 → 配方管理 2000 → 报表中心 3000 → 用户管理 4000 → 角色管理 4100 → 审计日志 4200。
 
 ### 5.2 设置贡献者模式（往系统配置中心加一页）
 
@@ -279,6 +281,7 @@ bin/Release/AP.Host.Desktop.exe
 > 2026-07-25 起落地（阶段 4）。定位：业务层**永远按逻辑点名**访问设备数据，不允许直接传协议地址（协议语法只存在于驱动内部）。
 
 - **点表**：`bin/Release/Configuration/tags.json`（随宿主 `Configuration/tags.json` 复制）：`{ "Acquisition": {...}, "Tags": [...] }`；启动时全量校验（点名唯一/设备已注册/地址经 `IAddressValidator` 解析），任一非法即**中止启动**（快速失败，`DeviceConfigurationException`）；`Acquisition` 节为可选采集配置（`DefaultIntervalMs` 默认 1000 + `Overrides` 按点名覆盖），采集策略不属于 `TagDefinition`。
+- **点表编辑（2026-07-31 起）**：运行期改点表走"点表配置"菜单页（`AP.Plugin.TagConfiguration`），不要手改 JSON——保存前经 `ITagTableValidator`（与启动加载共用 `TagTableValidation`，规则/错误文案一致）全量校验，非法不落盘；保存为原子写入并写审计，**重启后生效**（热重载未做，见 2.3 待办）。
 - **读写**：注入 `ITagService` → `ReadAsync(name)` / `WriteAsync(name, value)`，返回 `TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`；**通信失败返回 `Quality=Bad` 不抛异常**（设备未连接快速失败、类型不支持 Bad）；仅编程错误抛异常（点名不存在 `ArgumentException`、读写方向违规 `InvalidOperationException`、写入类型不匹配 `ArgumentException`）；地址解析在点表加载时完成（`ResolvedTag` 缓存 Address Object），读写零解析开销。
 - **采集**：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点）→ `LatestTagValueStore`（Version 按点递增；订阅者读最新值不打设备）→ 变化检测（值或质量戳变化）→ `TagValueChangedEvent`（MediatR）/ `PrismTagValueChangedEvent`（UI）；设备状态走 `DeviceStateChangedEvent` / `PrismDeviceStateChangedEvent`。
 - **错误处理与日志规范**：新代码必须遵守 `docs/conventions/ERROR_HANDLING.md` 与 `LOGGING.md`（禁止裸 `Exception`、禁止 emoji、状态迁移记录法、通信字段结构化）。
@@ -319,11 +322,11 @@ bin/Release/AP.Host.Desktop.exe
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 465 个测试通过。
+2. 运行三个测试项目确认 471 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办；**架构演进任务以 `docs/EVOLUTION_PLAN.md` 为准**（含任务执行铁律：一次一个 Task、单独提交可回滚、不改公开 API 除非必须、提交后回填状态）。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。
 
 ---
 
-**最后更新**: 2026-07-29
+**最后更新**: 2026-07-31

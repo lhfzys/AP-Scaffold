@@ -54,6 +54,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IDeviceRegistry>(),
             sp.GetServices<IAddressValidator>(),
             Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json")));
+        // 点表校验器：与启动加载同一规则，供点表编辑界面保存前预检
+        services.AddSingleton<ITagTableValidator, TagTableValidator>();
         // Tag 服务：业务按点名读写的唯一入口
         services.AddSingleton<ITagService, TagService>();
         // 采集引擎与最新值表（启动/停止由 Bootstrapper 显式调用）

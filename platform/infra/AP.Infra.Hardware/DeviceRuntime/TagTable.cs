@@ -33,7 +33,12 @@ public sealed class TagTable : ITagTable
         var validators = addressValidators.ToDictionary(v => v.DriverType, StringComparer.OrdinalIgnoreCase);
         var file = LoadFile(filePath);
         Acquisition = file.Acquisition ?? new TagAcquisitionConfig();
-        _tags = ValidateAndResolve(file.Tags, deviceRegistry, validators);
+
+        var errors = new List<string>();
+        _tags = TagTableValidation.ValidateAndResolve(file.Tags, deviceRegistry, validators, errors);
+        if (errors.Count > 0)
+            throw new DeviceConfigurationException(
+                $"点表校验失败（{errors.Count} 处）:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
     }
 
     /// <summary>采集配置（tags.json "Acquisition" 节；缺失=默认值）。</summary>
@@ -57,57 +62,6 @@ public sealed class TagTable : ITagTable
         var json = File.ReadAllText(filePath);
         return JsonSerializer.Deserialize<TagTableFile>(json, JsonOptions)
             ?? throw new DeviceConfigurationException($"点表文件为空或格式错误: {filePath}");
-    }
-
-    private static IReadOnlyDictionary<string, ResolvedTag> ValidateAndResolve(
-        List<TagDefinition> definitions,
-        IDeviceRegistry deviceRegistry,
-        IReadOnlyDictionary<string, IAddressValidator> validators)
-    {
-        var errors = new List<string>();
-        var resolved = new Dictionary<string, ResolvedTag>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var tag in definitions)
-        {
-            if (string.IsNullOrWhiteSpace(tag.Name))
-            {
-                errors.Add("存在点名为空的条目");
-                continue;
-            }
-
-            if (resolved.ContainsKey(tag.Name))
-            {
-                errors.Add($"点名重复: '{tag.Name}'");
-                continue;
-            }
-
-            var device = deviceRegistry.Find(tag.DeviceId);
-            if (device == null)
-            {
-                errors.Add($"点 '{tag.Name}' 引用的设备未注册: '{tag.DeviceId}'");
-                continue;
-            }
-
-            if (!validators.TryGetValue(device.Info.DriverType, out var validator))
-            {
-                errors.Add($"点 '{tag.Name}' 的驱动 '{device.Info.DriverType}' 无地址验证器");
-                continue;
-            }
-
-            if (!validator.TryParse(tag.Address, out var parsed, out var error))
-            {
-                errors.Add($"点 '{tag.Name}' 地址非法: {error}");
-                continue;
-            }
-
-            resolved[tag.Name] = new ResolvedTag(tag, parsed!);
-        }
-
-        if (errors.Count > 0)
-            throw new DeviceConfigurationException(
-                $"点表校验失败（{errors.Count} 处）:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
-
-        return resolved;
     }
 
     /// <summary>点表文件形状：{ "Acquisition": {...}, "Tags": [ TagDefinition... ] }。</summary>
