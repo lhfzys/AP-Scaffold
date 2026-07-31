@@ -61,8 +61,14 @@ public class SettingsService
             };
         }
 
-        // 2. 备份现有配置
-        var backupPath = BackupAppSettings();
+        // 2. 逐节解析写回目标文件（角色文件含该节 → 角色文件，否则基文件），并备份各目标文件
+        var roleFileName = _configuration["AppRuntime:RoleConfigFile"];
+        var targetFiles = editors
+            .Select(e => ConfigurationHelper.ResolveTargetFileName(e.Contributor.ConfigurationSection, roleFileName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var backupPaths = BackupConfigFiles(targetFiles);
+        var backupPath = string.Join("; ", backupPaths);
 
         // 3. 保存每个配置节
         var requiresRestart = false;
@@ -75,7 +81,8 @@ public class SettingsService
                 var oldValue = _configuration[contributor.ConfigurationSection];
                 var newValue = editor.GetConfigurationValue();
 
-                ConfigurationHelper.UpdateAppSetting(contributor.ConfigurationSection, newValue, "appsettings.json");
+                var fileName = ConfigurationHelper.ResolveTargetFileName(contributor.ConfigurationSection, roleFileName);
+                ConfigurationHelper.UpdateAppSetting(contributor.ConfigurationSection, newValue, fileName);
 
                 changedSections.Add(contributor.ConfigurationSection);
                 if (editor.RequiresRestart)
@@ -139,17 +146,24 @@ public class SettingsService
     }
 
     /// <summary>
-    /// 备份 appsettings.json
+    /// 备份各目标配置文件（不存在的文件跳过；备份名规则 {文件名去扩展名}.backup.{时间戳}.json）
     /// </summary>
-    private string BackupAppSettings()
+    private IReadOnlyList<string> BackupConfigFiles(IReadOnlyList<string> fileNames)
     {
-        if (!File.Exists(_appSettingsPath))
-            return string.Empty;
+        var backups = new List<string>();
+        foreach (var fileName in fileNames)
+        {
+            var sourcePath = Path.Combine(_configDirectory, fileName);
+            if (!File.Exists(sourcePath)) continue;
 
-        var backupFileName = $"appsettings.backup.{DateTime.Now:yyyyMMddHHmmss}.json";
-        var backupPath = Path.Combine(_configDirectory, backupFileName);
-        File.Copy(_appSettingsPath, backupPath, overwrite: true);
-        return backupPath;
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            var backupFileName = $"{nameWithoutExtension}.backup.{DateTime.Now:yyyyMMddHHmmss}.json";
+            var backupPath = Path.Combine(_configDirectory, backupFileName);
+            File.Copy(sourcePath, backupPath, overwrite: true);
+            backups.Add(backupPath);
+        }
+
+        return backups;
     }
 
     /// <summary>

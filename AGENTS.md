@@ -34,7 +34,7 @@
 - **声明式导航贡献者模式**（`INavigationContributor`，见 5.1）
 - **设置贡献者模式**（`ISettingsContributor`，见 5.2）
 - 三菱 / 西门子 / 欧姆龙 PLC 驱动与统一切换机制（`IPlcDriverFactory` + `ActivePlcService`）
-- 串口扫码枪硬件驱动
+- 串口扫码枪硬件驱动（`Plugins:Configuration:AP.Plugin.Scanner:Enabled=false` 可整体禁用：不注册服务/设备、不连接，系统配置页有勾选；2026-07-31 起）
 - gRPC Server/Client 分布式通信（proto 契约 + StreamBroadcaster 广播）❄ 已封存（代码保留不维护，文件头有标注）
 - 安全模块：本地用户/角色/权限（12 个种子权限、3 个默认角色）、登录、强制改密、审计日志
 - 用户管理、角色管理、审计日志可视化、配方管理骨架、报表中心骨架
@@ -109,7 +109,7 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（45 个测试文件 / 471 个测试）
+│   └── tests/                            # xUnit 测试（45 个测试文件 / 475 个测试）
 │       ├── AP.Core.Tests                 # 9 文件 / 130 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 48 测试
 │       └── AP.Infra.Tests                # 31 文件 / 287 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
@@ -251,7 +251,7 @@ bin/Release/AP.Host.Desktop.exe
 
 ### 5.11 其他坑点
 
-- **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`；临时文件+替换原子写入，IO/JSON/权限错误会**抛出异常**（配置文件不存在则静默返回），调用方需处理失败。
+- **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`；临时文件+替换原子写入，IO/JSON/权限错误会**抛出异常**（配置文件不存在则静默返回），调用方需处理失败。**分层写回（2026-07-31 修复）**：配置按 `appsettings.json` + `appsettings.{Role}.json` 分层加载（角色文件优先），写回必须经 `ConfigurationHelper.ResolveTargetFileName` 按节选目标文件（角色文件含该节 → 角色文件；宿主经 `AppRuntime:RoleConfigFile` 暴露活动角色文件名），否则只存在于角色文件的节会被遮蔽、保存不生效。
 - **SQLite**：启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
 - **gRPC 配置键**：服务端 `Grpc:ServerPort`（默认 5000）；客户端 `Grpc:ServerUrl`、`Grpc:ClientId`、`Grpc:ClientName`。
@@ -322,7 +322,7 @@ bin/Release/AP.Host.Desktop.exe
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 471 个测试通过。
+2. 运行三个测试项目确认 475 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办；**架构演进任务以 `docs/EVOLUTION_PLAN.md` 为准**（含任务执行铁律：一次一个 Task、单独提交可回滚、不改公开 API 除非必须、提交后回填状态）。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。

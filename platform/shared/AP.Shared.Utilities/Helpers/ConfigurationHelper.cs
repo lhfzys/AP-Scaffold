@@ -10,6 +10,51 @@ namespace AP.Shared.Utilities.Helpers;
 public static class ConfigurationHelper
 {
     /// <summary>
+    ///     解析配置节的写回目标文件：活动角色文件（appsettings.{Role}.json）中存在该节 → 角色文件；否则 appsettings.json。
+    /// </summary>
+    /// <remarks>
+    ///     配置按 appsettings.json + appsettings.{Role}.json 分层加载（角色文件优先）。
+    ///     只存在于角色文件中的节（如 Plugins:Configuration:AP.Plugin.Scanner）若写回基文件，
+    ///     会被角色文件遮蔽、永不生效。
+    /// </remarks>
+    /// <param name="sectionName">节点路径，例如 "Plugins:Configuration:AP.Plugin.Scanner"</param>
+    /// <param name="roleFileName">活动角色配置文件名（宿主启动时写入 AppRuntime:RoleConfigFile）；空或文件不存在时回退基文件</param>
+    public static string ResolveTargetFileName(string sectionName, string? roleFileName)
+    {
+        if (!string.IsNullOrWhiteSpace(roleFileName))
+        {
+            var rolePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration", roleFileName);
+            if (File.Exists(rolePath) && SectionExists(rolePath, sectionName))
+                return roleFileName;
+        }
+
+        return "appsettings.json";
+    }
+
+    /// <summary>判断 JSON 配置文件中是否存在指定节点路径（文件损坏时按不存在处理）。</summary>
+    private static bool SectionExists(string filePath, string sectionName)
+    {
+        JsonNode? node;
+        try
+        {
+            node = JsonNode.Parse(File.ReadAllText(filePath));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        foreach (var part in sectionName.Split(':'))
+        {
+            if (node is not JsonObject obj) return false;
+            node = obj[part];
+            if (node is null) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     ///     将配置节点安全地更新到 appsettings.json（原子写入：先写临时文件再替换，避免中途崩溃损坏配置）
     /// </summary>
     /// <param name="sectionName">节点路径，例如 "Plugins:Scanner:SerialPort"</param>

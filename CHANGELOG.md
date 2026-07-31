@@ -9,6 +9,22 @@
 
 ## [Unreleased]
 
+### 修复：配置写回与分层加载不一致（2026-07-31）
+
+修复：
+
+- **设置中心保存的配置永不生效（只存在于角色文件的节）**：配置按 `appsettings.json` + `appsettings.{Role}.json` 分层加载（角色文件优先），而 `SettingsService` 写回时写死 `appsettings.json`——扫码枪整节只在角色文件中，此前经界面保存的串口参数实际从未生效（写入了基文件被遮蔽）。现按节解析写回目标：角色文件含该节 → 写角色文件，否则写基文件（`ConfigurationHelper.ResolveTargetFileName`；宿主启动时经 `AppRuntime:RoleConfigFile` 暴露活动角色文件名）；备份同步覆盖各目标文件
+- 附注：此前误写入 `bin/Release/Configuration/appsettings.json` 的遮蔽节（`Plugins:Configuration:AP.Plugin.Scanner`）随重新构建已被清理
+
+测试：471 → 475（`ConfigurationHelperTests` 新增 4 项）
+
+### 扫码枪可整体禁用（2026-07-31）
+
+新增：
+
+- **`Plugins:Configuration:AP.Plugin.Scanner:Enabled` 开关**（默认 `true`）：置 `false` 后插件不注册 `IScannerService`/`IDevice`、不发起串口连接——无扫码枪的项目不再出现启动"初始化失败"报错，状态栏/设备注册表也不再显示常驻离线设备；系统配置"扫码枪配置"页同步新增"启用扫码枪"勾选（RequiresRestart）
+- 注意：禁用后点表中引用 `scanner.*` 设备的点会在启动校验时报"设备未注册"（快速失败设计），需将该类点一并移除
+
 ### 点表可视化编辑（2026-07-31，AP.Plugin.TagConfiguration）
 
 新增：

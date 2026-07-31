@@ -162,6 +162,12 @@ public class Bootstrapper : PrismBootstrapper
             .SetBasePath(configPath)
             .AddJsonFile("appsettings.json", false, true)
             .AddJsonFile($"appsettings.{_appRole}.json", true, true)
+            // 记录活动角色配置文件名：配置写回（SettingsService）据此决定写入基文件还是角色文件，
+            // 只存在于角色文件中的节（如扫码枪）写回基文件会被遮蔽、永不生效
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppRuntime:RoleConfigFile"] = $"appsettings.{_appRole}.json"
+            })
             .AddEnvironmentVariables();
 
         _configuration = builder.Build();

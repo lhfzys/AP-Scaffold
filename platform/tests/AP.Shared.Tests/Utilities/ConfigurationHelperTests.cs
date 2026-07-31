@@ -140,4 +140,56 @@ public class ConfigurationHelperTests
             File.Delete(filePath);
         }
     }
+
+    [Fact]
+    public void ResolveTargetFileName_SectionInRoleFile_ReturnsRoleFile()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var filePath = Path.Combine(configDir, "appsettings.Test.json");
+        File.WriteAllText(filePath, """{ "Plugins": { "Configuration": { "AP.Plugin.Scanner": { "Enabled": true } } } }""");
+
+        try
+        {
+            ConfigurationHelper.ResolveTargetFileName("Plugins:Configuration:AP.Plugin.Scanner", "appsettings.Test.json")
+                .Should().Be("appsettings.Test.json");
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void ResolveTargetFileName_SectionNotInRoleFile_ReturnsBaseFile()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var filePath = Path.Combine(configDir, "appsettings.Test.json");
+        File.WriteAllText(filePath, """{ "Plc": { "DriverType": "Siemens" } }""");
+
+        try
+        {
+            ConfigurationHelper.ResolveTargetFileName("Plugins:Configuration:AP.Plugin.Scanner", "appsettings.Test.json")
+                .Should().Be("appsettings.json");
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void ResolveTargetFileName_RoleFileMissing_ReturnsBaseFile()
+    {
+        ConfigurationHelper.ResolveTargetFileName("Plc", "appsettings.Nonexistent.json")
+            .Should().Be("appsettings.json");
+    }
+
+    [Fact]
+    public void ResolveTargetFileName_NullRoleFile_ReturnsBaseFile()
+    {
+        ConfigurationHelper.ResolveTargetFileName("Plc", null)
+            .Should().Be("appsettings.json");
+    }
 }
