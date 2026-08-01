@@ -34,19 +34,29 @@
 
 ## 构建步骤
 
-1. **构建整个解决方案**（插件输出到 `bin/Release/plugins/`，publish 只负责复制，跳过此步会打包旧插件）
+**一键方式（推荐）**：双击运行 `installer/build-installer.bat`（自动完成"清理 bin → 构建 → 发布 → 编译安装包"四步），产物在 `installer/Output/`。
+
+**手动分步方式**：
+
+1. **清理旧产物**（可选但推荐，避免残留插件目录）
+
+   ```powershell
+   rm -rf bin   # 或手动删除 bin 文件夹
+   ```
+
+2. **构建整个解决方案**（插件输出到 `bin/Release/plugins/`，publish 只负责复制，跳过此步会打包旧插件）
 
    ```powershell
    dotnet build AP-Automation.Platform.slnx -c Release
    ```
 
-2. **发布应用**（输出到 `bin/Release/publish/`；`-p:AppendRuntimeIdentifierToOutputPath=true` 让 RID 构建落入 `bin/Release/win-x64/`，不污染开发目录）
+3. **发布应用**（输出到 `bin/Release/publish/`；`-p:AppendRuntimeIdentifierToOutputPath=true` 让 RID 构建落入 `bin/Release/win-x64/`，不污染开发目录）
 
    ```powershell
    dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true
    ```
 
-3. **编译安装包**
+4. **编译安装包**
 
    用 Inno Setup 打开 `installer/setup.iss`，点击 Build。
 
@@ -56,7 +66,7 @@
    & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/setup.iss
    ```
 
-4. **获取安装包**
+5. **获取安装包**
 
    生成的安装程序位于 `installer/Output/` 目录（已 gitignore）。
 

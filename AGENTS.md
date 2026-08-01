@@ -44,6 +44,8 @@
 - **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅、**带类型批量读**（`IPlcTypedBatchRead`，在线每周期一次往返+三级降级）
 - **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
 - **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
+- **点表可视化编辑**（`AP.Plugin.TagConfiguration`，2026-07-31）：`tags.json` 可视化增删改点，复用启动校验逻辑
+- **扫码枪整体开关**（`Plugins:Configuration:AP.Plugin.Scanner:Enabled`，2026-07-31）
 - **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**重启后生效**
 
 ### 2.3 活跃问题 / 待办
@@ -112,7 +114,7 @@ AP-Scaffold/
 │   └── tests/                            # xUnit 测试（45 个测试文件 / 475 个测试）
 │       ├── AP.Core.Tests                 # 9 文件 / 130 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 48 测试
-│       └── AP.Infra.Tests                # 31 文件 / 287 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
+│       └── AP.Infra.Tests                # 32 文件 / 293 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
 ├── docs/                                 # 架构/使用/测试/状态文档
 ├── installer/setup.iss                   # Inno Setup 6 安装包脚本
 ├── AGENTS.md                             # 本文件
@@ -134,7 +136,12 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release -v qu
 
 # 运行桌面宿主（需要 Windows + 人工登录）
 bin/Release/AP.Host.Desktop.exe
+
+# 一键构建打包安装包（清理 bin → 构建 → 发布 → Inno 编译，产物在 installer/Output/）
+installer/build-installer.bat
 ```
+
+安装包手动分步流程与发布形态说明见 `installer/README.md`。
 
 ---
 
