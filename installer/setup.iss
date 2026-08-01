@@ -30,7 +30,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
-SetupIconFile=
+SetupIconFile=..\platform\hosts\AP.Host.Desktop\Assets\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; 应用运行中禁止安装（与 App.xaml.cs 中持有的命名互斥体对应）
 AppMutex=AP.SCAFFOLD.PLATFORM.RUNNING

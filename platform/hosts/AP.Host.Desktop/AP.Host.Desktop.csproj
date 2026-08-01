@@ -8,6 +8,9 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
 
+    <!-- 应用图标（深蓝底白字 AP 占位图标；exe/任务栏/安装包/托盘共用） -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
     <!-- 发布（方案 A：框架依赖，现场装 .NET 8 桌面运行时 + ASP.NET Core 运行时）：
          RID 与 self-contained 由发布命令行传入，避免污染日常开发构建；
          发布命令须带 -p:AppendRuntimeIdentifierToOutputPath=true，让 RID 构建落入 win-x64 子目录，不污染 bin/Release 根。
@@ -15,6 +18,10 @@
          启动即 TypeLoadException（FixedAddressValueTypeAttribute），2026-07-29 实测踩坑。 -->
     <PublishDir>$(BuildRoot)publish\</PublishDir>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

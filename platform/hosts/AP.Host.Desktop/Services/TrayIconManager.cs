@@ -19,7 +19,10 @@ public sealed class TrayIconManager : IDisposable
         {
             Text = "自动化监控系统",
             Visible = true,
-            Icon = SystemIcons.Application
+            // 跟随 exe 嵌入图标（ApplicationIcon），不再用系统默认图标
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(
+                System.Diagnostics.Process.GetCurrentProcess().MainModule!.FileName)
+                    ?? SystemIcons.Application
         };
 
         _notifyIcon.DoubleClick += OnDoubleClick;
