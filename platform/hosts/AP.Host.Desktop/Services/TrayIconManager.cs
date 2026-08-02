@@ -6,7 +6,8 @@ namespace AP.Host.Desktop.Services;
 
 /// <summary>
 /// 系统托盘图标管理器
-/// 提供最小化到托盘、托盘菜单、双击显示等功能
+/// 托盘图标常驻（菜单：显示主窗口/重启/退出，双击显示）。
+/// 最小化为标准行为（回任务栏），不隐藏到托盘（2026-08-01 起，A 方案）。
 /// </summary>
 public sealed class TrayIconManager : IDisposable
 {
@@ -37,21 +38,12 @@ public sealed class TrayIconManager : IDisposable
     }
 
     /// <summary>
-    /// 绑定主窗口，处理最小化到托盘
+    /// 绑定主窗口（同步托盘提示文本；最小化不再拦截，标准回任务栏）
     /// </summary>
     public void Attach(Window mainWindow)
     {
         _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-        _mainWindow.StateChanged += OnMainWindowStateChanged;
         _notifyIcon.Text = _mainWindow.Title;
-    }
-
-    private void OnMainWindowStateChanged(object? sender, EventArgs e)
-    {
-        if (_mainWindow?.WindowState == WindowState.Minimized)
-        {
-            _mainWindow.Hide();
-        }
     }
 
     private void OnDoubleClick(object? sender, EventArgs e)

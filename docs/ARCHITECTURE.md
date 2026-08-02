@@ -636,7 +636,7 @@ App.OnStartup
          │       Client 角色：手动 GrpcClientWorker.StartAsync
          ├── 21. 汇总失败插件告警 → 发布 AppInitializedEvent → 关闭 Splash
          │
-         └── 22. TrayIconManager.Attach(MainWindow)（最小化到托盘/重启/退出）
+         └── 22. TrayIconManager.Attach(MainWindow)（托盘常驻：显示/重启/退出菜单；最小化为标准行为回任务栏，2026-08-01 起）
 ```
 
 ---

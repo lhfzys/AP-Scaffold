@@ -111,7 +111,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 - `Bootstrapper`（`PrismBootstrapper`）：配置读取 → Serilog → Infra 服务注册（Database/Resilience/Security/Recipe/Hardware/Report，按角色加 gRPC）→ 插件发现 → 两阶段实例化（先收集 `ConfigureServices`，再造最终容器）→ MediatR 扫描 → DryIoc 桥接（`Populate` + 注册插件实例，含 `INavigationContributor`）→ 登录窗口 → 数据库初始化器（Security/Recipe/Report）→ 插件 Initialize/Start → 按角色启动 Kestrel gRPC / GrpcClientWorker
 - `MainWindow`：仅一个 `MainRegion`（布局由 Layout 插件注入），`RootDialogHost` 对话框宿主，启动遮罩在 `AppInitializedEvent` 后关闭
 - `SplashWindow`：启动画面，按初始化进度实时更新百分比与状态文本
-- `TrayIconManager`：WinForms NotifyIcon，最小化到托盘、显示主窗口、重启、退出（关闭需确认）
+- `TrayIconManager`：WinForms NotifyIcon 常驻托盘（显示主窗口/重启/退出菜单，关闭需确认；最小化为标准行为回任务栏，2026-08-01 起不再隐藏到托盘）
 - `GlobalExceptionHandler`：三级异常捕获，崩溃写 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`
 
 ### 9. 测试 `platform/tests`
