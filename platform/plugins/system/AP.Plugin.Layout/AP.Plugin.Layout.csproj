@@ -17,4 +17,10 @@
     <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FreeSql" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+  </ItemGroup>
+
 </Project>

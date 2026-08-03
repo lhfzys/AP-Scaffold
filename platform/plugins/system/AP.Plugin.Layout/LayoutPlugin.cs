@@ -34,6 +34,9 @@ public class LayoutPlugin : PluginBase, INavigationContributor
         services.AddTransient<LayoutViewModel>();
         services.AddTransient<SidebarViewModel>();
         services.AddTransient<DashboardViewModel>();
+
+        // 状态栏系统监控（CPU/内存），契约在 AP.Contracts.System
+        services.AddSingleton<AP.Contracts.System.Services.ISystemMonitorService, Services.SystemMonitorService>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)

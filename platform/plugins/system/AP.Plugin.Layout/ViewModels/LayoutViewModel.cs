@@ -11,6 +11,7 @@ using AP.Contracts.System.Services;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FreeSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Prism.Events;
@@ -38,6 +39,9 @@ public partial class LayoutViewModel : ViewModelBase
     [ObservableProperty] private bool _canLogout;
     [ObservableProperty] private string _deviceStatusText = "设备 --/--";
     [ObservableProperty] private string _deviceStatusLevel = "none";
+    [ObservableProperty] private string _systemMetricsText = "CPU --% · 内存 --MB";
+    [ObservableProperty] private string _databaseStatusText = "数据库 --";
+    [ObservableProperty] private string _versionText = "";
 
     public LayoutViewModel(
         IConfiguration configuration,
@@ -57,10 +61,11 @@ public partial class LayoutViewModel : ViewModelBase
 
         CompanyName = configuration["AppConfiguration:CompanyName"] ?? "Automation";
         SoftwareName = configuration["AppConfiguration:SoftwareName"] ?? "Platform";
+        VersionText = $"v{GetInformationalVersion()}";
 
         _currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (s, e) => CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        _timer.Tick += OnTimerTick;
         _timer.Start();
 
         RefreshDeviceStatus();
@@ -69,6 +74,68 @@ public partial class LayoutViewModel : ViewModelBase
 
         CanLogout = configuration.GetValue<bool?>("Security:Enabled") ?? true;
         RefreshCurrentUser();
+    }
+
+    private int _tickCount;
+
+    private void OnTimerTick(object? sender, EventArgs e)
+    {
+        CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        // CPU/内存每 2 秒、数据库连通每 30 秒
+        _tickCount++;
+        if (_tickCount % 2 == 0) _ = RefreshSystemMetricsAsync();
+        if (_tickCount % 30 == 0) _ = RefreshDatabaseStatusAsync();
+    }
+
+    private async Task RefreshSystemMetricsAsync()
+    {
+        try
+        {
+            var monitor = _serviceProvider.GetService<ISystemMonitorService>();
+            if (monitor == null) return;
+
+            var metrics = await monitor.GetMetricsAsync();
+            SystemMetricsText = metrics.CpuUsage < 0
+                ? "CPU --% · 内存 --MB"
+                : $"CPU {metrics.CpuUsage:0}% · 内存 {metrics.MemoryUsage:0}MB";
+        }
+        catch
+        {
+            // 性能计数器不可用（权限/精简系统）时保持默认文本，不影响状态栏
+        }
+    }
+
+    private async Task RefreshDatabaseStatusAsync()
+    {
+        try
+        {
+            var freeSql = _serviceProvider.GetService<IFreeSql>();
+            if (freeSql == null)
+            {
+                DatabaseStatusText = "数据库 未启用";
+                return;
+            }
+
+            await freeSql.Ado.ExecuteScalarAsync("select 1");
+            DatabaseStatusText = "数据库 已连接";
+        }
+        catch
+        {
+            DatabaseStatusText = "数据库 异常";
+        }
+    }
+
+    private static string GetInformationalVersion()
+    {
+        var assembly = System.Reflection.Assembly.GetEntryAssembly();
+        if (assembly == null) return "1.0.0";
+
+        var info = System.Reflection.CustomAttributeExtensions
+            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)
+            ?.InformationalVersion;
+        // InformationalVersion 可能带 +commit 后缀，只取版本部分
+        return info?.Split('+')[0] ?? "1.0.0";
     }
 
     [RelayCommand]

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.Loader;
 
 namespace AP.Core.PluginFramework.Loading;
@@ -34,7 +34,12 @@ public class PluginLoadContext : AssemblyLoadContext
         "MahApps.Metro",
         "Newtonsoft.Json",
         "Serilog",
-        "FreeSql"
+        "FreeSql",
+
+        // 图表（LiveCharts2/SkiaSharp/OpenTK，宿主共享库模式，2026-08-03）
+        "LiveChartsCore",
+        "SkiaSharp",
+        "OpenTK"
     };
 
     private static readonly HashSet<string> SharedAssemblies = new(StringComparer.OrdinalIgnoreCase)

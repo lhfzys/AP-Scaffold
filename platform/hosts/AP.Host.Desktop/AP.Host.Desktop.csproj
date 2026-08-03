@@ -54,6 +54,9 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="MaterialDesignThemes" />
     <PackageReference Include="MaterialDesignColors" />
+    <!-- LiveCharts2 走宿主共享库模式（同 MaterialDesign）：插件 XAML 的 BAML 引用经 Default ALC 解析，
+         程序集必须在宿主输出目录；插件私有副本由 CleanDuplicateLibs 删除、PluginLoadContext 共享前缀兜底 -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
   </ItemGroup>
 
   <ItemGroup>

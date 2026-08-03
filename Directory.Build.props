@@ -68,6 +68,15 @@
       <FilesToDelete Include="$(OutputPath)MahApps.Metro*" />
       <FilesToDelete Include="$(OutputPath)Microsoft.Xaml.Behaviors.*" />
 
+      <!-- 图表共享库（宿主输出根目录已有一份，避免插件 ALC 私载第二份导致类型不一致） -->
+      <FilesToDelete Include="$(OutputPath)LiveChartsCore*" />
+      <FilesToDelete Include="$(OutputPath)SkiaSharp*" />
+      <FilesToDelete Include="$(OutputPath)OpenTK*" />
+      <!-- 对应原生库（宿主根 runtimes 已有一份；按文件名精确删除，不影响其他插件的原生资产） -->
+      <FilesToDelete Include="$(OutputPath)runtimes\**\libSkiaSharp.dll" />
+      <FilesToDelete Include="$(OutputPath)runtimes\**\libHarfBuzzSharp.dll" />
+      <FilesToDelete Include="$(OutputPath)runtimes\**\glfw3.dll" />
+
       <FilesToDelete Include="$(OutputPath)Microsoft.Extensions.*" />
       <FilesToDelete Include="$(OutputPath)System.Diagnostics.DiagnosticSource.dll" />
       <FilesToDelete Include="$(OutputPath)System.ComponentModel.Annotations.dll" />

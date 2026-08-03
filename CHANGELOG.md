@@ -9,6 +9,21 @@
 
 ## [Unreleased]
 
+### 仪表板重排与实时趋势图（2026-08-03）
+
+新增：
+
+- **实时采集趋势图**（LiveCharts2，SkiaSharp 渲染）：Dashboard 第二行左侧新增趋势卡，取点表前 4 个数值型点，2s 采样自 `LatestTagValueStore`（仅 Good 质量入缓冲），内存环形缓冲保留近 60 分钟（1800 点/序列），X 轴 10 分钟刻度 `HH:mm`、Y 轴下限 0、首序列带渐变填充、底部图例；无数值型点时显示占位提示。时间范围切换预留 1H/24H/7D/30D 按钮位（仅 1H 可用，其余提示"需历史数据持久化（未启用）"，停车场项）
+- **状态栏系统监控**：新增 `ISystemMonitorService` 实现（`SystemMonitorService`，Layout 插件内，PerformanceCounter 整机 CPU + 进程工作集内存，首次采样无效显示 `--`）；状态栏左区追加"CPU x% · 内存 xMB"（每 2s）与数据库连通探测（`select 1`，每 30s，已连接/异常/未启用），右区时间前加版本号（取入口程序集 `InformationalVersion`，`v1.0.0` 格式）
+- **最近事件级别徽标**：事件条目新增级别（Info/Success/Warning/Error → 信息/成功/警告/严重），左侧 8px 级别色点 + 右侧级别文字同色；设备状态映射（Connected→成功、Connecting/Reconnecting→信息、Disabled→警告、其余→严重），Tag 质量异常→警告
+
+变更：
+
+- **统计卡重排**：4 张 KPI 卡由 WrapPanel 改 4 列等宽 Grid（填满整行）；卡内改为"左文字栈 + 右上 36×36 圆角图标块（主题色 12% 底 + 同色图标）"，数字 28px 加粗带小字后缀（`/2 台`、` 分钟`），底部状态徽标为色点+文字（全部在线/N 台离线/采集中/全部停止/系统刚启动，按 ok/warn/err/none 映射语义色）
+- **LiveCharts2 走宿主共享库模式**（同 MaterialDesign）：宿主 `AP.Host.Desktop` 直接引用包（程序集落在输出根目录供 Default ALC 解析——插件 XAML 的 BAML 引用经此路径），`PluginLoadContext.SharedPrefixes` 新增 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含对应原生库），避免插件 ALC 私载第二份导致 VM/BAML 类型不一致。注：2.0.0-rc6.1 曾以强名引用在插件 ALC 内侥幸自洽，2.0.4 正式版不再强名（BAML 引用为部分名）触发解析失败，故归位共享库模式；`SkiaSharp.Views.WPF` 仅提供 net462 资产（NU1701 警告，.NET 8 运行无碍）
+
+依赖：新增 `LiveChartsCore.SkiaSharpView.WPF` 2.0.4、`System.Diagnostics.PerformanceCounter`（Layout 插件编译引用 + 宿主共享引用）
+
 ### 修复：配置写回与分层加载不一致（2026-07-31）
 
 修复：

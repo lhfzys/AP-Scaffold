@@ -44,9 +44,8 @@
 - **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅、**带类型批量读**（`IPlcTypedBatchRead`，在线每周期一次往返+三级降级）
 - **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
 - **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
-- **点表可视化编辑**（`AP.Plugin.TagConfiguration`，2026-07-31）：`tags.json` 可视化增删改点，复用启动校验逻辑
-- **扫码枪整体开关**（`Plugins:Configuration:AP.Plugin.Scanner:Enabled`，2026-07-31）
 - **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**重启后生效**
+- **仪表板实时趋势（2026-08-03，LiveCharts2）**：Dashboard 趋势卡取点表前 4 个数值型点 2s 采样（内存环形缓冲近 60 分钟，仅 Good 质量入图）；统计卡大数字+徽标重排、事件级别徽标；24H/7D/30D 预留禁用（待历史持久化）
 
 ### 2.3 活跃问题 / 待办
 
@@ -253,7 +252,7 @@ installer/build-installer.bat
 - **DataGrid**：不要显式 `Style="{StaticResource MaterialDesignDataGrid}"`——`App.xaml` 隐式样式已 `BasedOn` 它，并全局并入虚拟化 4 项 + `AutoGenerateColumns=False`/`GridLinesVisibility=Horizontal`/`BorderThickness=0`/背景/前景；页面只写差异属性（`ItemsSource`/`IsReadOnly`/`BorderThickness` 等）。**单元格模板已全局覆写**（MD 原模板的 ContentPresenter 不消费 `VerticalContentAlignment`，44px 行高下文本贴顶；覆写后 ContentPresenter 垂直居中、水平保持 Stretch 供编辑控件填满），文本/按钮列自动垂直居中，新页面无需处理。
 - **主题按钮**：Raised 按钮统一用 `App.xaml` 的 `RaisedButton.Primary`（BasedOn `MaterialDesignRaisedButton`，`Brush.Primary` 深蓝底 + `Brush.OnPrimary` 白字；OnPrimary 语义键在主题文件定义为 `#FFFFFF`）。不要直接用 MD3 原生 Raised 键（浅色主题下灰白底、白字看不清）；**不要**用同名键 BasedOn 覆写 MD 样式——自引用会被静默置空丢模板，必须另起新键名。
 - **Header 用户区**：右上角用户标识+退出按钮整体按 `CanLogout`（即 `Security:Enabled`）显隐，免登录时改显公司名（`CompanyName` 淡白字）；深色 Header 上的图标/文字用白色前景，用户标识底衬为 `PrimaryHueDarkBrush` 圆角 Border。**Sidebar 底部用户卡**同样按 `Security:Enabled` 显隐（`SidebarViewModel.IsUserCardVisible`），免登录不再露出 `anonymous`。
-- **底部状态栏**（2026-07-29 起）：`StatusBarView` 挂在两个布局的 HeaderView 之外（Standard/SinglePage 第三行），DataContext 继承布局的 `LayoutViewModel`（与 HeaderView 同模式，无独立 VM、无需 DI 注册）；左=设备在线 X/Y + 状态点（`DeviceStatusLevel`：ok/warn/error/none → Success/Warning/Error/Inactive），中=公司名，右=当前时间。头部不再放时钟。
+- **底部状态栏**（2026-07-29 起，2026-08-03 扩展）：`StatusBarView` 挂在两个布局的 HeaderView 之外（Standard/SinglePage 第三行），DataContext 继承布局的 `LayoutViewModel`（与 HeaderView 同模式，无独立 VM、无需 DI 注册）；左=设备在线 X/Y + 状态点（`DeviceStatusLevel`：ok/warn/error/none → Success/Warning/Error/Inactive）+ "CPU x% · 内存 xMB"（`ISystemMonitorService`，Layout 插件内实现，PerformanceCounter 整机 CPU，每 2s）+ 数据库连通（`select 1` 探测，每 30s），中=公司名，右=版本号（入口程序集 `InformationalVersion`）+ 当前时间。头部不再放时钟。
 - **深色例外**（刻意不走浅色主题）：Splash 启动页（深色硬编码品牌页，仅显示中文软件名）；Login/ChangePassword 的蓝色 `ColorZone PrimaryMid` 横幅页头。其余窗口一律浅色主题键。
 
 ### 5.11 其他坑点
@@ -270,6 +269,7 @@ installer/build-installer.bat
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
+- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，.NET 8 运行无碍）。
 
 ### 5.12 Device Runtime Model（设备运行时模型）
 
@@ -336,4 +336,4 @@ installer/build-installer.bat
 
 ---
 
-**最后更新**: 2026-07-31
+**最后更新**: 2026-08-03
