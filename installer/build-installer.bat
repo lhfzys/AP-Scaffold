@@ -4,7 +4,7 @@ REM AP-Scaffold one-click build & package script
 REM Steps: clean bin -> build solution -> publish app -> Inno compile
 REM Usage: double-click this file, or run installer\build-installer.bat
 REM Output: installer\Output\*-Setup.exe
-REM Requires: .NET 10 SDK (build) + Inno Setup 6 (default path)
+REM Requires: .NET 10 SDK (build) + Inno Setup 6 (auto-detects C/D drive, user dir, PATH)
 REM ============================================================
 setlocal
 cd /d "%~dp0\.."
@@ -21,7 +21,16 @@ dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release 
 if errorlevel 1 goto :error
 
 echo === [4/4] Compiling installer (Inno Setup 6) ===
-"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss
+REM ISCC 路径按常见安装位置自检测（默认 C 盘 → D 盘 → 用户目录 → PATH）
+set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" set "ISCC=D:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" for /f "delims=" %%i in ('where ISCC.exe 2^>nul') do set "ISCC=%%i"
+if not exist "%ISCC%" (
+    echo *** Inno Setup 6 not found: please install it or set ISCC path in this script ***
+    goto :error
+)
+"%ISCC%" installer\setup.iss
 if errorlevel 1 goto :error
 
 echo.
