@@ -8,12 +8,12 @@
       "Plc.Main.HeartbeatValue": 500
     }
   },
-  // 以下为示例条目（默认配置 DriverType=Mitsubishi），请按现场实际替换。
+  // 以下为示例条目（默认配置 DriverType=Siemens），请按现场实际替换。
   "Tags": [
     {
       "Name": "Plc.Main.HeartbeatValue",
       "DeviceId": "plc.main",
-      "Address": "D0",
+      "Address": "DB1.0",
       "DataType": "Int16",
       "Access": "ReadOnly",
       "Description": "示例：心跳寄存器值",
@@ -22,7 +22,7 @@
     {
       "Name": "Plc.Main.RunStatus",
       "DeviceId": "plc.main",
-      "Address": "D100",
+      "Address": "DB1.1",
       "DataType": "Int16",
       "Access": "ReadWrite",
       "Description": "示例：运行状态字",
