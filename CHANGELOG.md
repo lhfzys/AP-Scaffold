@@ -24,6 +24,21 @@
 
 依赖：新增 `LiveChartsCore.SkiaSharpView.WPF` 2.0.4、`System.Diagnostics.PerformanceCounter`（Layout 插件编译引用 + 宿主共享引用）
 
+### 修复：插件 ALC 双载 Infra 程序集导致采集引擎/最新值表双实例（2026-08-06）
+
+修复：
+
+- **仪表板采集徽标恒显"全部停止"、趋势图永远空白**：`DashboardViewModel`（Layout 插件）构造函数注入了 Infra 具体类型 `TagAcquisitionEngine`/`LatestTagValueStore`。插件在独立 `AssemblyLoadContext` 加载，`AP.Infra.Hardware.dll` 不在插件输出目录时经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册的同名类型不恒等 → DryIoc 把构造参数的具体类当未注册类型自动瞬态化 → VM 拿到从未 Start 的新引擎实例（`IsRunning` 恒 false）与空的新值表。现契约化：新增 `ITagAcquisitionStatus`（`IsRunning`）与 `ILatestTagValueStore`（`Snapshot()`）只读视图接口（`AP.Contracts.Hardware/DeviceRuntime/`），Infra 实现并注册 DI 转发，VM 只依赖契约；`AP.Plugin.Layout` 移除对 `AP.Infra.Hardware` 的项目引用
+- **防护**：`PluginLoadContext.SharedPrefixes` 新增 `AP.Infra`（插件误引用 Infra 时共享宿主副本而非双载）；`CleanDuplicateLibs` 同步删除插件输出的 `AP.Infra.*` 副本。连带修复：`SharedPrefixes` 同步新增 `Polly`——`AP.Infra.Resilience` 公开方法返回 `Polly.ResiliencePipeline`，只共享 AP.Infra 而不共享 Polly 会让 PLC 插件跨 ALC 方法签名不匹配（`MissingMethodException`，设备注册失败无法启动）
+- **趋势图彻底空白（无轴/无线/无图例、无任何报错）**：ALC 修复后数据已正常入缓冲但图表仍空白，最小复现二分定位确证根因——X 轴设了 `MinStep = 10分钟`，启动初期数据范围（秒级）小于 MinStep 时 LiveCharts2 整图静默不渲染。修复：移除 `MinStep`（保留 `UnitWidth`+`Labeler`）；同时在宿主 `App.OnStartup` 补 `LiveCharts.Configure(c => c.UseDefaults())`（官方要求的显式初始化，注册 SkiaSharp 后端/默认映射器/主题）
+- **采集徽标延迟最长 30s 才翻"采集中"**：徽标此前只在 VM 构造/设备事件/30s 轮询时刷新，引擎启动晚于 VM 构造时最长停留 30s"全部停止"；现随 2s 趋势采样一并刷新（用户感知与状态栏数据库探测同步仅为刷新周期巧合）
+
+变更：
+
+- 默认配置改为西门子仿真环境（`Plc:DriverType=Siemens`、127.0.0.1:102、心跳 `DB1.0.0`，点表 2 个 Int16 点 `DB1.0`/`DB1.1`）；扫码枪默认禁用（`Plugins:Configuration:AP.Plugin.Scanner:Enabled=false`）——开箱即可连本地仿真器，无扫码枪项目不再报串口初始化失败
+
+文档：`docs/conventions/LAYERING.md` 新增第 8 节"插件与 Infra 程序集的隔离纪律"；`AGENTS.md` 5.11 坑点 + 5.13 契约视图说明
+
 ### 修复：配置写回与分层加载不一致（2026-07-31）
 
 修复：

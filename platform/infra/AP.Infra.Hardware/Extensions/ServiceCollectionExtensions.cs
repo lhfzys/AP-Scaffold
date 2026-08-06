@@ -72,6 +72,10 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<LatestTagValueStore>(),
                 sp.GetRequiredService<ILogger<TagAcquisitionEngine>>());
         });
+        // 契约只读视图：UI/业务（插件 ALC）只能经契约访问运行时组件——
+        // 具体类型跨 ALC 注入会因程序集双载被瞬态化（2026-08-06 仪表板引擎/值表双实例根因）
+        services.AddSingleton<ILatestTagValueStore>(sp => sp.GetRequiredService<LatestTagValueStore>());
+        services.AddSingleton<ITagAcquisitionStatus>(sp => sp.GetRequiredService<TagAcquisitionEngine>());
         return services;
     }
 }

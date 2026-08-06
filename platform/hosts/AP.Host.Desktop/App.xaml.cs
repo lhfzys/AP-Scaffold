@@ -1,6 +1,8 @@
 using AP.Host.Desktop.Bootstrapping;
 using AP.Host.Desktop.Services;
 using AP.Host.Desktop.Views;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
 using Serilog;
 using System.Windows;
 
@@ -21,6 +23,11 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // 0.1 LiveCharts2 全局配置：注册 SkiaSharp 渲染后端 + 默认类型映射器 + 默认主题（= UseDefaults）。
+        // 必须在任何图表渲染前调用一次，否则图表无任何绘制输出（空白无坐标轴）。
+        // 由宿主统一配置（共享库模式，设置是 LiveChartsCore 程序集级静态）。
+        LiveCharts.Configure(c => c.UseDefaults());
 
         // 0. 单实例检查（互斥体同时供 Inno Setup AppMutex 检测应用正在运行，防止运行中覆盖安装）
         _appMutex = new Mutex(true, "AP.SCAFFOLD.PLATFORM.RUNNING", out var isFirstInstance);

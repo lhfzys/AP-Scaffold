@@ -6,7 +6,7 @@ namespace AP.Infra.Hardware.DeviceRuntime;
 /// 最新值表：全部 Tag 最新采集值的唯一存放处（线程安全）。
 /// 写入时按点单调递增 <see cref="TagValue.Version"/>；订阅者读最新值而不是打设备（缓存职责）。
 /// </summary>
-public sealed class LatestTagValueStore
+public sealed class LatestTagValueStore : ILatestTagValueStore
 {
     private readonly object _gate = new();
     private readonly Dictionary<string, TagValue> _values = new(StringComparer.OrdinalIgnoreCase);

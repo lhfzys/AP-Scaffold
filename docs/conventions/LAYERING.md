@@ -48,6 +48,14 @@ grep 全仓库 `IPlcService|IPlcBatchReadWrite|IPlcTypedBatchRead`：命中仅 P
 - `IPlcService` / `IPlcBatchReadWrite` 现为 **DeviceRuntime 内部实现细节**（TagService/ActivePlcService/审计装饰器使用），不再是对业务开放的 API；对外语义由 `ITagService` 承载。
 - 旧接口的 Obsolete/退役处理见 `EVOLUTION_PLAN.md` T5.3，届时专项评审。
 
+## 8. 插件与 Infra 程序集的隔离纪律（2026-08-06 实战教训）
+
+- **插件禁止注入/引用 Infra 层具体类型**（如 `TagAcquisitionEngine`、`LatestTagValueStore`）。插件在独立 `AssemblyLoadContext` 加载；Infra DLL 不在插件输出目录时会经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册的同名类型不恒等 → DryIoc 把构造参数的具体类当未注册类型自动瞬态化 → 插件拿到的是**从未 Start 的新实例**。
+- 实战案例（2026-08-06）：`DashboardViewModel` 注入 `TagAcquisitionEngine`/`LatestTagValueStore` 具体类型，导致采集徽标恒显"全部停止"、趋势图永远空白（引擎单例其实在正常运行）。
+- **正确做法**：插件需要 Infra 运行时状态/数据时，在契约层定义**只读视图接口**（如 `ILatestTagValueStore`、`ITagAcquisitionStatus`，位于 `AP.Contracts.Hardware/DeviceRuntime/`），Infra 实现并在 DI 中注册转发，插件只依赖契约。
+- **既有防护**：`PluginLoadContext.SharedPrefixes` 含 `"AP.Infra"`（误引用时共享宿主副本而非双载）；`Directory.Build.props` 的 `CleanDuplicateLibs` 会删除插件输出的 `AP.Infra.*` 副本。
+- **连带坑点**：往 `SharedPrefixes` 新增前缀时，该程序集公开签名中的第三方类型前缀也必须已共享——`AP.Infra.Resilience` 公开方法返回 `Polly.ResiliencePipeline`，只共享 AP.Infra 而不共享 Polly 会导致跨 ALC 方法签名不匹配（`MissingMethodException`）。
+
 ---
 
-**版本**: v1.0（2026-07-28，T5.1）
+**版本**: v1.1（2026-08-06，新增第 8 节插件/Infra 隔离纪律）

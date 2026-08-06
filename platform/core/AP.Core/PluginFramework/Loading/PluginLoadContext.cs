@@ -16,6 +16,7 @@ public class PluginLoadContext : AssemblyLoadContext
         "AP.Core",
         "AP.Shared",
         "AP.Contracts",
+        "AP.Infra",
 
         // 核心框架
         "Prism",
@@ -35,6 +36,9 @@ public class PluginLoadContext : AssemblyLoadContext
         "Newtonsoft.Json",
         "Serilog",
         "FreeSql",
+        // Polly 必须共享：AP.Infra.Resilience 的公开签名含 Polly 类型，
+        // 插件私载第二份 Polly 会导致跨 ALC 方法签名不匹配（MissingMethodException）
+        "Polly",
 
         // 图表（LiveCharts2/SkiaSharp/OpenTK，宿主共享库模式，2026-08-03）
         "LiveChartsCore",

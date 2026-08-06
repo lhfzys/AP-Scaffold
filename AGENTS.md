@@ -269,7 +269,8 @@ installer/build-installer.bat
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
-- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，.NET 8 运行无碍）。
+- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 8 运行；如需消除可把 TFM 升为 `net8.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。
+- **插件禁止注入/引用 Infra 具体类型（2026-08-06 实战教训）**：插件在独立 ALC 加载，Infra DLL 不在插件目录时会经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册类型不恒等 → DryIoc 自动瞬态化 → 拿到从未 Start 的新实例（实例：DashboardViewModel 注入 `TagAcquisitionEngine`/`LatestTagValueStore` 具体类型 → 采集徽标恒"全部停止"、趋势图空白）。需要 Infra 运行时状态时走契约层只读视图接口（`ILatestTagValueStore`/`ITagAcquisitionStatus`，见 5.13）。防护：`SharedPrefixes` 含 `AP.Infra`、`CleanDuplicateLibs` 删插件输出 `AP.Infra.*`。连带坑点：`SharedPrefixes` 新增前缀时，其公开签名里的第三方类型前缀也必须已共享（AP.Infra.Resilience 返回 `Polly.ResiliencePipeline`，故 `Polly` 同步共享，否则跨 ALC 签名不匹配抛 `MissingMethodException`）。
 
 ### 5.12 Device Runtime Model（设备运行时模型）
 
@@ -290,7 +291,7 @@ installer/build-installer.bat
 - **点表**：`bin/Release/Configuration/tags.json`（随宿主 `Configuration/tags.json` 复制）：`{ "Acquisition": {...}, "Tags": [...] }`；启动时全量校验（点名唯一/设备已注册/地址经 `IAddressValidator` 解析），任一非法即**中止启动**（快速失败，`DeviceConfigurationException`）；`Acquisition` 节为可选采集配置（`DefaultIntervalMs` 默认 1000 + `Overrides` 按点名覆盖），采集策略不属于 `TagDefinition`。
 - **点表编辑（2026-07-31 起）**：运行期改点表走"点表配置"菜单页（`AP.Plugin.TagConfiguration`），不要手改 JSON——保存前经 `ITagTableValidator`（与启动加载共用 `TagTableValidation`，规则/错误文案一致）全量校验，非法不落盘；保存为原子写入并写审计，**重启后生效**（热重载未做，见 2.3 待办）。
 - **读写**：注入 `ITagService` → `ReadAsync(name)` / `WriteAsync(name, value)`，返回 `TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`；**通信失败返回 `Quality=Bad` 不抛异常**（设备未连接快速失败、类型不支持 Bad）；仅编程错误抛异常（点名不存在 `ArgumentException`、读写方向违规 `InvalidOperationException`、写入类型不匹配 `ArgumentException`）；地址解析在点表加载时完成（`ResolvedTag` 缓存 Address Object），读写零解析开销。
-- **采集**：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点）→ `LatestTagValueStore`（Version 按点递增；订阅者读最新值不打设备）→ 变化检测（值或质量戳变化）→ `TagValueChangedEvent`（MediatR）/ `PrismTagValueChangedEvent`（UI）；设备状态走 `DeviceStateChangedEvent` / `PrismDeviceStateChangedEvent`。
+- **采集**：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点）→ `LatestTagValueStore`（Version 按点递增；订阅者读最新值不打设备）→ 变化检测（值或质量戳变化）→ `TagValueChangedEvent`（MediatR）/ `PrismTagValueChangedEvent`（UI）；设备状态走 `DeviceStateChangedEvent` / `PrismDeviceStateChangedEvent`。**UI 读采集状态/最新值走契约只读视图**（2026-08-06 起）：`ITagAcquisitionStatus.IsRunning`、`ILatestTagValueStore.Snapshot()`（均在 `AP.Contracts.Hardware/DeviceRuntime/`，DI 转发宿主单例）——禁止注入 Infra 具体类型（见 5.11 坑点）。
 - **错误处理与日志规范**：新代码必须遵守 `docs/conventions/ERROR_HANDLING.md` 与 `LOGGING.md`（禁止裸 `Exception`、禁止 emoji、状态迁移记录法、通信字段结构化）。
 
 ### 5.14 打包与发布（框架依赖）
@@ -336,4 +337,4 @@ installer/build-installer.bat
 
 ---
 
-**最后更新**: 2026-08-03
+**最后更新**: 2026-08-06

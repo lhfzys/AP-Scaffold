@@ -4,7 +4,6 @@ using System.Windows.Threading;
 using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Hardware.PrismEvents;
 using AP.Contracts.Security.Abstractions;
-using AP.Infra.Hardware.DeviceRuntime;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LiveChartsCore;
@@ -39,8 +38,8 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly IIdentityService _identityService;
     private readonly IDeviceRegistry _deviceRegistry;
     private readonly ITagTable _tagTable;
-    private readonly TagAcquisitionEngine _acquisitionEngine;
-    private readonly LatestTagValueStore _latestValueStore;
+    private readonly ITagAcquisitionStatus _acquisitionStatus;
+    private readonly ILatestTagValueStore _latestValueStore;
     private readonly IEventAggregator _eventAggregator;
     private SubscriptionToken? _deviceStateToken;
     private SubscriptionToken? _tagChangedToken;
@@ -78,14 +77,14 @@ public partial class DashboardViewModel : ViewModelBase
         IIdentityService identityService,
         IDeviceRegistry deviceRegistry,
         ITagTable tagTable,
-        TagAcquisitionEngine acquisitionEngine,
-        LatestTagValueStore latestValueStore,
+        ITagAcquisitionStatus acquisitionStatus,
+        ILatestTagValueStore latestValueStore,
         IEventAggregator eventAggregator)
     {
         _identityService = identityService;
         _deviceRegistry = deviceRegistry;
         _tagTable = tagTable;
-        _acquisitionEngine = acquisitionEngine;
+        _acquisitionStatus = acquisitionStatus;
         _latestValueStore = latestValueStore;
         _eventAggregator = eventAggregator;
         _startTime = DateTime.Now;
@@ -109,7 +108,12 @@ public partial class DashboardViewModel : ViewModelBase
         _uptimeTimer.Start();
 
         _trendTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _trendTimer.Tick += (_, _) => SampleTrend();
+        _trendTimer.Tick += (_, _) =>
+        {
+            SampleTrend();
+            // 采集徽标随 2s 采样一并刷新：引擎启动晚于本 VM 构造时，30s 轮询会让徽标长时间停留在"全部停止"
+            RefreshAcquisitionPoints();
+        };
         _trendTimer.Start();
 
         RefreshUptime();
@@ -125,7 +129,7 @@ public partial class DashboardViewModel : ViewModelBase
         {
             Labeler = value => new DateTime((long)value).ToString("HH:mm"),
             UnitWidth = TimeSpan.FromMinutes(10).Ticks,
-            MinStep = TimeSpan.FromMinutes(10).Ticks,
+            // 注意：不能设 MinStep——数据范围小于 MinStep 时 LiveCharts2 整图静默不渲染（2026-08-06 复现实验确证）
         }
     ];
 
@@ -252,8 +256,8 @@ public partial class DashboardViewModel : ViewModelBase
     private void RefreshAcquisitionPoints()
     {
         AcquisitionPoints = _tagTable.Tags.Count.ToString();
-        AcquisitionBadgeText = _acquisitionEngine.IsRunning ? "采集中" : "全部停止";
-        AcquisitionBadgeLevel = _acquisitionEngine.IsRunning ? "ok" : "warn";
+        AcquisitionBadgeText = _acquisitionStatus.IsRunning ? "采集中" : "全部停止";
+        AcquisitionBadgeLevel = _acquisitionStatus.IsRunning ? "ok" : "warn";
     }
 
     private void AddRecentEvent(string title, DateTime timestamp, RecentEventLevel level)

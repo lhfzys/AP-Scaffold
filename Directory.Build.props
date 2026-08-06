@@ -57,6 +57,8 @@
       <FilesToDelete Include="$(OutputPath)AP.Core.*" />
       <FilesToDelete Include="$(OutputPath)AP.Shared.*" />
       <FilesToDelete Include="$(OutputPath)AP.Contracts.*" />
+      <!-- 预防性：Infra 实现只许宿主装载一份（插件引用会经 SharedPrefixes 共享宿主副本，副本落盘即删） -->
+      <FilesToDelete Include="$(OutputPath)AP.Infra.*" />
 
       <FilesToDelete Include="$(OutputPath)Prism.*" />
       <FilesToDelete Include="$(OutputPath)Polly.*" />

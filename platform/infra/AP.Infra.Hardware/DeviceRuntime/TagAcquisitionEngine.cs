@@ -32,7 +32,7 @@ public sealed class TagPolledEventArgs : EventArgs
 /// 设备未连接 → 直接逐点（TagService 快速返回 Bad，不在注定失败的批量上空等重试）。
 /// 只写最新值表，不发布事件——变化通知是 T4.5 的职责（经 <see cref="TagPolled"/> 钩子）。
 /// </summary>
-public sealed class TagAcquisitionEngine : IDisposable
+public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
 {
     private readonly ITagTable _tagTable;
     private readonly TagAcquisitionConfig _config;
