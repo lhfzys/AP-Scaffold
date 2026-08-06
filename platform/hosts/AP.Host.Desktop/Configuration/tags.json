@@ -22,7 +22,7 @@
     {
       "Name": "Plc.Main.RunStatus",
       "DeviceId": "plc.main",
-      "Address": "DB1.1",
+      "Address": "DB1.2",
       "DataType": "Int16",
       "Access": "ReadWrite",
       "Description": "示例：运行状态字",
