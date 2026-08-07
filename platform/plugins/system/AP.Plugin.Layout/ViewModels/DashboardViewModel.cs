@@ -19,7 +19,8 @@ namespace AP.Plugin.Layout.ViewModels;
 /// <summary>
 /// 仪表盘（框架级首页）：只展示系统健康度、设备状态与运行概况，全部为真实数据——
 /// 设备（设备注册表）、采集（点表+采集引擎计数）、系统资源（ISystemMonitorService）、
-/// 数据库（DatabaseStatusService 探测）、最近事件（Prism 事件流）、快捷入口（导航贡献者）。
+/// 数据库（DatabaseStatusService 探测）、最近事件（Prism 事件流：设备连接状态变化/扫码/系统启动，
+/// 不含 Tag 实时值变化——那是数据不是事件）、快捷入口（导航贡献者）。
 /// 不依赖任何具体业务 Tag；实时趋势/工艺曲线等项目内容归业务页面（LiveCharts2 能力保留给业务插件）。
 /// </summary>
 public partial class DashboardViewModel : ViewModelBase
@@ -38,7 +39,6 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly IConfiguration _configuration;
     private readonly IRegionManager _regionManager;
     private SubscriptionToken? _deviceStateToken;
-    private SubscriptionToken? _tagChangedToken;
     private SubscriptionToken? _scanToken;
     private readonly DispatcherTimer _timer;
     private readonly DateTime _startTime;
@@ -184,16 +184,12 @@ public partial class DashboardViewModel : ViewModelBase
                 RefreshDevices();
                 RefreshAlarms();
                 RefreshHealth();
-                AddRecentEvent($"{e.Info.Name} {StateText(e.Transition.To)}", e.Transition.Timestamp,
+                AddRecentEvent(DeviceEventText(e.Transition, e.Info.Name), e.Transition.Timestamp,
                     StateLevel(e.Transition.To));
             }));
 
-        _tagChangedToken = _eventAggregator.GetEvent<PrismTagValueChangedEvent>().Subscribe(e =>
-            RunOnUi(() => AddRecentEvent(
-                e.Value.Quality == TagQuality.Good ? $"{e.Name} = {e.Value.Value}" : $"{e.Name} 质量异常",
-                e.Value.Timestamp.LocalDateTime,
-                e.Value.Quality == TagQuality.Good ? RecentEventLevel.Info : RecentEventLevel.Warning)));
-
+        // 注意：不订阅 Tag 值变化事件——实时数据不是"事件"，且原始点名对操作员无意义；
+        // 采集异常由设备状态迁移（通讯中断/重连）与告警卡覆盖。
         _scanToken = _eventAggregator.GetEvent<PrismScanCompletedEvent>().Subscribe(e =>
             RunOnUi(() => AddRecentEvent($"扫码完成：{e.Barcode}", e.Timestamp, RecentEventLevel.Info)));
     }
@@ -359,6 +355,19 @@ public partial class DashboardViewModel : ViewModelBase
             RecentEvents.RemoveAt(RecentEvents.Count - 1);
     }
 
+    /// <summary>设备状态事件文案：面向操作员（连接成功/自动重连成功/通讯中断），不含协议细节。</summary>
+    private static string DeviceEventText(DeviceConnectionTransition t, string name) => t.To switch
+    {
+        DeviceConnectionState.Connected when t.From == DeviceConnectionState.Reconnecting => $"{name} 自动重连成功",
+        DeviceConnectionState.Connected => $"{name} 连接成功",
+        DeviceConnectionState.Connecting => $"{name} 正在连接",
+        DeviceConnectionState.Reconnecting => $"{name} 通讯中断，正在自动重连",
+        DeviceConnectionState.Disconnected => $"{name} 已断开连接",
+        DeviceConnectionState.Faulted => $"{name} 通讯故障",
+        DeviceConnectionState.Disabled => $"{name} 已停用",
+        _ => $"{name} {StateText(t.To)}",
+    };
+
     private static string StateText(DeviceConnectionState state) => state switch
     {
         DeviceConnectionState.Connected => "已连接",
@@ -381,7 +390,8 @@ public partial class DashboardViewModel : ViewModelBase
     private static RecentEventLevel StateLevel(DeviceConnectionState state) => state switch
     {
         DeviceConnectionState.Connected => RecentEventLevel.Success,
-        DeviceConnectionState.Connecting or DeviceConnectionState.Reconnecting => RecentEventLevel.Info,
+        DeviceConnectionState.Connecting => RecentEventLevel.Info,
+        DeviceConnectionState.Reconnecting => RecentEventLevel.Warning,
         DeviceConnectionState.Disabled => RecentEventLevel.Warning,
         _ => RecentEventLevel.Error,
     };
@@ -449,7 +459,6 @@ public partial class DashboardViewModel : ViewModelBase
     {
         _timer.Stop();
         if (_deviceStateToken != null) _eventAggregator.GetEvent<PrismDeviceStateChangedEvent>().Unsubscribe(_deviceStateToken);
-        if (_tagChangedToken != null) _eventAggregator.GetEvent<PrismTagValueChangedEvent>().Unsubscribe(_tagChangedToken);
         if (_scanToken != null) _eventAggregator.GetEvent<PrismScanCompletedEvent>().Unsubscribe(_scanToken);
         base.Destroy();
     }

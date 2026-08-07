@@ -22,6 +22,7 @@
 
 - **服务状态卡"采集引擎"恒显已停止**：`RefreshServiceStatus` 原只在 VM 构造时执行一次（彼时引擎尚未启动），现采集引擎行随 2s tick 刷新
 - **快捷入口跳转后左侧菜单选中不同步**：`SidebarViewModel` 原仅由自身点击驱动选中态；现订阅 `ContentRegion` 的 `NavigationService.Navigated` 事件，任意来源导航均回写选中（`_syncingSelection` 防重入）
+- **最近事件混入 Tag 实时值刷屏**：Tag 值变化（如 `Plc.Main.HeartbeatValue = 4`）是数据不是事件，原始点名对操作员无意义——已移除 Tag 变化订阅；事件流只保留设备连接状态变化（文案面向操作员：连接成功/自动重连成功/通讯中断正在自动重连/通讯故障，按 `Transition.From` 区分首连与重连）、扫码完成、系统启动
 
 新增：
 
