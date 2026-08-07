@@ -9,6 +9,28 @@
 
 ## [Unreleased]
 
+### 首页（Dashboard）框架通用化重构（2026-08-06）
+
+变更：
+
+- **定位调整**：首页只展示系统健康度、设备状态与运行概况，不依赖任何具体业务 Tag——无论后续接入 PLC、Modbus、OPC UA、MQTT 还是其他设备均可直接复用；实时趋势/工艺参数等项目内容归具体业务页面（LiveCharts2 图表能力保留给业务插件，宿主共享库模式不变）
+- **布局四行**：① 欢迎区（左：时段问候+用户名、"欢迎使用 {软件名}"、健康结论徽标"系统运行正常/存在 N 项异常"；右：1s 走动的当前时间）② 六张统计卡等宽一行（在线设备、当前告警=离线/故障/重连设备数+Bad 质量点数、采集点、通讯成功率、系统资源=CPU+内存、运行时间；徽标逻辑沿用色点+语义色）③ 设备状态总览（全部已注册设备实时状态行）+ 最近事件（保留）④ 系统服务状态（数据库 `select 1` 探测/采集引擎/审计服务/资源监控）+ 快捷入口（复用 `NavigationMenuItemBuilder` 按权限与白名单过滤、排除首页自身、≤6 个，点击 `RequestNavigate`）
+- **统一 1s tick**：原 30s 运行时间轮询 + 2s 趋势采样双定时器合并为单个 1s DispatcherTimer（时间每秒；设备/告警/采集/成功率/资源/健康每 2s；运行时间与数据库探测每 30s），采集徽标晚启动翻牌特性保留（≤2s）
+- **数据库探测抽公共服务**：新增 Layout 插件 `DatabaseStatusService`（`ProbeAsync()` 返回文本+级别），底部状态栏（`LayoutViewModel`）与首页服务状态卡共用，状态栏行为不变
+
+修复（重构后复查发现）：
+
+- **服务状态卡"采集引擎"恒显已停止**：`RefreshServiceStatus` 原只在 VM 构造时执行一次（彼时引擎尚未启动），现采集引擎行随 2s tick 刷新
+- **快捷入口跳转后左侧菜单选中不同步**：`SidebarViewModel` 原仅由自身点击驱动选中态；现订阅 `ContentRegion` 的 `NavigationService.Navigated` 事件，任意来源导航均回写选中（`_syncingSelection` 防重入）
+
+新增：
+
+- **`ITagAcquisitionStatus` 读次统计**：`TotalReads`/`FailedReads`（引擎 `Publish` 处 Interlocked 累计，Bad 质量计失败），支撑通讯成功率卡；`TagAcquisitionEngineTests` 新增 3 个统计用例（全 Good 只计总数/全 Bad 计失败/批量缺地址计失败）
+
+移除：
+
+- 首页"实时采集趋势"卡与"今日变化"卡、`DashboardViewModel` 全部 LiveCharts2/SkiaSharp 代码（趋势缓冲/序列/坐标轴）；`AP.Plugin.Layout` 不再引用 `LiveChartsCore.SkiaSharpView.WPF`
+
 ### 仪表板重排与实时趋势图（2026-08-03）
 
 新增：

@@ -46,6 +46,8 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
     private CancellationTokenSource? _cts;
     private List<Task> _loops = [];
     private volatile bool _batchDisabled;
+    private long _totalReads;
+    private long _failedReads;
 
     public TagAcquisitionEngine(
         ITagTable tagTable,
@@ -70,6 +72,12 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
 
     /// <summary>是否正在运行。</summary>
     public bool IsRunning { get { lock (_lifecycleGate) return _cts != null; } }
+
+    /// <summary>自启动以来累计读取点数（含失败）。</summary>
+    public long TotalReads => Interlocked.Read(ref _totalReads);
+
+    /// <summary>自启动以来累计失败点数（Bad 质量/读取异常）。</summary>
+    public long FailedReads => Interlocked.Read(ref _failedReads);
 
     /// <summary>启动采集（幂等）。</summary>
     public void Start()
@@ -209,9 +217,13 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
         }
     }
 
-    /// <summary>写入最新值表并触发采集完成钩子。</summary>
+    /// <summary>写入最新值表并触发采集完成钩子（同时累计读次统计：Bad 计失败）。</summary>
     private void Publish(string name, object? value, TagQuality quality, string? error)
     {
+        Interlocked.Increment(ref _totalReads);
+        if (quality != TagQuality.Good)
+            Interlocked.Increment(ref _failedReads);
+
         var (stored, changed) = _store.Update(name, value, quality, error);
         TagPolled?.Invoke(this, new TagPolledEventArgs(name, stored, changed));
     }

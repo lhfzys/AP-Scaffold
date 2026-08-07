@@ -11,7 +11,6 @@ using AP.Contracts.System.Services;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FreeSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Prism.Events;
@@ -28,6 +27,7 @@ public partial class LayoutViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly IDeviceRegistry _deviceRegistry;
     private readonly IEventAggregator _eventAggregator;
+    private readonly Services.DatabaseStatusService _databaseStatusService;
     private readonly DispatcherTimer _timer;
     private SubscriptionToken? _deviceStateToken;
 
@@ -50,7 +50,8 @@ public partial class LayoutViewModel : ViewModelBase
         ILoginService loginService,
         IServiceProvider serviceProvider,
         IDeviceRegistry deviceRegistry,
-        IEventAggregator eventAggregator)
+        IEventAggregator eventAggregator,
+        Services.DatabaseStatusService databaseStatusService)
     {
         _identityService = identityService;
         _auditService = auditService;
@@ -58,6 +59,7 @@ public partial class LayoutViewModel : ViewModelBase
         _serviceProvider = serviceProvider;
         _deviceRegistry = deviceRegistry;
         _eventAggregator = eventAggregator;
+        _databaseStatusService = databaseStatusService;
 
         CompanyName = configuration["AppConfiguration:CompanyName"] ?? "Automation";
         SoftwareName = configuration["AppConfiguration:SoftwareName"] ?? "Platform";
@@ -108,22 +110,8 @@ public partial class LayoutViewModel : ViewModelBase
 
     private async Task RefreshDatabaseStatusAsync()
     {
-        try
-        {
-            var freeSql = _serviceProvider.GetService<IFreeSql>();
-            if (freeSql == null)
-            {
-                DatabaseStatusText = "数据库 未启用";
-                return;
-            }
-
-            await freeSql.Ado.ExecuteScalarAsync("select 1");
-            DatabaseStatusText = "数据库 已连接";
-        }
-        catch
-        {
-            DatabaseStatusText = "数据库 异常";
-        }
+        var (text, _) = await _databaseStatusService.ProbeAsync();
+        DatabaseStatusText = $"数据库 {text}";
     }
 
     private static string GetInformationalVersion()

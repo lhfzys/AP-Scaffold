@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="FreeSql" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
   </ItemGroup>
 

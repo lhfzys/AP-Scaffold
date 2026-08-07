@@ -37,6 +37,8 @@ public class LayoutPlugin : PluginBase, INavigationContributor
 
         // 状态栏系统监控（CPU/内存），契约在 AP.Contracts.System
         services.AddSingleton<AP.Contracts.System.Services.ISystemMonitorService, Services.SystemMonitorService>();
+        // 数据库连通探测（状态栏与首页服务状态卡共用）
+        services.AddSingleton<Services.DatabaseStatusService>();
     }
 
     public override async Task InitializeAsync(IServiceProvider serviceProvider, CancellationToken ct = default)

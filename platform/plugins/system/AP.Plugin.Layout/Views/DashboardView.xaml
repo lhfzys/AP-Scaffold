@@ -4,18 +4,77 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:vm="clr-namespace:AP.Plugin.Layout.ViewModels"
              mc:Ignorable="d"
-             d:DesignHeight="600"
-             d:DesignWidth="900">
+             d:DesignHeight="760"
+             d:DesignWidth="1100">
+    <UserControl.Resources>
+        <!-- 状态徽标：色点 + 文本（Level: ok/warn/err/none；Text 为空隐藏） -->
+        <DataTemplate x:Key="StatusBadgeTemplate" DataType="{x:Type vm:StatusBadge}">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Text}" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Text}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource Brush.Inactive}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Level}" Value="ok">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Success}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="warn">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="err">
+                                    <Setter Property="Fill" Value="{DynamicResource Brush.Error}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Text="{Binding Text}"
+                           FontSize="11"
+                           VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.Inactive}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Level}" Value="ok">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="warn">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="err">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid Background="Transparent" Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 欢迎区 -->
+        <!-- 行 1：欢迎区（左：问候 + 软件名 + 健康结论；右：当前时间） -->
         <Grid Grid.Row="0" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -23,185 +82,56 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Margin="0,0,0,4">
-                    <Run Text="你好，" FontSize="24" FontWeight="SemiBold"
-                         Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
-                    <Run Text="{Binding DisplayName}" FontSize="24" FontWeight="Bold"
-                         Foreground="{DynamicResource Brush.OnSurface}"/>
+                <TextBlock Text="{Binding WelcomeTitle}"
+                           FontSize="24" FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.OnSurface}"
+                           Margin="0,0,0,4"/>
+                <TextBlock FontSize="14"
+                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                           Margin="0,0,0,6">
+                    <Run Text="欢迎使用 "/>
+                    <Run Text="{Binding SoftwareName}"/>
                 </TextBlock>
-                <TextBlock Text="{Binding GreetingText}"
-                           FontSize="14"
-                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+                <ContentControl Content="{Binding HealthBadge}"
+                                ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
             </StackPanel>
 
             <TextBlock Grid.Column="1"
-                       Text="{Binding CurrentDate}"
-                       FontSize="13"
+                       Text="{Binding CurrentTimeText}"
+                       FontSize="14"
                        Foreground="{DynamicResource Brush.OnSurfaceVariant}"
                        VerticalAlignment="Center"/>
         </Grid>
 
-        <!-- 统计卡：大数字 + 右上圆角图标 + 底部状态徽标 -->
+        <!-- 行 2：六张统计卡（大数字 + 右上圆角图标 + 底部状态徽标） -->
         <Grid Grid.Row="1" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 采集点 -->
-            <md:Card Grid.Column="0" Margin="0,0,12,0"
-                     Padding="20"
-                     md:ElevationAssist.Elevation="Dp1">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="采集点"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
-                        <TextBlock Text="{Binding AcquisitionPoints}"
-                                   FontSize="28" FontWeight="Bold"
-                                   Foreground="{DynamicResource Brush.OnSurface}"
-                                   Margin="0,6,0,10"/>
-                        <StackPanel Orientation="Horizontal">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AcquisitionBadgeText}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding AcquisitionBadgeText}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,6,0">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="ok">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="warn">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="err">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
-                            <TextBlock Text="{Binding AcquisitionBadgeText}"
-                                       FontSize="11"
-                                       VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="ok">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="warn">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding AcquisitionBadgeLevel}" Value="err">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </StackPanel>
-                    <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
-                        <Grid>
-                            <Border Background="{DynamicResource Brush.Primary}" Opacity="0.12" CornerRadius="8"/>
-                            <md:PackIcon Kind="Database" Width="18" Height="18"
-                                         Foreground="{DynamicResource Brush.Primary}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </md:Card>
-
             <!-- 在线设备 -->
-            <md:Card Grid.Column="1" Margin="0,0,12,0"
-                     Padding="20"
-                     md:ElevationAssist.Elevation="Dp1">
+            <md:Card Grid.Column="0" Margin="0,0,12,0" Padding="16" md:ElevationAssist.Elevation="Dp1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="在线设备"
-                                   FontSize="12"
+                        <TextBlock Text="在线设备" FontSize="12"
                                    Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         <TextBlock Margin="0,6,0,10">
-                            <Run Text="{Binding OnlineDevices}" FontSize="28" FontWeight="Bold"
+                            <Run Text="{Binding OnlineDevices}" FontSize="26" FontWeight="Bold"
                                  Foreground="{DynamicResource Brush.OnSurface}"/>
                             <Run Text="{Binding OnlineDevicesSuffix}" FontSize="13"
                                  Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         </TextBlock>
-                        <StackPanel Orientation="Horizontal">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding OnlineBadgeText}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding OnlineBadgeText}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,6,0">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="ok">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="warn">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="err">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
-                            <TextBlock Text="{Binding OnlineBadgeText}"
-                                       FontSize="11"
-                                       VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="ok">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="warn">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding OnlineBadgeLevel}" Value="err">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                        <ContentControl Content="{Binding OnlineBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
                     </StackPanel>
                     <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
                         <Grid>
@@ -214,30 +144,87 @@
                 </Grid>
             </md:Card>
 
-            <!-- 今日变化 -->
-            <md:Card Grid.Column="2" Margin="0,0,12,0"
-                     Padding="20"
-                     md:ElevationAssist.Elevation="Dp1">
+            <!-- 当前告警 -->
+            <md:Card Grid.Column="1" Margin="0,0,12,0" Padding="16" md:ElevationAssist.Elevation="Dp1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="今日变化"
-                                   FontSize="12"
+                        <TextBlock Text="当前告警" FontSize="12"
                                    Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         <TextBlock Margin="0,6,0,10">
-                            <Run Text="{Binding TagChanges}" FontSize="28" FontWeight="Bold"
+                            <Run Text="{Binding AlarmCount}" FontSize="26" FontWeight="Bold"
                                  Foreground="{DynamicResource Brush.OnSurface}"/>
-                            <Run Text=" 次" FontSize="13"
+                            <Run Text=" 项" FontSize="13"
                                  Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         </TextBlock>
+                        <ContentControl Content="{Binding AlarmBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
+                        <Grid>
+                            <Border Background="{DynamicResource Brush.Warning}" Opacity="0.12" CornerRadius="8"/>
+                            <md:PackIcon Kind="BellAlertOutline" Width="18" Height="18"
+                                         Foreground="{DynamicResource Brush.Warning}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </md:Card>
+
+            <!-- 采集点 -->
+            <md:Card Grid.Column="2" Margin="0,0,12,0" Padding="16" md:ElevationAssist.Elevation="Dp1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="采集点" FontSize="12"
+                                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+                        <TextBlock Text="{Binding AcquisitionPoints}"
+                                   FontSize="26" FontWeight="Bold"
+                                   Foreground="{DynamicResource Brush.OnSurface}"
+                                   Margin="0,6,0,10"/>
+                        <ContentControl Content="{Binding AcquisitionBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
+                        <Grid>
+                            <Border Background="{DynamicResource Brush.Primary}" Opacity="0.12" CornerRadius="8"/>
+                            <md:PackIcon Kind="Database" Width="18" Height="18"
+                                         Foreground="{DynamicResource Brush.Primary}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </md:Card>
+
+            <!-- 通讯成功率 -->
+            <md:Card Grid.Column="3" Margin="0,0,12,0" Padding="16" md:ElevationAssist.Elevation="Dp1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="通讯成功率" FontSize="12"
+                                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+                        <TextBlock Margin="0,6,0,10">
+                            <Run Text="{Binding CommSuccessRate}" FontSize="26" FontWeight="Bold"
+                                 Foreground="{DynamicResource Brush.OnSurface}"/>
+                            <Run Text=" %" FontSize="13"
+                                 Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+                        </TextBlock>
+                        <ContentControl Content="{Binding CommBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
                     </StackPanel>
                     <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
                         <Grid>
                             <Border Background="{DynamicResource Brush.Info}" Opacity="0.12" CornerRadius="8"/>
-                            <md:PackIcon Kind="LightningBolt" Width="18" Height="18"
+                            <md:PackIcon Kind="SwapVertical" Width="18" Height="18"
                                          Foreground="{DynamicResource Brush.Info}"
                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
@@ -245,77 +232,53 @@
                 </Grid>
             </md:Card>
 
-            <!-- 系统运行时长 -->
-            <md:Card Grid.Column="3"
-                     Padding="20"
-                     md:ElevationAssist.Elevation="Dp1">
+            <!-- 系统资源 -->
+            <md:Card Grid.Column="4" Margin="0,0,12,0" Padding="16" md:ElevationAssist.Elevation="Dp1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="系统运行时长"
-                                   FontSize="12"
+                        <TextBlock Text="系统资源" FontSize="12"
+                                   Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+                        <TextBlock Text="{Binding SystemResourceText}"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.OnSurface}"
+                                   Margin="0,12,0,13"
+                                   TextWrapping="Wrap"/>
+                        <ContentControl Content="{Binding SystemResourceBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
+                        <Grid>
+                            <Border Background="{DynamicResource Brush.Accent}" Opacity="0.12" CornerRadius="8"/>
+                            <md:PackIcon Kind="Memory" Width="18" Height="18"
+                                         Foreground="{DynamicResource Brush.Accent}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </md:Card>
+
+            <!-- 运行时间 -->
+            <md:Card Grid.Column="5" Padding="16" md:ElevationAssist.Elevation="Dp1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="运行时间" FontSize="12"
                                    Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         <TextBlock Margin="0,6,0,10">
-                            <Run Text="{Binding Uptime}" FontSize="28" FontWeight="Bold"
+                            <Run Text="{Binding Uptime}" FontSize="26" FontWeight="Bold"
                                  Foreground="{DynamicResource Brush.OnSurface}"/>
                             <Run Text="{Binding UptimeSuffix}" FontSize="13"
                                  Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
                         </TextBlock>
-                        <StackPanel Orientation="Horizontal">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding UptimeBadgeText}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding UptimeBadgeText}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,6,0">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="ok">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="warn">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="err">
-                                                <Setter Property="Fill" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
-                            <TextBlock Text="{Binding UptimeBadgeText}"
-                                       FontSize="11"
-                                       VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Inactive}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="ok">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="warn">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding UptimeBadgeLevel}" Value="err">
-                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                        <ContentControl Content="{Binding UptimeBadge}"
+                                        ContentTemplate="{StaticResource StatusBadgeTemplate}"/>
                     </StackPanel>
                     <Border Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top">
                         <Grid>
@@ -329,82 +292,67 @@
             </md:Card>
         </Grid>
 
-        <!-- 第二行：实时趋势 + 最近事件 -->
-        <Grid Grid.Row="2">
+        <!-- 行 3：设备状态总览 + 最近事件 -->
+        <Grid Grid.Row="2" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 实时采集趋势（内存缓冲近 60 分钟；24H/7D/30D 待历史持久化） -->
-            <md:Card Grid.Column="0" Margin="0,0,12,0"
-                     Padding="24"
-                     md:ElevationAssist.Elevation="Dp1">
+            <!-- 设备状态总览 -->
+            <md:Card Grid.Column="0" Margin="0,0,12,0" Padding="24" md:ElevationAssist.Elevation="Dp1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="实时采集趋势"
-                                       FontSize="16" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Brush.OnSurface}"/>
-                            <TextBlock Text="近 60 分钟数据变化"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource Brush.OnSurfaceVariant}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Top">
-                            <Border Background="{DynamicResource Brush.Primary}"
-                                    CornerRadius="10" Padding="10,2" Margin="0,0,6,0">
-                                <TextBlock Text="1H" FontSize="11"
-                                           Foreground="{DynamicResource Brush.OnPrimary}"/>
-                            </Border>
-                            <Border Background="{DynamicResource Brush.SurfaceVariant}"
-                                    CornerRadius="10" Padding="10,2" Margin="0,0,6,0"
-                                    ToolTip="需历史数据持久化（未启用）">
-                                <TextBlock Text="24H" FontSize="11"
-                                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
-                            </Border>
-                            <Border Background="{DynamicResource Brush.SurfaceVariant}"
-                                    CornerRadius="10" Padding="10,2" Margin="0,0,6,0"
-                                    ToolTip="需历史数据持久化（未启用）">
-                                <TextBlock Text="7D" FontSize="11"
-                                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
-                            </Border>
-                            <Border Background="{DynamicResource Brush.SurfaceVariant}"
-                                    CornerRadius="10" Padding="10,2"
-                                    ToolTip="需历史数据持久化（未启用）">
-                                <TextBlock Text="30D" FontSize="11"
-                                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Grid.Row="1">
-                        <lvc:CartesianChart Series="{Binding TrendSeries}"
-                                            XAxes="{Binding TrendXAxes}"
-                                            YAxes="{Binding TrendYAxes}"
-                                            LegendPosition="Bottom"
-                                            MinHeight="240"/>
-                        <TextBlock Text="暂无数值型采集点"
-                                   FontSize="13"
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="设备状态总览"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.OnSurface}"/>
+                        <TextBlock Text="全部已注册设备的实时连接状态"
+                                   FontSize="11"
                                    Foreground="{DynamicResource Brush.OnSurfaceVariant}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Visibility="{Binding HasTrendSeries, Converter={StaticResource InverseBoolToVis}}"/>
-                    </Grid>
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding DeviceItems}" Margin="0,0,20,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource Brush.Outline}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="14" FontWeight="Medium"
+                                                           Foreground="{DynamicResource Brush.OnSurface}"/>
+                                                <TextBlock Text="{Binding TypeText}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                                                           Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                            <ContentControl Grid.Column="1"
+                                                            Content="{Binding State}"
+                                                            ContentTemplate="{StaticResource StatusBadgeTemplate}"
+                                                            VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </Grid>
             </md:Card>
 
             <!-- 最近事件 -->
-            <md:Card Grid.Column="1"
-                     Padding="24"
-                     md:ElevationAssist.Elevation="Dp1">
+            <md:Card Grid.Column="1" Padding="24" md:ElevationAssist.Elevation="Dp1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -422,7 +370,7 @@
                     </StackPanel>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding RecentEvents}">
+                        <ItemsControl ItemsSource="{Binding RecentEvents}" Margin="0,0,20,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="{DynamicResource Brush.Outline}"
@@ -492,6 +440,96 @@
                                             </TextBlock>
                                         </Grid>
                                     </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </md:Card>
+        </Grid>
+
+        <!-- 行 4：系统服务状态 + 快捷入口 -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 系统服务状态 -->
+            <md:Card Grid.Column="0" Margin="0,0,12,0" Padding="24" md:ElevationAssist.Elevation="Dp1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="系统服务状态"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.OnSurface}"/>
+                    </StackPanel>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ServiceItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Name}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource Brush.OnSurface}"
+                                               VerticalAlignment="Center"/>
+                                    <ContentControl Grid.Column="1"
+                                                    Content="{Binding Status}"
+                                                    ContentTemplate="{StaticResource StatusBadgeTemplate}"
+                                                    VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </md:Card>
+
+            <!-- 快捷入口 -->
+            <md:Card Grid.Column="1" Padding="24" md:ElevationAssist.Elevation="Dp1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="快捷入口"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.OnSurface}"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding QuickLinks}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding Command}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Margin="0,0,10,10"
+                                            Padding="14,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="{Binding IconKind}"
+                                                         Width="16" Height="16"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding Label}"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

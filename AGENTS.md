@@ -45,7 +45,7 @@
 - **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
 - **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
 - **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**重启后生效**
-- **仪表板实时趋势（2026-08-03，LiveCharts2）**：Dashboard 趋势卡取点表前 4 个数值型点 2s 采样（内存环形缓冲近 60 分钟，仅 Good 质量入图）；统计卡大数字+徽标重排、事件级别徽标；24H/7D/30D 预留禁用（待历史持久化）
+- **仪表板框架通用化（2026-08-06 重构）**：首页只展示系统健康度、设备状态与运行概况，不依赖任何业务 Tag——欢迎区（问候+软件名+健康结论+实时时钟）、六张统计卡（在线设备/当前告警/采集点/通讯成功率/系统资源/运行时间，全部真实数据）、设备状态总览、系统服务状态（数据库探测/采集引擎/审计/资源监控，探测逻辑抽为 Layout 插件 `DatabaseStatusService` 与状态栏共用）、最近事件、快捷入口（复用导航贡献者，排除首页自身，≤6 个）。实时趋势/工艺曲线归业务页面，LiveCharts2 能力保留给业务插件（宿主共享库模式不变，见 5.11）；`ITagAcquisitionStatus` 新增 `TotalReads`/`FailedReads` 读次统计支撑通讯成功率卡。历史演进：2026-08-03 曾落地首页实时趋势卡（LiveCharts2），本次按"框架级首页不放业务数据"定位移除
 
 ### 2.3 活跃问题 / 待办
 
@@ -152,7 +152,7 @@ installer/build-installer.bat
 - 插件主类实现该接口即可出现在 Sidebar，**无需**手动操作 SidebarViewModel；但仍需在 `InitializeAsync` 中把视图 `RegisterViewWithRegion("ContentRegion", ...)`（按权限条件）。
 - Host 在 `Bootstrapper` 桥接 DryIoc 时，对实现了 `INavigationContributor` 的插件实例额外 `RegisterInstance(typeof(INavigationContributor), instance)`。
 - `SidebarViewModel` 注入 `IEnumerable<INavigationContributor>`，用 `NavigationMenuItemBuilder.Build(contributors, identityService.HasPermission, defaultTarget, visibilityFilter)` 构建菜单：按 `NavigationTarget` 去重（取最小 Order）→ 排序 → 权限过滤 → 白名单过滤 → 无默认项时取第一个可见项。
-- 默认导航延迟到 `Dispatcher.BeginInvoke(Background)` 执行（确保 UI 就绪后再选中）。
+- 默认导航延迟到 `Dispatcher.BeginInvoke(Background)` 执行（确保 UI 就绪后再选中）；同处订阅 `ContentRegion` 的 `NavigationService.Navigated` 事件——Sidebar 之外发起的导航（如首页快捷入口 `RequestNavigate`）会回写左侧选中态（`_syncingSelection` 标志防止回写再次触发导航）。
 - 相关配置键：
   - `AppConfiguration:DefaultNavigationTarget`（当前 `"DashboardView"`）
   - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / RecipeListView / ReportListView`）
@@ -269,7 +269,7 @@ installer/build-installer.bat
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
-- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 8 运行；如需消除可把 TFM 升为 `net8.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。
+- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 8 运行；如需消除可把 TFM 升为 `net8.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。当前首页已移除趋势图（2026-08-06 框架通用化重构），上述基建为业务插件接入图表保留。
 - **插件禁止注入/引用 Infra 具体类型（2026-08-06 实战教训）**：插件在独立 ALC 加载，Infra DLL 不在插件目录时会经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册类型不恒等 → DryIoc 自动瞬态化 → 拿到从未 Start 的新实例（实例：DashboardViewModel 注入 `TagAcquisitionEngine`/`LatestTagValueStore` 具体类型 → 采集徽标恒"全部停止"、趋势图空白）。需要 Infra 运行时状态时走契约层只读视图接口（`ILatestTagValueStore`/`ITagAcquisitionStatus`，见 5.13）。防护：`SharedPrefixes` 含 `AP.Infra`、`CleanDuplicateLibs` 删插件输出 `AP.Infra.*`。连带坑点：`SharedPrefixes` 新增前缀时，其公开签名里的第三方类型前缀也必须已共享（AP.Infra.Resilience 返回 `Polly.ResiliencePipeline`，故 `Polly` 同步共享，否则跨 ALC 签名不匹配抛 `MissingMethodException`）。
 
 ### 5.12 Device Runtime Model（设备运行时模型）

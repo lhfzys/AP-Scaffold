@@ -188,6 +188,48 @@ public class TagAcquisitionEngineTests
         engine.Dispose();
     }
 
+    // --- 读次统计（ITagAcquisitionStatus.TotalReads / FailedReads） ---
+
+    [Fact]
+    public async Task AllGoodReads_CountTotalOnly()
+    {
+        var (engine, _, _) = Create([Tag("T1"), Tag("T2")], intervalMs: 20);
+
+        engine.Start();
+        await WaitUntilAsync(() => engine.TotalReads >= 6, "应持续累计读次");
+
+        engine.FailedReads.Should().Be(0);
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task BadReads_CountAsFailed()
+    {
+        var (engine, _, fakes) = Create([Tag("T1")], intervalMs: 20);
+        fakes.TagService.Responder = _ => TagValue.Bad("设备未连接");
+
+        engine.Start();
+        await WaitUntilAsync(() => engine.TotalReads >= 3, "应持续累计读次");
+
+        engine.FailedReads.Should().Be(engine.TotalReads); // 全部 Bad
+        engine.Dispose();
+    }
+
+    [Fact]
+    public async Task BatchMissingAddress_CountsFailed()
+    {
+        var (engine, _, fakes) = Create([Tag("T1"), Tag("T2")], intervalMs: 20, plcConnected: true);
+        fakes.TypedBatch.Responder = items =>
+            Task.FromResult(new Dictionary<string, object> { ["D0"] = (short)42 }); // 缺 D1(T2)
+
+        engine.Start();
+        await WaitUntilAsync(() => engine.TotalReads >= 4, "应累计两轮以上读次");
+
+        engine.FailedReads.Should().BeGreaterThan(0);
+        engine.FailedReads.Should().BeLessThan(engine.TotalReads); // T1 Good / T2 Bad
+        engine.Dispose();
+    }
+
     // --- 测试基础设施 ---
 
     private static (TagAcquisitionEngine Engine, LatestTagValueStore Store, Fakes Fakes) Create(
