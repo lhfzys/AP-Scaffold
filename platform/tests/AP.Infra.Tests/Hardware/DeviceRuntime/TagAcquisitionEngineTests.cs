@@ -188,6 +188,24 @@ public class TagAcquisitionEngineTests
         engine.Dispose();
     }
 
+    // --- 热重载：Restart 重建分组 ---
+
+    [Fact]
+    public async Task Restart_RebuildsGroupsFromLatestTable()
+    {
+        var (engine, store, fakes) = Create([Tag("T1")], intervalMs: 20);
+        engine.Start();
+        await WaitUntilAsync(() => store.Get("T1") != null, "T1 应被采集");
+
+        // 热重载后点表换成 T2（T1 删除）；Restart 应按新表重建分组
+        fakes.Table.Tags = [Tag("T2")];
+        engine.Restart();
+        await WaitUntilAsync(() => store.Get("T2") != null, "Restart 后应采集新表 T2");
+
+        engine.IsRunning.Should().BeTrue();
+        engine.Dispose();
+    }
+
     // --- 读次统计（ITagAcquisitionStatus.TotalReads / FailedReads） ---
 
     [Fact]
@@ -237,9 +255,9 @@ public class TagAcquisitionEngineTests
     {
         var fakes = new Fakes(deviceType, plcConnected);
         var store = new LatestTagValueStore();
+        fakes.Table = new FakeTagTable(tags, new TagAcquisitionConfig { DefaultIntervalMs = intervalMs });
         var engine = new TagAcquisitionEngine(
-            new FakeTagTable(tags),
-            new TagAcquisitionConfig { DefaultIntervalMs = intervalMs },
+            fakes.Table,
             fakes.TagService,
             fakes.TypedBatch,
             fakes.Registry,
@@ -261,11 +279,13 @@ public class TagAcquisitionEngineTests
         public override string ToString() => Address;
     }
 
-    private sealed class FakeTagTable(ResolvedTag[] tags) : ITagTable
+    private sealed class FakeTagTable(ResolvedTag[] tags, TagAcquisitionConfig acquisition) : ITagTable
     {
-        public IReadOnlyCollection<ResolvedTag> Tags => tags;
+        public IReadOnlyCollection<ResolvedTag> Tags { get; set; } = tags;
+        public TagAcquisitionConfig Acquisition { get; set; } = acquisition;
+
         public ResolvedTag? Find(string name) =>
-            tags.FirstOrDefault(t => string.Equals(t.Definition.Name, name, StringComparison.OrdinalIgnoreCase));
+            Tags.FirstOrDefault(t => string.Equals(t.Definition.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class Fakes
@@ -285,6 +305,7 @@ public class TagAcquisitionEngineTests
         public FakeTagService TagService { get; }
         public FakeTypedBatchRead TypedBatch { get; }
         public IDeviceRegistry Registry { get; }
+        public FakeTagTable Table { get; set; } = null!;
     }
 
     private sealed class FakeTagService : ITagService

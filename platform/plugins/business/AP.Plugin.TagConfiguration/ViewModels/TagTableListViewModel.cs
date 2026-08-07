@@ -21,12 +21,14 @@ using Microsoft.Extensions.Logging;
 namespace AP.Plugin.TagConfiguration.ViewModels;
 
 /// <summary>
-/// 点表配置列表 ViewModel：tags.json 可视化编辑（保存后重启生效）。
-/// 保存前经 <see cref="ITagTableValidator"/> 全量校验（与启动加载同一规则），非法点表不落盘。
+/// 点表配置列表 ViewModel：tags.json 可视化编辑（保存后热重载即时生效，无需重启）。
+/// 保存前经 <see cref="ITagTableValidator"/> 全量校验（与启动加载同一规则），非法点表不落盘；
+/// 落盘后调用 <see cref="ITagTableReloader"/> 换表 + 采集引擎重启 + 最新值表清理。
 /// </summary>
 public partial class TagTableListViewModel : ViewModelBase
 {
     private readonly ITagTableValidator _tagTableValidator;
+    private readonly ITagTableReloader _tagTableReloader;
     private readonly IAuditService _auditService;
     private readonly IIdentityService _identityService;
     private readonly ICustomDialogService _dialogService;
@@ -44,6 +46,7 @@ public partial class TagTableListViewModel : ViewModelBase
 
     public TagTableListViewModel(
         ITagTableValidator tagTableValidator,
+        ITagTableReloader tagTableReloader,
         IAuditService auditService,
         IIdentityService identityService,
         ICustomDialogService dialogService,
@@ -51,6 +54,7 @@ public partial class TagTableListViewModel : ViewModelBase
         ILogger<TagTableListViewModel> logger)
     {
         _tagTableValidator = tagTableValidator;
+        _tagTableReloader = tagTableReloader;
         _auditService = auditService;
         _identityService = identityService;
         _dialogService = dialogService;
@@ -166,7 +170,20 @@ public partial class TagTableListViewModel : ViewModelBase
             TagTableFileStore.Save(data);
 
             await LogAuditAsync(true, $"更新点表（{definitions.Count} 点）");
-            await _dialogService.ShowAlertAsync("点表已保存，重启应用后生效。", "保存成功");
+
+            // 热重载即时生效：换表 + 采集引擎重启 + 最新值表清理（失败时保留旧表运行）
+            var reload = _tagTableReloader.Reload();
+            if (reload.Success)
+            {
+                await _dialogService.ShowAlertAsync("点表已保存并即时生效。", "保存成功");
+            }
+            else
+            {
+                // 保存内容已过预校验，正常不会走到这；兜底提示（如文件被外部并发改动）
+                await _dialogService.ShowAlertAsync(
+                    $"点表已保存，但热重载未通过（已保留旧点表继续运行，重启后生效）：{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", reload.Errors)}",
+                    "保存成功");
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {

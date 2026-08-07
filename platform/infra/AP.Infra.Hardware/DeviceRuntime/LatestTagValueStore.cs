@@ -38,4 +38,16 @@ public sealed class LatestTagValueStore : ILatestTagValueStore
     {
         lock (_gate) return new Dictionary<string, TagValue>(_values, StringComparer.OrdinalIgnoreCase);
     }
+
+    /// <summary>清理不在点名集内的残留值（点表热重载后调用，移除已删除点）。</summary>
+    public void PruneExcept(IReadOnlyCollection<string> names)
+    {
+        var keep = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
+        lock (_gate)
+        {
+            var stale = _values.Keys.Where(k => !keep.Contains(k)).ToList();
+            foreach (var key in stale)
+                _values.Remove(key);
+        }
+    }
 }

@@ -130,6 +130,66 @@ public class TagTableTests : IDisposable
         table.Acquisition.DefaultIntervalMs.Should().Be(1000);
     }
 
+    // --- 热重载 ---
+
+    [Fact]
+    public void Reload_PicksUpNewContent_Atomically()
+    {
+        var path = WriteTags("""
+            { "Tags": [ { "Name": "A.B", "DeviceId": "plc.main", "Address": "raw1" } ] }
+            """);
+        var table = CreateTable([new FakeValidator("Test")], path);
+
+        File.WriteAllText(path, """
+            {
+              "Acquisition": { "DefaultIntervalMs": 250 },
+              "Tags": [ { "Name": "C.D", "DeviceId": "plc.main", "Address": "raw2" } ]
+            }
+            """);
+
+        var errors = table.Reload();
+
+        errors.Should().BeEmpty();
+        table.Find("A.B").Should().BeNull();      // 旧点已移除
+        table.Find("C.D").Should().NotBeNull();   // 新点已生效
+        table.Acquisition.DefaultIntervalMs.Should().Be(250); // 采集配置同步更新
+    }
+
+    [Fact]
+    public void Reload_InvalidContent_KeepsOldTable()
+    {
+        var path = WriteTags("""
+            { "Tags": [ { "Name": "A.B", "DeviceId": "plc.main", "Address": "raw1" } ] }
+            """);
+        var table = CreateTable([new FakeValidator("Test")], path);
+
+        File.WriteAllText(path, """
+            { "Tags": [ { "Name": "C.D", "DeviceId": "plc.main", "Address": "BAD!" } ] }
+            """);
+
+        var errors = table.Reload();
+
+        errors.Should().NotBeEmpty();
+        table.Find("A.B").Should().NotBeNull(); // 旧表保留
+        table.Find("C.D").Should().BeNull();
+    }
+
+    [Fact]
+    public void Reload_MalformedJson_KeepsOldTable()
+    {
+        var path = WriteTags("""
+            { "Tags": [ { "Name": "A.B", "DeviceId": "plc.main", "Address": "raw1" } ] }
+            """);
+        var table = CreateTable([new FakeValidator("Test")], path);
+
+        File.WriteAllText(path, "{ not json");
+
+        var errors = table.Reload();
+
+        errors.Should().NotBeEmpty();
+        table.Find("A.B").Should().NotBeNull();
+    }
+
     private string WriteTags(string json)
     {
         var path = Path.GetTempFileName();

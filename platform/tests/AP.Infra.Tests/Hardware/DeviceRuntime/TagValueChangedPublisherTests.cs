@@ -75,8 +75,7 @@ public class TagValueChangedPublisherTests
         var registry = Substitute.For<IDeviceRegistry>();
         registry.Find(Arg.Any<string>()).Returns((IDevice?)null); // 无设备 → 逐点路径
         var engine = new TagAcquisitionEngine(
-            new FakeTagTable(tag),
-            new TagAcquisitionConfig { DefaultIntervalMs = 20 },
+            new FakeTagTable(tag, new TagAcquisitionConfig { DefaultIntervalMs = 20 }),
             tagService,
             Substitute.For<IPlcTypedBatchRead>(),
             registry,
@@ -85,9 +84,10 @@ public class TagValueChangedPublisherTests
         return (engine, tagService);
     }
 
-    private sealed class FakeTagTable(ResolvedTag tag) : ITagTable
+    private sealed class FakeTagTable(ResolvedTag tag, TagAcquisitionConfig acquisition) : ITagTable
     {
         public IReadOnlyCollection<ResolvedTag> Tags => [tag];
+        public TagAcquisitionConfig Acquisition { get; } = acquisition;
         public ResolvedTag? Find(string name) => tag;
     }
 

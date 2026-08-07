@@ -17,7 +17,7 @@ using Prism.Navigation.Regions;
 namespace AP.Plugin.TagConfiguration;
 
 /// <summary>
-/// 点表配置插件（tags.json 可视化编辑，保存后重启生效）
+/// 点表配置插件（tags.json 可视化编辑，保存后热重载即时生效）
 /// </summary>
 [PluginMetadata("AP.Plugin.TagConfiguration", Name = "点表配置", Version = "1.0.0", Priority = 100, Required = false)]
 public class TagConfigurationPlugin : PluginBase, INavigationContributor

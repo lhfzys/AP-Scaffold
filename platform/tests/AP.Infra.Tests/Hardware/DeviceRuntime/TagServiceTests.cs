@@ -174,6 +174,8 @@ public class TagServiceTests
     {
         public IReadOnlyCollection<ResolvedTag> Tags => tags;
 
+        public TagAcquisitionConfig Acquisition { get; } = new();
+
         public ResolvedTag? Find(string name) =>
             tags.FirstOrDefault(t => string.Equals(t.Definition.Name, name, StringComparison.OrdinalIgnoreCase));
     }

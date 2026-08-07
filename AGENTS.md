@@ -44,7 +44,7 @@
 - **Tag 系统（见 5.13）**：点表（`Configuration/tags.json`）、`ITagService` 按点名读写（质量戳结果）、采集引擎 + 最新值表 + 变化事件订阅、**带类型批量读**（`IPlcTypedBatchRead`，在线每周期一次往返+三级降级）
 - **横切规范文档（四份，新代码必须遵守）**：`docs/conventions/ERROR_HANDLING.md`、`LOGGING.md`、`LAYERING.md`（设备访问防线）、`DEPENDENCIES.md`（依赖方向）
 - **首个真实报表**：操作审计日报（`AuditDailyReportProvider`，数据源=审计日志）
-- **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**重启后生效**
+- **点表可视化编辑（2026-07-31，`AP.Plugin.TagConfiguration`）**：菜单"点表配置"（Order=1100，权限 `device.config`），tags.json 列表增删改 + 默认/按点采集周期编辑；保存前经 `ITagTableValidator` 全量校验（与启动加载同一规则，非法不落盘），原子写入含头部注释，保存写审计，**保存后热重载即时生效**（`ITagTableReloader`：换表→引擎 Restart→值表 PruneExcept，校验失败保留旧表，见 5.13）
 - **仪表板框架通用化（2026-08-06 重构）**：首页只展示系统健康度、设备状态与运行概况，不依赖任何业务 Tag——欢迎区（问候+软件名+健康结论+实时时钟）、六张统计卡（在线设备/当前告警/采集点/通讯成功率/系统资源/运行时间，全部真实数据）、设备状态总览、系统服务状态（数据库探测/采集引擎/审计/资源监控，探测逻辑抽为 Layout 插件 `DatabaseStatusService` 与状态栏共用）、最近事件（仅设备连接状态变化/扫码/系统启动，文案面向操作员如"自动重连成功"；**不含 Tag 实时值变化**——那是数据不是事件）、快捷入口（复用导航贡献者，排除首页自身，≤6 个）。实时趋势/工艺曲线归业务页面，LiveCharts2 能力保留给业务插件（宿主共享库模式不变，见 5.11）；`ITagAcquisitionStatus` 新增 `TotalReads`/`FailedReads` 读次统计支撑通讯成功率卡。历史演进：2026-08-03 曾落地首页实时趋势卡（LiveCharts2），本次按"框架级首页不放业务数据"定位移除
 
 ### 2.3 活跃问题 / 待办
@@ -53,7 +53,7 @@
 >
 > **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
 
-- [ ] 点表热重载（点表编辑器保存后免重启：采集引擎分组重建+最新值表失效+视图刷新链，停车场议题）
+- [x] 点表热重载（2026-08-07，停车场议题落地）：点表编辑器保存后免重启——`ITagTableReloader` 编排（`TagTable.Reload` 原子替换快照→采集引擎 `Restart` 重建分组→`LatestTagValueStore.PruneExcept` 清理删点残留），校验失败保留旧表继续运行；仅编辑页保存触发，手工改 tags.json 仍需重启
 - [ ] 配方管理完善（**等真实项目配方需求再动**：参数校验/版本历史/`SwitchAsync` 事件 TODO，避免返工）
 - [ ] Tag 值持久化（停车场议题，设备运行日报/历史报表前置；等客户提历史数据需求再选型）
 - [x] 报表中心首个真实数据提供者（2026-07-28，操作审计日报 AuditDaily）
@@ -289,7 +289,7 @@ installer/build-installer.bat
 > 2026-07-25 起落地（阶段 4）。定位：业务层**永远按逻辑点名**访问设备数据，不允许直接传协议地址（协议语法只存在于驱动内部）。
 
 - **点表**：`bin/Release/Configuration/tags.json`（随宿主 `Configuration/tags.json` 复制）：`{ "Acquisition": {...}, "Tags": [...] }`；启动时全量校验（点名唯一/设备已注册/地址经 `IAddressValidator` 解析），任一非法即**中止启动**（快速失败，`DeviceConfigurationException`）；`Acquisition` 节为可选采集配置（`DefaultIntervalMs` 默认 1000 + `Overrides` 按点名覆盖），采集策略不属于 `TagDefinition`。
-- **点表编辑（2026-07-31 起）**：运行期改点表走"点表配置"菜单页（`AP.Plugin.TagConfiguration`），不要手改 JSON——保存前经 `ITagTableValidator`（与启动加载共用 `TagTableValidation`，规则/错误文案一致）全量校验，非法不落盘；保存为原子写入并写审计，**重启后生效**（热重载未做，见 2.3 待办）。
+- **点表编辑（2026-07-31 起；热重载 2026-08-07 起）**：运行期改点表走"点表配置"菜单页（`AP.Plugin.TagConfiguration`），不要手改 JSON——保存前经 `ITagTableValidator`（与启动加载共用 `TagTableValidation`，规则/错误文案一致）全量校验，非法不落盘；保存为原子写入并写审计。**保存即热重载生效**：`ITagTableReloader`（契约层 `AP.Contracts.Hardware/DeviceRuntime/`）编排三步——`TagTable.Reload()`（重读文件+全量校验，失败保留旧表返回错误；成功锁内原子替换 `_tags`+`Acquisition` 快照）→ 采集引擎 `Restart()`（Stop+Start，`Acquisition` 配置改为 `Start` 时从 `ITagTable` 现取，引擎构造不再接收快照）→ `LatestTagValueStore.PruneExcept(当前点名集)`（清理已删点的残留值/版本）。热重载校验失败时保留旧表继续运行并弹窗提示（重启后生效）。注意：仅编辑页保存触发热重载，**手工改 tags.json 文件仍需重启**（无文件监视）。
 - **读写**：注入 `ITagService` → `ReadAsync(name)` / `WriteAsync(name, value)`，返回 `TagValue(Value, Quality, Timestamp:DateTimeOffset, Version, Error)`；**通信失败返回 `Quality=Bad` 不抛异常**（设备未连接快速失败、类型不支持 Bad）；仅编程错误抛异常（点名不存在 `ArgumentException`、读写方向违规 `InvalidOperationException`、写入类型不匹配 `ArgumentException`）；地址解析在点表加载时完成（`ResolvedTag` 缓存 Address Object），读写零解析开销。
 - **采集**：`TagAcquisitionEngine`（按生效间隔分组轮询、跳过只写点）→ `LatestTagValueStore`（Version 按点递增；订阅者读最新值不打设备）→ 变化检测（值或质量戳变化）→ `TagValueChangedEvent`（MediatR）/ `PrismTagValueChangedEvent`（UI）；设备状态走 `DeviceStateChangedEvent` / `PrismDeviceStateChangedEvent`。**UI 读采集状态/最新值走契约只读视图**（2026-08-06 起）：`ITagAcquisitionStatus.IsRunning`、`ILatestTagValueStore.Snapshot()`（均在 `AP.Contracts.Hardware/DeviceRuntime/`，DI 转发宿主单例）——禁止注入 Infra 具体类型（见 5.11 坑点）。
 - **错误处理与日志规范**：新代码必须遵守 `docs/conventions/ERROR_HANDLING.md` 与 `LOGGING.md`（禁止裸 `Exception`、禁止 emoji、状态迁移记录法、通信字段结构化）。
@@ -337,4 +337,4 @@ installer/build-installer.bat
 
 ---
 
-**最后更新**: 2026-08-06
+**最后更新**: 2026-08-07

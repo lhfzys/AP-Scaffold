@@ -49,7 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDevice>(sp => new PlcDeviceAdapter(
             sp.GetRequiredService<ActivePlcService>(),
             sp.GetRequiredService<IOptions<PlcOptions>>()));
-        // 点表：启动时加载并校验（快速失败），地址验证器由各驱动插件注册
+        // 点表：启动时加载并校验（快速失败），地址验证器由各驱动插件注册；运行期可热重载（ITagTableReloader）
         services.AddSingleton<ITagTable>(sp => new TagTable(
             sp.GetRequiredService<IDeviceRegistry>(),
             sp.GetServices<IAddressValidator>(),
@@ -60,18 +60,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagService, TagService>();
         // 采集引擎与最新值表（启动/停止由 Bootstrapper 显式调用）
         services.AddSingleton<LatestTagValueStore>();
-        services.AddSingleton<TagAcquisitionEngine>(sp =>
-        {
-            var table = (TagTable)sp.GetRequiredService<ITagTable>();
-            return new TagAcquisitionEngine(
-                table,
-                table.Acquisition,
-                sp.GetRequiredService<ITagService>(),
-                sp.GetRequiredService<IPlcTypedBatchRead>(),
-                sp.GetRequiredService<IDeviceRegistry>(),
-                sp.GetRequiredService<LatestTagValueStore>(),
-                sp.GetRequiredService<ILogger<TagAcquisitionEngine>>());
-        });
+        services.AddSingleton<TagAcquisitionEngine>(sp => new TagAcquisitionEngine(
+            sp.GetRequiredService<ITagTable>(),
+            sp.GetRequiredService<ITagService>(),
+            sp.GetRequiredService<IPlcTypedBatchRead>(),
+            sp.GetRequiredService<IDeviceRegistry>(),
+            sp.GetRequiredService<LatestTagValueStore>(),
+            sp.GetRequiredService<ILogger<TagAcquisitionEngine>>()));
+        // 点表热重载编排：换表 → 引擎重启 → 值表清理（点表编辑页保存后调用）
+        services.AddSingleton<ITagTableReloader, TagTableReloader>();
         // 契约只读视图：UI/业务（插件 ALC）只能经契约访问运行时组件——
         // 具体类型跨 ALC 注入会因程序集双载被瞬态化（2026-08-06 仪表板引擎/值表双实例根因）
         services.AddSingleton<ILatestTagValueStore>(sp => sp.GetRequiredService<LatestTagValueStore>());

@@ -35,7 +35,6 @@ public sealed class TagPolledEventArgs : EventArgs
 public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
 {
     private readonly ITagTable _tagTable;
-    private readonly TagAcquisitionConfig _config;
     private readonly ITagService _tagService;
     private readonly IPlcTypedBatchRead _typedBatchRead;
     private readonly IDeviceRegistry _deviceRegistry;
@@ -51,7 +50,6 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
 
     public TagAcquisitionEngine(
         ITagTable tagTable,
-        TagAcquisitionConfig config,
         ITagService tagService,
         IPlcTypedBatchRead typedBatchRead,
         IDeviceRegistry deviceRegistry,
@@ -59,7 +57,6 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
         ILogger<TagAcquisitionEngine> logger)
     {
         _tagTable = tagTable;
-        _config = config;
         _tagService = tagService;
         _typedBatchRead = typedBatchRead;
         _deviceRegistry = deviceRegistry;
@@ -88,9 +85,11 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
             _cts = new CancellationTokenSource();
 
             // 只写点不参与轮询；按生效间隔分组，每组一个周期循环
+            // 采集配置现取（热重载后 Start 应用新周期）
+            var config = _tagTable.Acquisition;
             var groups = _tagTable.Tags
                 .Where(t => t.Definition.Access != TagAccess.WriteOnly)
-                .GroupBy(t => _config.GetIntervalMs(t.Definition.Name))
+                .GroupBy(t => config.GetIntervalMs(t.Definition.Name))
                 .ToList();
 
             foreach (var group in groups)
@@ -103,6 +102,13 @@ public sealed class TagAcquisitionEngine : ITagAcquisitionStatus, IDisposable
             _logger.LogInformation("Tag 采集引擎已启动: {TagCount} 个点 / {GroupCount} 个采集组",
                 groups.Sum(g => g.Count()), _loops.Count);
         }
+    }
+
+    /// <summary>重启采集（点表热重载后调用：Stop + Start，重建分组并应用新采集周期；未运行时等同 Start）。</summary>
+    public void Restart()
+    {
+        Stop();
+        Start();
     }
 
     /// <summary>停止采集（取消并等待全部循环退出；幂等）。</summary>

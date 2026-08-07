@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+### 点表热重载（2026-08-07）
+
+新增：
+
+- **点表保存免重启即时生效**：点表配置页保存落盘后自动触发热重载，`ITagTableReloader`（契约层新增，实现于 `AP.Infra.Hardware/DeviceRuntime/TagTableReloader`）编排三步——`TagTable.Reload()` → 采集引擎 `Restart()` → 值表清理。成功弹"点表已保存并即时生效。"；重载校验失败保留旧表继续运行，弹窗提示重启后生效。仅编辑页保存触发，手工改 tags.json 仍需重启
+
+变更：
+
+- **`ITagTable` 新增 `Acquisition` 属性**：采集配置随点表快照一起走（原为启动时一次性快照传入引擎）；注释明确快照语义
+- **`TagTable` 可变快照化**：`_tags` 加锁可变，新增 `Reload()`——重读文件全量校验（与启动加载同一 `TagTableValidation`），失败保留旧表返回错误列表，成功锁内原子替换点表与采集配置
+- **`TagAcquisitionEngine`**：构造函数不再接收 `TagAcquisitionConfig` 快照（6 参），`Start()` 时从 `ITagTable.Acquisition` 现取；新增 `Restart()`（Stop+Start 重建采集分组）
+- **`LatestTagValueStore` 新增 `PruneExcept(点名集)`**：热重载后清理已删除点的残留值与版本（契约 `ILatestTagValueStore` 未动）
+- 点表配置页副标题与保存成功文案改为"保存即生效"表述；tags.json 头部注释说明"界面保存即热重载生效；手工编辑则需重启"
+
+测试：
+
+- `TagTableTests` 新增 Reload 三例（成功原子替换/非法保留旧表/JSON 损坏保留旧表）；`TagAcquisitionEngineTests` 新增 `Restart_RebuildsGroupsFromLatestTable`；`LatestTagValueStoreTests` 新增 `PruneExcept_RemovesStaleKeys_KeepsListed`；新增 `TagTableReloaderTests`（端到端：换表+引擎重启+值表清理；非法内容不动引擎）。全量 485 测试通过
+
 ### 首页（Dashboard）框架通用化重构（2026-08-06）
 
 变更：

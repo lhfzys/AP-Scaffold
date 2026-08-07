@@ -71,4 +71,18 @@ public class LatestTagValueStoreTests
 
         store.Snapshot().Should().HaveCount(2);
     }
+
+    [Fact]
+    public void PruneExcept_RemovesStaleKeys_KeepsListed()
+    {
+        var store = new LatestTagValueStore();
+        store.Update("A", 1, TagQuality.Good);
+        store.Update("B", 2, TagQuality.Good);
+
+        store.PruneExcept(["a"]); // 大小写不敏感
+
+        store.Get("A").Should().NotBeNull();
+        store.Get("B").Should().BeNull();
+        store.Snapshot().Should().HaveCount(1);
+    }
 }

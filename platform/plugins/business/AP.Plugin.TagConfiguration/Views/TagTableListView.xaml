@@ -31,7 +31,7 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0">
                     <TextBlock Text="点表配置"
                                Style="{DynamicResource TextStyle.Title}"/>
-                    <TextBlock Text="修改后点击保存，重启应用生效"
+                    <TextBlock Text="修改后点击保存，保存即生效"
                                Style="{DynamicResource TextStyle.Label}"
                                Foreground="{DynamicResource Brush.OnSurfaceVariant}"
                                Margin="0,4,0,0"/>
