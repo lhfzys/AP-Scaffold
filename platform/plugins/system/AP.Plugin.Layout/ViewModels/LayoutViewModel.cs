@@ -9,9 +9,7 @@ using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
 using AP.Contracts.System.Services;
-using AP.Plugin.Layout.Services;
 using AP.Shared.UI.Base;
-using AP.Shared.Utilities.Security;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Configuration;
@@ -32,8 +30,6 @@ public partial class LayoutViewModel : ViewModelBase
     private readonly Services.DatabaseStatusService _databaseStatusService;
     private readonly DispatcherTimer _timer;
     private SubscriptionToken? _deviceStateToken;
-    private readonly int _idleLockMinutes;
-    private bool _idleLockTriggered;
     private bool _sessionRestarting;
 
     [ObservableProperty] private string _companyName = "未配置";
@@ -67,7 +63,6 @@ public partial class LayoutViewModel : ViewModelBase
         CompanyName = configuration["AppConfiguration:CompanyName"] ?? "Automation";
         SoftwareName = configuration["AppConfiguration:SoftwareName"] ?? "Platform";
         VersionText = $"v{GetInformationalVersion()}";
-        _idleLockMinutes = configuration.GetValue<int?>("Security:IdleLockMinutes") ?? 10;
 
         _currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -92,41 +87,6 @@ public partial class LayoutViewModel : ViewModelBase
         _tickCount++;
         if (_tickCount % 2 == 0) _ = RefreshSystemMetricsAsync();
         if (_tickCount % 30 == 0) _ = RefreshDatabaseStatusAsync();
-
-        CheckIdleLock();
-    }
-
-    /// <summary>
-    /// 空闲锁屏：仅安全模式启用；超时后走“登出 + 重启”重建整个会话。
-    /// </summary>
-    private void CheckIdleLock()
-    {
-        if (!CanLogout || _idleLockMinutes <= 0 || _idleLockTriggered || _sessionRestarting) return;
-        if (!IdleLockPolicy.ShouldLock(IdleTimeDetector.GetIdleTime(), _idleLockMinutes)) return;
-
-        _idleLockTriggered = true;
-        _ = LockForIdleAsync();
-    }
-
-    private async Task LockForIdleAsync()
-    {
-        if (_sessionRestarting) return;
-        _sessionRestarting = true;
-
-        var userName = _identityService.CurrentUser?.UserName ?? "unknown";
-        try
-        {
-            await _identityService.LogoutAsync();
-            await LogAuditAsync(
-                AuditActionType.Logout,
-                userName,
-                true,
-                $"空闲锁屏（{_idleLockMinutes} 分钟无操作）");
-        }
-        finally
-        {
-            RestartForUserSwitch();
-        }
     }
 
     private async Task RefreshSystemMetricsAsync()

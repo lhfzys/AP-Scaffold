@@ -155,7 +155,7 @@ installer/build-installer.bat
 - 默认导航延迟到 `Dispatcher.BeginInvoke(Background)` 执行（确保 UI 就绪后再选中）；同处订阅 `ContentRegion` 的 `NavigationService.Navigated` 事件——Sidebar 之外发起的导航（如首页快捷入口 `RequestNavigate`）会回写左侧选中态（`_syncingSelection` 标志防止回写再次触发导航）。
 - 相关配置键：
   - `AppConfiguration:DefaultNavigationTarget`（当前 `"DashboardView"`）
-  - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / RecipeListView / ReportListView`）
+  - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / TagTableListView / RecipeListView / ReportListView / AuditLogListView`）
 - 当前菜单 Order：仪表板 100 → 系统配置 1000 → 点表配置 1100 → 配方管理 2000 → 报表中心 3000 → 用户管理 4000 → 角色管理 4100 → 审计日志 4200。
 
 ### 5.2 设置贡献者模式（往系统配置中心加一页）
@@ -231,7 +231,7 @@ installer/build-installer.bat
 
 默认角色：`Administrator`（全部权限）、`Operator`（system.view / recipe.view / recipe.switch / report.view / report.export / test.start）、`Technician`（system.view / system.settings / recipe.* / report.view / report.export / device.config）。默认账号 `admin / admin123`，首次登录强制改密（仅 `Security:Enabled=true` 时涉及；当前默认配置为 false，见 5.9）。
 
-> **轻身份模式（2026-11-18，DH-4）**：默认 `Security:RoleManagement:Enabled=false`，隐藏角色/权限管理入口；保留用户管理、操作员身份与审计。密码策略为 ≥8 位 + 字母 + 数字；连续 5 次登录失败锁定 5 分钟（`Security:MaxFailedLoginAttempts` / `Security:LockoutMinutes`）；管理员重置密码生成 12 位一次性临时密码并保留原角色。登出后用 `--restart` 重启进程重建 UI/权限，避免旧菜单残留；安全模式下 `Security:IdleLockMinutes`（默认 10，0=关闭）无键鼠操作自动锁屏并重启。需要完整 RBAC 的项目显式打开 `Security:RoleManagement:Enabled=true`。
+> **轻身份模式（2026-11-18，DH-4）**：默认 `Security:Enabled=false` + `Security:Audit:Enabled=true`，不弹登录、不启用空闲锁屏；审计保留（操作人 anonymous/system），免登录白名单包含审计日志查看。角色/权限管理默认隐藏（`Security:RoleManagement:Enabled=false`）；密码策略 ≥8 位 + 字母 + 数字；连续 5 次失败锁定 5 分钟（`Security:MaxFailedLoginAttempts` / `Security:LockoutMinutes`）；管理员重置密码生成 12 位一次性临时密码并保留原角色。需要完整 RBAC/登录的项目显式打开 `Security:Enabled=true`，登出用 `--restart` 重建会话；当前不做自动锁屏。
 
 视图级权限控制还可用 `AP.Shared.UI` 的 `PermissionBehavior` 附加属性：`ui:PermissionBehavior.Permission="user.manage"`，`HideWhenUnauthorized=false` 时禁用而非隐藏。
 
@@ -241,8 +241,8 @@ installer/build-installer.bat
 
 - DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留），关闭时用 `NullAuditService`；审计表由 `AuditService` 构造函数幂等自建（`SyncStructure<AuditLog>`），不再依赖仅 Security 启用时注册的初始化器。
 - 宿主：跳过登录窗口与安全库初始化。
-- 菜单：Sidebar 只显示 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单内的 Target；UserManagement/RoleManagement/AuditLog 插件在 `InitializeAsync` 中检测禁用后直接 return 不注册视图（注意：RecipeManagement/ReportCenter 目前只按各自权限门控，未检查 `Security:Enabled`）。
-- 轻身份模式默认隐藏角色管理（`Security:RoleManagement:Enabled=false`）；需要多角色时显式打开。登出采用进程重启，登录/登出审计仍保留。
+- 菜单：Sidebar 只显示 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单内的 Target；UserManagement/RoleManagement 插件在 `InitializeAsync` 中检测禁用后直接 return 不注册视图；AuditLog 插件在 `Security:Audit:Enabled=true` 时仍注册只读视图（免登录审计），审计关闭才跳过。
+- 轻身份模式默认隐藏角色管理（`Security:RoleManagement:Enabled=false`）；需要多角色时显式打开。默认 A 模式不登录、不锁屏；可选登录模式登出采用进程重启，登录/登出审计仍保留。
 
 ### 5.10 统一视觉主题
 

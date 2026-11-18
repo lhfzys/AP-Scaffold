@@ -40,9 +40,13 @@ public class AuditLogPlugin : PluginBase, INavigationContributor
 
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
-        if (!securityEnabled)
+        var auditEnabled = configuration.GetValue<bool?>("Security:Audit:Enabled") ?? securityEnabled;
+
+        // 免登录（Security:Enabled=false）但审计开启时，仍注册只读审计视图：
+        // “不启用登录、保留审计”是单机交付的默认形态，操作人记为 anonymous/system。
+        if (!securityEnabled && !auditEnabled)
         {
-            Logger.LogInformation("安全模块已禁用，跳过审计日志视图注册");
+            Logger.LogInformation("安全模块与审计均已禁用，跳过审计日志视图注册");
             return;
         }
 

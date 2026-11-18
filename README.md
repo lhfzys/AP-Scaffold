@@ -428,7 +428,7 @@ Configuration/
     "SoftwareName": "自动化监控系统",
     "LayoutMode": "Standard",
     "DefaultNavigationTarget": "DashboardView",
-    "NavigationWhenSecurityDisabled": ["DashboardView", "SettingsShellView", "RecipeListView", "ReportListView"]
+    "NavigationWhenSecurityDisabled": ["DashboardView", "SettingsShellView", "TagTableListView", "RecipeListView", "ReportListView", "AuditLogListView"]
   }
 }
 ```
