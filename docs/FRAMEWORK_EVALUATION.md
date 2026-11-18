@@ -260,9 +260,11 @@
 - 继续分发 EOL 运行时，安全补丁与合规都不可持续。
 - 高危 STJ 是实际可达的依赖，不是“仅测试包”。
 
+> **迁移前必须做客户 OS 盘点（2026-11-18 补充）**：.NET 10 官方支持矩阵把 Windows 10 限定为 **LTSC/Enterprise（1607/1809/21H2）**，Windows 11 与 Server 2012+ 也支持；**Windows 10 Home/Pro 22H2 不在官方支持列表**，Windows 7/8.1 完全不支持（见 [Microsoft .NET Windows 安装文档](https://learn.microsoft.com/en-us/dotnet/core/install/windows)）。如果客户大量使用 Win10 Pro 22H2，.NET 10 可能“能跑但不受支持”；如果是 Win7/8.1，当前 net8 也已经不在官方支持范围。此时不应全仓硬迁，而应：① 先盘点客户 OS；② 新项目/新客户在 Win10 LTSC/11/Server 上试点 .NET 10；③ 老客户暂留 net8 并单独修补 `System.Text.Json`，或做 net8/net10 双构建。迁移决策应以客户 OS 矩阵为准，不以“最新 LTS”单独决定。
+
 **修复（P0，约 3–5 人日）**
 
-1. 全仓升级到 `net10.0` / `net10.0-windows`，同步升级 `Microsoft.Extensions.*` 到 10.x；Prism 9 / MaterialDesign 5.3 / FreeSql 3.5 / LiveCharts 2.0.4 先做兼容性回归。
+1. 全仓升级到 `net10.0` / `net10.0-windows`，同步升级 `Microsoft.Extensions.*` 到 10.x；Prism 9 / MaterialDesign 5.3 / FreeSql 3.5 / LiveCharts 2.0.4 先做兼容性回归。**前提是客户 OS 在 .NET 10 官方支持矩阵内（Win10 LTSC/Enterprise、Win11、Server 2012+）；否则先走双构建/暂留 net8 并修补依赖。**
 2. 中央包管理增加 `System.Text.Json` 的显式安全版本（迁移到 .NET 10 后通常随框架解决，但仍要跑漏洞审计）。
 3. 安装包只检测 .NET 10 桌面运行时；如果同时移出 gRPC，则不再需要 ASP.NET Core 运行时。
 4. CI 增加 `dotnet list package --vulnerable` 门禁。

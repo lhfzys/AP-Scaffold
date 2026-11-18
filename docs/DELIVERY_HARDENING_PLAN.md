@@ -45,7 +45,7 @@
 | DH-3 | .NET 10 迁移 + 依赖漏洞清零 | P0 | 待开始 | 4d |
 | DH-4 | 轻身份 + 审计闭环（会话/锁屏/审计索引） | P0 | 待开始 | 4d |
 | DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 待开始 | 5d |
-| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 待开始 | 4d |
+| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 进行中（非提权安装冒烟通过） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 待开始 | 2d |
@@ -243,6 +243,20 @@
 - build + tests + publish + 标准用户安装启动 + 漏洞审计；
 - 物理移出 gRPC/Server/Client，Host 删除 `Microsoft.AspNetCore.App`。
 
+#### DH-6 安装冒烟记录（2026-11-18，部分完成）
+
+官方安装包：`installer/Output/自动化监控系统-1.0.0-Setup.exe`（约 13.45 MB，Inno 6.7.3 编译通过）。
+
+本次在没有 UAC 提权的会话里做了一个**非提权安装冒烟**：
+
+1. 复制 `setup.iss` 为临时脚本，改为 `PrivilegesRequired=lowest`、`DefaultDirName={localappdata}\AP-Scaffold-Smoke`，移除 `{commonappdata}` 的 `[Dirs]`（仅测试用，未改仓库正式脚本）；
+2. 编译并静默安装：退出码 0，文件、开始菜单快捷方式、卸载项均创建；
+3. 从安装目录启动 `AP.Host.Desktop.exe`，主窗口正常；用 `AP_SCAFFOLD_DATA_ROOT` 指到临时目录，成功创建 `local_data.db`、`logs`、`reports`、`Configuration\tags.json`；
+4. 静默卸载：退出码 0，安装目录与快捷方式删除，数据根按设计保留；
+5. 测试产物已清理，仓库无残留。
+
+**未完成（需要一次 UAC）**：正式安装包写入 `Program Files` + `{commonappdata}\AP-Scaffold` 的实机验证；`[Dirs]` 的 `users-modify` 只做了编译验证，没有在标准用户下实际读写。建议下一步在测试虚拟机（干净 Windows + 目标运行时）用标准用户跑一次正式安装包。
+
 ### DH-7 ~ DH-13
 
 见评估报告第 8 节；每项单独开 Task、单独提交。
@@ -256,10 +270,11 @@
 | 2026-11-18 | 计划文档 | `14f4e7e` | 文档评审 |
 | 2026-11-18 | DH-1 | `43ace41` | 构建 0 错误；489 测试通过；发布目录启动写入 `C:\ProgramData\AP-Scaffold`；安装包编译通过 |
 | 2026-11-18 | DH-2 | `07e3174` | 构建 0 错误；489 测试通过；写路径静态审查通过；真机待现场 |
+| 2026-11-18 | DH-6（部分） | 待提交 | 非提权安装/启动/数据根/卸载冒烟通过；正式 Program Files 安装待 UAC |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v1.1（2026-11-18，DH-1/DH-2 完成）
-**下一步**：评审 DH-3（.NET 10）与 DH-4（轻身份 + 审计）的排期；DH-6 补真实安装冒烟。
+**文档版本**：v1.2（2026-11-18，补充 DH-6 非提权安装冒烟）
+**下一步**：正式安装包在测试虚拟机做一次 UAC 提权 + 标准用户读写验证；DH-3（.NET 10）暂缓，先做客户 OS 兼容性盘点。
