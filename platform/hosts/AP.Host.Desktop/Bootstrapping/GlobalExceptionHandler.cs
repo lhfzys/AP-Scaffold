@@ -1,4 +1,5 @@
-﻿using Serilog;
+using AP.Shared.Utilities.Paths;
+using Serilog;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -32,11 +33,10 @@ public static class GlobalExceptionHandler
     ];
 
     /// <summary>
-    /// 崩溃日志文件路径
+    /// 崩溃日志文件路径（写入时解析，兼容数据根初始化前的早期启动异常）
     /// </summary>
-    private static readonly string CrashLogPath = Path.Combine(
-        AppContext.BaseDirectory,
-        "logs",
+    private static string CrashLogPath => Path.Combine(
+        AppPaths.LogDirectory,
         $"crash-{DateTime.Now:yyyyMMdd}.log");
 
     /// <summary>

@@ -1,10 +1,11 @@
-﻿using AP.Core.Enums;
+using AP.Core.Enums;
 using AP.Infra.Database.Abstractions;
 using AP.Shared.Utilities.Constants;
 using FreeSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using System.Data.Common;
 
 namespace AP.Infra.Database.Configuration;
 
@@ -40,6 +41,19 @@ public static class DatabaseServiceExtensions
             connectionString = configuration[GlobalConstants.ConfigKeys.SqliteConnection]
                                ?? "Data Source=data.db;Version=3;"; // 默认连接串
 
+            // 宿主导出的绝对数据库路径（DataRoot），避免相对 CWD 落进 Program Files
+            var databasePath = configuration["AppRuntime:DatabasePath"];
+            if (!string.IsNullOrWhiteSpace(databasePath))
+                connectionString = SetSqliteDataSource(connectionString, databasePath);
+
+            var dbFilePath = ExtractSqliteFilePath(connectionString);
+            if (!string.IsNullOrWhiteSpace(dbFilePath))
+            {
+                var dbDirectory = Path.GetDirectoryName(dbFilePath);
+                if (!string.IsNullOrWhiteSpace(dbDirectory))
+                    Directory.CreateDirectory(dbDirectory);
+            }
+
             // 3. SQLite 启动前自动备份（防止断电导致数据丢失）
             BackupSqliteDatabase(connectionString);
         }
@@ -67,6 +81,7 @@ public static class DatabaseServiceExtensions
                     PRAGMA synchronous = NORMAL;
                     PRAGMA temp_store = MEMORY;
                     PRAGMA cache_size = -64000;
+                    PRAGMA busy_timeout = 5000;
                 ");
             }
             catch (Exception ex)
@@ -82,6 +97,16 @@ public static class DatabaseServiceExtensions
         services.AddScoped(typeof(IRepository<>), typeof(FreeSqlImp.FreeSqlRepository<>));
 
         return services;
+    }
+
+    /// <summary>
+    /// 将连接串的 Data Source 替换为绝对路径，保留其余参数。
+    /// </summary>
+    private static string SetSqliteDataSource(string connectionString, string databasePath)
+    {
+        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
+        builder["Data Source"] = databasePath;
+        return builder.ConnectionString;
     }
 
     /// <summary>

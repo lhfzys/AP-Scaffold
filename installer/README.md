@@ -12,9 +12,24 @@
 
 当前发布方案为 **win-x64 框架依赖**：应用不含运行时，体积小，适合"初次装机时装一次运行时、后续只发应用"的外包交付节奏。
 
-- 发布目录约 **26 MB / 227 文件**（含 13 个插件目录）；安装包（LZMA2）约 **7.7 MB**
+- 发布目录约 **46 MB / 243 文件**（含 14 个插件目录）；安装包（LZMA2）约 **13.4 MB**
 - 不要开 `PublishReadyToRun`：R2R 与 WPF 内部混合程序集（DirectWriteForwarder）冲突，启动即 `TypeLoadException`（2026-07-29 实测踩坑）
 - **暂勿改自包含发布**：`PluginLoadContext`（可回收插件隔离上下文）会把 WPF 的 C++/CLI 混合程序集 `DirectWriteForwarder` 装入插件上下文，启动即 `TypeLoadException: Collectible type '<Module>' ... FixedAddressValueTypeAttribute`。框架依赖发布因该文件不在应用目录、解析回退默认上下文而天然规避；如需自包含，须先修插件加载上下文（让框架程序集回退 `AssemblyLoadContext.Default`）
+
+## 运行数据目录（2026-11-18 起）
+
+程序文件与运行数据分离，避免标准用户无法写 `Program Files`：
+
+| 内容 | 位置 |
+|------|------|
+| 程序/默认配置 | `C:\Program Files\自动化监控系统\`（只读） |
+| 数据库/日志/报表/现场点表/配置覆盖层 | `%ProgramData%\AP-Scaffold\`（安装器授予 Users Modify） |
+
+- 配置采用“安装目录默认值 + 数据根覆盖层”，系统设置保存只写覆盖层，升级不会覆盖现场修改；
+- `tags.json` 首次启动从安装目录复制到 `%ProgramData%\AP-Scaffold\Configuration\tags.json`，后续升级保留现场副本；
+- 旧版 `local_data.db` 在首次启动时复制到数据根（目标不存在时）；
+- 可用环境变量 `AP_SCAFFOLD_DATA_ROOT` 指定其他可写数据根（POC/便携部署）；
+- 卸载默认保留数据根，避免误删现场数据。
 
 ## 现场装机要求（仅首次）
 

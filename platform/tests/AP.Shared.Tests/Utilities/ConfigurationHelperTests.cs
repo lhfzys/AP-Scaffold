@@ -4,6 +4,7 @@ using Xunit;
 
 namespace AP.Shared.Tests.Utilities;
 
+[Collection("AppPathsStatic")]
 public class ConfigurationHelperTests
 {
     private class TestConfig

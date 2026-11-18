@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AP.Contracts.Hardware.DeviceRuntime;
+using AP.Shared.Utilities.Paths;
 
 namespace AP.Plugin.TagConfiguration.Services;
 
@@ -33,7 +34,7 @@ internal static class TagTableFileStore
 
         """;
 
-    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json");
+    public static string FilePath => AppPaths.TagTablePath;
 
     /// <summary>读取点表文件；文件缺失按空表处理（与 TagTable 行为一致）。</summary>
     public static TagTableFileData Load()
@@ -47,6 +48,7 @@ internal static class TagTableFileStore
     /// <summary>原子写入点表文件（覆盖式，含头部标准注释）。</summary>
     public static void Save(TagTableFileData data)
     {
+        Directory.CreateDirectory(AppPaths.ConfigDirectory);
         var content = HeaderComment + JsonSerializer.Serialize(data, WriteOptions);
         var tempPath = FilePath + ".tmp";
         File.WriteAllText(tempPath, content);

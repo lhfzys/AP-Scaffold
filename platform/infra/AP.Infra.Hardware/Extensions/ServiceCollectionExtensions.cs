@@ -5,6 +5,7 @@ using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Infra.Hardware.DeviceRuntime;
 using AP.Infra.Hardware.Services;
+using AP.Shared.Utilities.Paths;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagTable>(sp => new TagTable(
             sp.GetRequiredService<IDeviceRegistry>(),
             sp.GetServices<IAddressValidator>(),
-            Path.Combine(AppContext.BaseDirectory, "Configuration", "tags.json")));
+            AppPaths.TagTablePath));
         // 点表校验器：与启动加载同一规则，供点表编辑界面保存前预检
         services.AddSingleton<ITagTableValidator, TagTableValidator>();
         // Tag 服务：业务按点名读写的唯一入口

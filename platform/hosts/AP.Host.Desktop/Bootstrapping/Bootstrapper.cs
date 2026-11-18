@@ -21,6 +21,7 @@ using AP.Infra.Resilience.Configuration;
 using AP.Infra.Recipe.Configuration;
 using AP.Infra.Security.Configuration;
 using AP.Shared.UI.Services;
+using AP.Shared.Utilities.Paths;
 using DryIoc.Microsoft.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -152,21 +153,41 @@ public class Bootstrapper : PrismBootstrapper
     /// </summary>
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
-        var configPath = Path.Combine(AppContext.BaseDirectory, "Configuration");
+        var configPath = AppPaths.DefaultConfigDirectory;
 
         if (!Directory.Exists(configPath))
             Directory.CreateDirectory(configPath);
 
-        // 1. 加载配置
+        // 1. 先加载安装目录下的只读默认配置，用于解析数据根。
+        var baseConfiguration = new ConfigurationBuilder()
+            .SetBasePath(configPath)
+            .AddJsonFile("appsettings.json", false, true)
+            .AddJsonFile($"appsettings.{_appRole}.json", true, true)
+            .Build();
+
+        // 2. 解析并初始化数据根（ProgramData/LocalAppData/显式指定），再做可写自检与旧数据迁移。
+        var dataRoot = AppPaths.ResolveDataRoot(baseConfiguration);
+        (baseConfiguration as IDisposable)?.Dispose();
+        AppPaths.Initialize(dataRoot);
+        AppPaths.PrepareDataFiles();
+
+        // 3. 最终配置 = 安装目录默认值 + 数据根覆盖层 + 运行时路径 + 环境变量。
+        // 覆盖层后加载，保存配置只写覆盖层，升级不会覆盖现场修改。
         var builder = new ConfigurationBuilder()
             .SetBasePath(configPath)
             .AddJsonFile("appsettings.json", false, true)
             .AddJsonFile($"appsettings.{_appRole}.json", true, true)
-            // 记录活动角色配置文件名：配置写回（SettingsService）据此决定写入基文件还是角色文件，
-            // 只存在于角色文件中的节（如扫码枪）写回基文件会被遮蔽、永不生效
+            .AddJsonFile(Path.Combine(AppPaths.ConfigDirectory, "appsettings.json"), true, true)
+            .AddJsonFile(Path.Combine(AppPaths.ConfigDirectory, $"appsettings.{_appRole}.json"), true, true)
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["AppRuntime:RoleConfigFile"] = $"appsettings.{_appRole}.json"
+                // 记录活动角色配置文件名：配置写回（SettingsService）据此决定写角色文件还是基文件
+                ["AppRuntime:RoleConfigFile"] = $"appsettings.{_appRole}.json",
+                ["AppRuntime:DataRoot"] = AppPaths.DataRoot,
+                ["AppRuntime:DatabasePath"] = AppPaths.DatabasePath,
+                ["AppRuntime:LogDirectory"] = AppPaths.LogDirectory,
+                ["AppRuntime:ReportRoot"] = AppPaths.ReportDirectory,
+                ["AppRuntime:WritableConfigDirectory"] = AppPaths.ConfigDirectory
             })
             .AddEnvironmentVariables();
 
@@ -181,6 +202,7 @@ public class Bootstrapper : PrismBootstrapper
 
         // --- 添加平台基础设施 ---
         services.AddPlatformLogging(_configuration);
+        Log.Information("运行数据目录: {DataRoot}", AppPaths.DataRoot);
         services.AddPlatformDatabase(_configuration, _appRole);
         services.AddPlatformResilience(_configuration);
         services.AddPlatformSecurity(_configuration);
@@ -329,7 +351,7 @@ public class Bootstrapper : PrismBootstrapper
 
                 // --- 0. 启动时清理过期日志（零开销，仅执行一次） ---
                 var logRetainDays = _configuration.GetValue<int>("Logging:RetainedFileCount", 90);
-                LogCleanupHelper.CleanupIfNeeded("logs", logRetainDays);
+                LogCleanupHelper.CleanupIfNeeded(AppPaths.LogDirectory, logRetainDays);
 
                 var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
                 if (securityEnabled)

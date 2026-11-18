@@ -1,6 +1,7 @@
 using AP.Host.Desktop.Bootstrapping;
 using AP.Host.Desktop.Services;
 using AP.Host.Desktop.Views;
+using AP.Shared.Utilities.Paths;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using Serilog;
@@ -24,40 +25,67 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
-        // 0.1 LiveCharts2 全局配置：注册 SkiaSharp 渲染后端 + 默认类型映射器 + 默认主题（= UseDefaults）。
-        // 必须在任何图表渲染前调用一次，否则图表无任何绘制输出（空白无坐标轴）。
-        // 由宿主统一配置（共享库模式，设置是 LiveChartsCore 程序集级静态）。
-        LiveCharts.Configure(c => c.UseDefaults());
-
-        // 0. 单实例检查（互斥体同时供 Inno Setup AppMutex 检测应用正在运行，防止运行中覆盖安装）
-        _appMutex = new Mutex(true, "AP.SCAFFOLD.PLATFORM.RUNNING", out var isFirstInstance);
-        if (!isFirstInstance && !TryTakeoverForRestart(e.Args))
+        try
         {
-            System.Windows.MessageBox.Show(
-                "应用程序已在运行中，请勿重复启动。",
-                "自动化监控系统",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-            Shutdown();
-            return;
+            // 0.1 LiveCharts2 全局配置：注册 SkiaSharp 渲染后端 + 默认类型映射器 + 默认主题（= UseDefaults）。
+            // 必须在任何图表渲染前调用一次，否则图表无任何绘制输出（空白无坐标轴）。
+            // 由宿主统一配置（共享库模式，设置是 LiveChartsCore 程序集级静态）。
+            LiveCharts.Configure(c => c.UseDefaults());
+
+            // 0. 单实例检查（互斥体同时供 Inno Setup AppMutex 检测应用正在运行，防止运行中覆盖安装）
+            _appMutex = new Mutex(true, "AP.SCAFFOLD.PLATFORM.RUNNING", out var isFirstInstance);
+            if (!isFirstInstance && !TryTakeoverForRestart(e.Args))
+            {
+                System.Windows.MessageBox.Show(
+                    "应用程序已在运行中，请勿重复启动。",
+                    "自动化监控系统",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                Shutdown();
+                return;
+            }
+
+            // 1. 解析运行角色 (默认为 Standalone)
+            var appRole = RoleResolver.Resolve(e.Args);
+
+            // 2. 显示启动画面
+            _splashWindow = new SplashWindow();
+            _splashWindow.Show();
+
+            // 3. 启动引导器
+            _bootstrapper = new Bootstrapper(appRole, _splashWindow);
+            _bootstrapper.Run();
+
+            // 4. 初始化系统托盘
+            _trayIconManager = new TrayIconManager();
+            if (Current.MainWindow != null)
+            {
+                _trayIconManager.Attach(Current.MainWindow);
+            }
         }
-
-        // 1. 解析运行角色 (默认为 Standalone)
-        var appRole = RoleResolver.Resolve(e.Args);
-
-        // 2. 显示启动画面
-        _splashWindow = new SplashWindow();
-        _splashWindow.Show();
-
-        // 3. 启动引导器
-        _bootstrapper = new Bootstrapper(appRole, _splashWindow);
-        _bootstrapper.Run();
-
-        // 4. 初始化系统托盘
-        _trayIconManager = new TrayIconManager();
-        if (Current.MainWindow != null)
+        catch (Exception ex)
         {
-            _trayIconManager.Attach(Current.MainWindow);
+            Log.Fatal(ex, "应用启动失败");
+
+            try
+            {
+                _splashWindow?.Close();
+            }
+            catch
+            {
+                // 关闭启动画面失败不掩盖原始异常
+            }
+
+            System.Windows.MessageBox.Show(
+                $"系统启动失败：{ex.Message}\n\n" +
+                $"数据目录：{AppPaths.DataRoot}\n" +
+                $"日志目录：{AppPaths.LogDirectory}\n\n" +
+                $"请检查目录权限，或设置环境变量 {AppPaths.DataRootEnvironmentVariable} 指向可写目录。",
+                "启动失败",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            Shutdown(-1);
         }
     }
 

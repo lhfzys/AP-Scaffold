@@ -4,6 +4,7 @@ using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.Utilities.Helpers;
+using AP.Shared.Utilities.Paths;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,6 @@ public class SettingsService
     private readonly IAuditService? _auditService;
     private readonly IIdentityService? _identityService;
     private readonly string _configDirectory;
-    private readonly string _appSettingsPath;
 
     public SettingsService(
         IConfiguration configuration,
@@ -32,8 +32,7 @@ public class SettingsService
         _logger = logger;
         _auditService = auditService;
         _identityService = identityService;
-        _configDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
-        _appSettingsPath = Path.Combine(_configDirectory, "appsettings.json");
+        _configDirectory = AppPaths.ConfigDirectory;
     }
 
     /// <summary>
@@ -67,18 +66,19 @@ public class SettingsService
             .Select(e => ConfigurationHelper.ResolveTargetFileName(e.Contributor.ConfigurationSection, roleFileName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var backupPaths = BackupConfigFiles(targetFiles);
-        var backupPath = string.Join("; ", backupPaths);
 
-        // 3. 保存每个配置节
         var requiresRestart = false;
         var changedSections = new List<string>();
+        var backupPath = string.Empty;
 
         try
         {
+            // 备份纳入 try：备份失败也应通过统一的“保存失败”路径反馈，而不是绕过错误提示
+            var backupPaths = BackupConfigFiles(targetFiles);
+            backupPath = string.Join("; ", backupPaths);
+
             foreach (var (contributor, editor) in editors)
             {
-                var oldValue = _configuration[contributor.ConfigurationSection];
                 var newValue = editor.GetConfigurationValue();
 
                 var fileName = ConfigurationHelper.ResolveTargetFileName(contributor.ConfigurationSection, roleFileName);
@@ -153,8 +153,14 @@ public class SettingsService
         var backups = new List<string>();
         foreach (var fileName in fileNames)
         {
+            // 覆盖层尚未生成时，备份安装目录的默认文件，保证“保存前状态”可追溯
             var sourcePath = Path.Combine(_configDirectory, fileName);
-            if (!File.Exists(sourcePath)) continue;
+            if (!File.Exists(sourcePath))
+            {
+                var defaultPath = Path.Combine(AppPaths.DefaultConfigDirectory, fileName);
+                if (!File.Exists(defaultPath)) continue;
+                sourcePath = defaultPath;
+            }
 
             var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
             var backupFileName = $"{nameWithoutExtension}.backup.{DateTime.Now:yyyyMMddHHmmss}.json";
@@ -174,7 +180,7 @@ public class SettingsService
         if (!Directory.Exists(_configDirectory))
             return Array.Empty<string>();
 
-        return Directory.GetFiles(_configDirectory, "appsettings.backup.*.json")
+        return Directory.GetFiles(_configDirectory, "appsettings*.backup.*.json")
             .OrderByDescending(Path.GetFileName)
             .ToList();
     }
@@ -187,8 +193,18 @@ public class SettingsService
         try
         {
             if (!File.Exists(backupPath)) return false;
-            File.Copy(backupPath, _appSettingsPath, overwrite: true);
-            _logger.LogInformation("配置已从备份恢复: {BackupPath}", backupPath);
+
+            // 备份名形如 appsettings[.Role].backup.yyyyMMddHHmmss.json；
+            // 必须恢复到原来的文件，否则角色文件的备份会被写进基文件而失效。
+            var name = Path.GetFileName(backupPath);
+            var markerIndex = name.IndexOf(".backup.", StringComparison.OrdinalIgnoreCase);
+            var targetName = markerIndex > 0
+                ? name[..markerIndex] + ".json"
+                : "appsettings.json";
+            var targetPath = Path.Combine(_configDirectory, targetName);
+
+            File.Copy(backupPath, targetPath, overwrite: true);
+            _logger.LogInformation("配置已从备份恢复: {BackupPath} → {TargetPath}", backupPath, targetPath);
             return true;
         }
         catch (Exception ex)

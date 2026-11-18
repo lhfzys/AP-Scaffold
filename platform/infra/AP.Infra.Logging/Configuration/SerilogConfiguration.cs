@@ -1,4 +1,5 @@
-﻿using AP.Infra.Logging.Enrichers;
+using AP.Infra.Logging.Enrichers;
+using AP.Shared.Utilities.Paths;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
@@ -15,6 +16,14 @@ public static class SerilogConfiguration
         // 从配置读取日志保留参数（工业场景建议 90~180 天）
         var retainedFileCount = configuration.GetValue<int?>("Logging:RetainedFileCount") ?? 90;
         var maxFileSizeMb = configuration.GetValue<int?>("Logging:MaxFileSizeMb") ?? 50;
+
+        // 日志目录由宿主在 DataRoot 中解析后注入；未注入时回退到 AppPaths（测试/工具场景）
+        var logDirectory = configuration["AppRuntime:LogDirectory"];
+        if (string.IsNullOrWhiteSpace(logDirectory))
+            logDirectory = AppPaths.LogDirectory;
+
+        Directory.CreateDirectory(logDirectory);
+        var logFilePath = Path.Combine(logDirectory, "log-.txt");
 
         // 基础日志配置
         var loggerConfiguration = new LoggerConfiguration()
@@ -37,7 +46,7 @@ public static class SerilogConfiguration
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
             )
             .WriteTo.File(
-                "logs/log-.txt", // 每天生成一个文件: log-20231027.txt
+                logFilePath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: retainedFileCount, // 配置化保留天数
                 fileSizeLimitBytes: maxFileSizeMb * 1024 * 1024, // 配置化单文件大小

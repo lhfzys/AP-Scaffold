@@ -1,5 +1,6 @@
 using AP.Infra.Report.Abstractions;
 using AP.Infra.Report.Configuration;
+using AP.Shared.Utilities.Paths;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -30,7 +31,8 @@ public class ReportStorage : IReportStorage
             .Replace("{date}", date.ToString("yyyy-MM-dd"))
             .Replace("{type}", reportType);
 
-        return Path.Combine(_options.Storage.RootPath, path);
+        // 相对 RootPath 统一落到 DataRoot，避免写进 Program Files / 随 CWD 漂移
+        return Path.Combine(AppPaths.ResolvePath(_options.Storage.RootPath), path);
     }
 
     /// <inheritdoc />
@@ -85,6 +87,7 @@ public class ReportStorage : IReportStorage
     /// <inheritdoc />
     public void CleanupEmptyDirectories(string rootPath)
     {
+        rootPath = AppPaths.ResolvePath(rootPath);
         if (!Directory.Exists(rootPath))
         {
             return;

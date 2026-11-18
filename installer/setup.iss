@@ -42,6 +42,14 @@ Name: "chinesesimplified"; MessagesFile: "Languages\ChineseSimplified.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[Dirs]
+; 运行数据与程序分离：Program Files 只读，数据写 %ProgramData%\AP-Scaffold
+; 标准用户需要对数据目录有 Modify 权限（数据库/日志/配置/报表/点表）
+Name: "{commonappdata}\AP-Scaffold"; Permissions: users-modify
+Name: "{commonappdata}\AP-Scaffold\Configuration"; Permissions: users-modify
+Name: "{commonappdata}\AP-Scaffold\logs"; Permissions: users-modify
+Name: "{commonappdata}\AP-Scaffold\reports"; Permissions: users-modify
+
 [Files]
 ; 发布目录下的所有文件（现场配置文件除外，单独处理）
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Configuration\appsettings*.json"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -49,9 +57,9 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Configuration\appsettings
 Source: "{#SourceDir}\Configuration\appsettings*.json"; DestDir: "{app}\Configuration"; Flags: onlyifdoesntexist
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
