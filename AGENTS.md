@@ -231,7 +231,7 @@ installer/build-installer.bat
 
 默认角色：`Administrator`（全部权限）、`Operator`（system.view / recipe.view / recipe.switch / report.view / report.export / test.start）、`Technician`（system.view / system.settings / recipe.* / report.view / report.export / device.config）。默认账号 `admin / admin123`，首次登录强制改密（仅 `Security:Enabled=true` 时涉及；当前默认配置为 false，见 5.9）。
 
-> **轻身份模式（2026-11-18，DH-4）**：默认 `Security:RoleManagement:Enabled=false`，隐藏角色/权限管理入口；保留用户管理、操作员身份与审计。密码策略为 ≥8 位 + 字母 + 数字；连续 5 次登录失败锁定 5 分钟（`Security:MaxFailedLoginAttempts` / `Security:LockoutMinutes`）；管理员重置密码生成 12 位一次性临时密码并保留原角色。登出后用 `--restart` 重启进程重建 UI/权限，避免旧菜单残留。需要完整 RBAC 的项目显式打开 `Security:RoleManagement:Enabled=true`。
+> **轻身份模式（2026-11-18，DH-4）**：默认 `Security:RoleManagement:Enabled=false`，隐藏角色/权限管理入口；保留用户管理、操作员身份与审计。密码策略为 ≥8 位 + 字母 + 数字；连续 5 次登录失败锁定 5 分钟（`Security:MaxFailedLoginAttempts` / `Security:LockoutMinutes`）；管理员重置密码生成 12 位一次性临时密码并保留原角色。登出后用 `--restart` 重启进程重建 UI/权限，避免旧菜单残留；安全模式下 `Security:IdleLockMinutes`（默认 10，0=关闭）无键鼠操作自动锁屏并重启。需要完整 RBAC 的项目显式打开 `Security:RoleManagement:Enabled=true`。
 
 视图级权限控制还可用 `AP.Shared.UI` 的 `PermissionBehavior` 附加属性：`ui:PermissionBehavior.Permission="user.manage"`，`HideWhenUnauthorized=false` 时禁用而非隐藏。
 
