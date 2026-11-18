@@ -173,15 +173,15 @@ installer/build-installer.bat
 - **View 的 DataContext 注入模式**: 统一采用**构造函数注入 ViewModel**（`public UserListView(UserListViewModel vm)`）。全仓库无 `AutoWireViewModel`；部分插件保留 `ViewModelLocationProvider.Register` 作双保险。Login 窗口由 `LoginService` 手动赋 DataContext；设置编辑器 View 通过 DataTemplate 关联。
 - 插件之间不允许互相引用，通信通过 `Contracts` 事件 + MediatR。
 
-### 5.4 数据库建表
+### 5.4 数据库建表 / 迁移 / 备份
 
 - `AddPlatformDatabase` 设置了 `.UseAutoSyncStructure(false)`，**不会自动建表**。
-- 新增实体必须在对应模块的初始化器中调用 `_freeSql.CodeFirst.SyncStructure<TEntity>()`。
-- 当前手动调用的初始化器（均由 `Bootstrapper` 显式解析调用）：
-  - `SecurityDbInitializer`（`ISecurityDbInitializer`，登录前同步一次 + `OnInitialized` 一次，幂等）
-  - `RecipeDbInitializer`（`IRecipeDbInitializer`）
-  - `ReportDatabaseInitializer`（`OnInitialized` 中直接解析并调 `StartAsync`）
-- 表清单：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`、`recipes`、`report_archives`。
+- **schema 由 `DatabaseSchemaMigrator` 统一执行**（2026-11-18，DH-5）：各模块注册 `IDatabaseSchemaContributor`（`AP.Infra.Database.Migration`），迁移器维护 `schema_migrations` 表与 `PRAGMA user_version`；新增实体/改表时**新增一个带新 Version 的 contributor**，不要在模块初始化器里再写 `SyncStructure`。
+- 迁移在 `Bootstrapper.InitializeShell` 中、登录/模块初始化之前执行；备份或迁移失败直接中止启动。
+- **启动前备份**：`DatabaseBackupService` 用 `VACUUM INTO` 生成 `backups/local_data-yyyyMMdd-HHmmss.db`，`quick_check` 校验，默认保留 10 代（`Database:Backup:RetentionCount`）；空库跳过。恢复脚本：`scripts/restore-db.ps1`，说明见 `docs/DATABASE_BACKUP_RESTORE.md`。
+- 当前模块初始化器只做种子数据，不再建表：`SecurityDbInitializer`（权限/角色/admin）、`RecipeDbInitializer`（DEFAULT 配方）、`ReportDatabaseInitializer`（兼容日志）。
+- 表清单：`schema_migrations`、`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`、`recipes`、`report_archives`。
+- `AP.Infra.Report → AP.Infra.Database` 是已登记例外（报表 schema contributor / FreeSql 仓储），见 `docs/conventions/DEPENDENCIES.md`。
 
 ### 5.5 PLC 品牌切换
 

@@ -1,6 +1,8 @@
 using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
+using AP.Infra.Database.Migration;
 using AP.Infra.Security.Audit;
+using AP.Infra.Security.Data;
 using AP.Infra.Security.Repositories;
 using AP.Infra.Security.Services;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +24,9 @@ public static class SecurityServiceExtensions
 
         services.Configure<SecurityOptions>(configuration.GetSection("Security"));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+
+        // schema 由 DatabaseSchemaMigrator 统一执行；即使 Security:Enabled=false 也要建表（审计仍可用）
+        services.AddSingleton<IDatabaseSchemaContributor, SecuritySchemaContributor>();
 
         if (enabled)
         {

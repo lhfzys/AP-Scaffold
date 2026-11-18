@@ -36,6 +36,7 @@ Tests        → 被测项目（含经 InternalsVisibleTo 开放的插件 intern
 | `AP.Infra.Database` → `AP.Infra.Resilience`、`AP.Core` | 容忍 | 仓储接重试管道；Core 引用为历史遗留 |
 | `AP.Infra.Hardware` → `AP.Infra.Resilience` | 容忍 | 同上 |
 | `AP.Infra.{Security,Recipe}` → `AP.Infra.Database` | 容忍 | 数据访问复用 |
+| `AP.Infra.Report` → `AP.Infra.Database` | 容忍 | 报表 schema 贡献者 + FreeSql 仓储；2026-11-18 DH-5 起登记 |
 | `AP.Infra.Report` → `AP.Core` | 容忍 | 历史遗留 |
 | `AP.Infra.Grpc` → `AP.Core` ❄ | 冻结中 | 不维护 |
 

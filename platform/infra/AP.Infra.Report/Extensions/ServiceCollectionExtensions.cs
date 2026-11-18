@@ -1,7 +1,8 @@
 using AP.Contracts.Report.Abstractions;
+using AP.Infra.Database.Migration;
 using AP.Infra.Report.Abstractions;
 using AP.Infra.Report.Configuration;
-using AP.Infra.Report.Entities;
+using AP.Infra.Report.Data;
 using AP.Infra.Report.Reporting;
 using AP.Infra.Report.Services;
 using Microsoft.Extensions.Configuration;
@@ -44,7 +45,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ReportCleanupService>();
         services.AddHostedService(p => p.GetRequiredService<ReportCleanupService>());
 
-        // 注册数据库初始化宿主服务（确保表结构存在）
+        // 注册数据库迁移贡献者（与安全/配方模块一起由 DatabaseSchemaMigrator 统一执行）
+        services.AddSingleton<IDatabaseSchemaContributor, ReportSchemaContributor>();
+
+        // 注册数据库初始化宿主服务（保留启动日志；表结构由迁移器创建）
         services.AddSingleton<ReportDatabaseInitializer>();
         services.AddHostedService(p => p.GetRequiredService<ReportDatabaseInitializer>());
 

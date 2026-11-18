@@ -1,4 +1,5 @@
 using AP.Contracts.Recipe.Abstractions;
+using AP.Infra.Database.Migration;
 using AP.Infra.Recipe.Data;
 using AP.Infra.Recipe.Services;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,7 @@ public static class RecipeServiceExtensions
     {
         services.AddSingleton<IRecipeManager, RecipeManager>();
         services.AddSingleton<IRecipeDbInitializer, RecipeDbInitializer>();
+        services.AddSingleton<IDatabaseSchemaContributor, RecipeSchemaContributor>();
         return services;
     }
 }

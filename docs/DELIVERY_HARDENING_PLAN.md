@@ -44,7 +44,7 @@
 | DH-2 | PLC 写路径去重试 + 批量写不嵌套 | P0 | 已完成 | 2d |
 | DH-3 | .NET 10 迁移 + 依赖漏洞清零 | P0 | 待开始 | 4d |
 | DH-4 | 轻身份 + 审计闭环（A 模式：免登录 + 审计） | P0 | 进行中（A 模式已收口；可选登录保留） | 4d |
-| DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 待开始 | 5d |
+| DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 已完成（核心迁移/备份/恢复脚本；事务/单写者待评估） | 5d |
 | DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 进行中（正式安装冒烟完成；CI/gRPC 未做） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
@@ -256,9 +256,20 @@
 
 ### DH-5 数据库迁移/备份
 
-- `PRAGMA user_version` + 有序迁移；升级前备份；失败阻断；
-- `VACUUM INTO` 多代备份 + `quick_check` + 恢复入口；
-- `busy_timeout`、事务、单写者队列。
+#### 完成记录（2026-11-18）
+
+1. **版本化迁移**：新增 `IDatabaseSchemaContributor` + `DatabaseSchemaMigrator`，维护 `schema_migrations`（name+version 复合主键）与 `PRAGMA user_version`；security/recipe/report 各注册 v1 contributor。`SecurityDbInitializer` / `RecipeDbInitializer` / `ReportDatabaseInitializer` / `AuditService` 的启动期 `SyncStructure` 已移除，初始化器只做种子。
+2. **启动顺序**：`Bootstrapper.InitializeShell` 在登录/插件初始化前执行“备份 → 迁移”；备份或迁移失败直接中止启动，不再各模块 catch 后继续。
+3. **备份**：`DatabaseBackupService` 用 `VACUUM INTO` 生成 `backups/local_data-yyyyMMdd-HHmmss.db`，`quick_check` 校验；默认保留 10 代（`Database:Backup:RetentionCount`）；空库跳过，避免首次启动生成 4KB 空备份。
+4. **恢复入口**：新增 `scripts/restore-db.ps1`（停应用、恢复前快照、覆盖 DB、删除 WAL/SHM）与 `docs/DATABASE_BACKUP_RESTORE.md`。
+5. **验证**：
+   - 首次启动：0→1 迁移，三模块各执行一次；
+   - 第二次启动：无重复迁移，生成 69KB 备份并通过 quick_check；
+   - 正式安装升级：旧 ProgramData DB（无 schema_migrations）启动前生成 32KB 备份，随后补记 v1，应用正常；
+   - 测试新增 `DatabaseSchemaMigratorTests`（幂等/版本递增）与 `DatabaseBackupServiceTests`（备份/校验/保留 2 代）；全量 **505** 测试通过。
+6. **tags.json**：已在 DH-1 落到 DataRoot，本次未改动；重装后 SHA256 不变（DH-6 验证）。
+
+**未完成**：写事务/单写者队列（当前依赖 `busy_timeout=5000` + 单进程写）；恢复 UI（当前为脚本）；定时/远程备份（按现场需求再加）。
 
 ### DH-6 CI / 安装冒烟 / gRPC
 
@@ -301,10 +312,11 @@
 | 2026-11-18 | DH-4 | `cfdc58c` | 502 测试通过；安全模式启动完成安全库初始化；登录 UI 自动化未做 |
 | 2026-11-18 | DH-4b（取消） | `ec38e0e`（回退） | 用户确认 A 模式：免登录 + 审计；空闲锁屏代码/配置移除，审计视图在免登录白名单可见 |
 | 2026-11-18 | A 模式收口 | `6e58c0a` | 免登录启动（无登录框）；日志显示“审计日志插件已加载”；Sidebar/快捷入口出现“审计日志”；502 测试通过 |
+| 2026-11-18 | DH-5 | 待提交 | 首次/二次启动迁移验证；正式安装旧库升级备份 32KB + quick_check；505 测试通过 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v1.6（2026-11-18，正式安装冒烟完成）
-**下一步**：DH-6 剩余 CI/gRPC 移出；或 DH-5 数据库迁移/备份；DH-3 .NET 10 继续暂缓，等客户 OS 清单。
+**文档版本**：v1.7（2026-11-18，DH-5 迁移/备份完成）
+**下一步**：DH-6 剩余 CI/gRPC 移出；或按客户需求评估写事务/单写者；DH-3 .NET 10 继续暂缓，等客户 OS 清单。

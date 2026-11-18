@@ -1,37 +1,26 @@
-using AP.Infra.Report.Entities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace AP.Infra.Report.Services;
 
 /// <summary>
-/// 报表数据库初始化服务
-/// 启动时自动创建报表归档表，防止数据库未初始化导致运行时崩溃
+/// 报表数据库初始化服务（兼容入口）。
+/// 表结构由 DatabaseSchemaMigrator 的 ReportSchemaContributor 统一创建。
 /// </summary>
 public class ReportDatabaseInitializer : IHostedService
 {
-    private readonly IFreeSql _freeSql;
     private readonly ILogger<ReportDatabaseInitializer> _logger;
 
-    public ReportDatabaseInitializer(IFreeSql freeSql, ILogger<ReportDatabaseInitializer> logger)
+    public ReportDatabaseInitializer(ILogger<ReportDatabaseInitializer> logger)
     {
-        _freeSql = freeSql;
         _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            // 自动同步表结构（如果表不存在则创建）
-            _freeSql.CodeFirst.SyncStructure<ReportArchive>();
-            _logger.LogInformation("报表归档表 (report_archives) 初始化完成");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "报表归档表初始化失败，报表功能可能不可用");
-        }
-
+        // 表结构由 DatabaseSchemaMigrator 的 ReportSchemaContributor 统一创建；
+        // 这里仅保留启动日志/兼容入口，不再单独 SyncStructure。
+        _logger.LogInformation("报表归档表 (report_archives) 由数据库迁移器管理");
         return Task.CompletedTask;
     }
 

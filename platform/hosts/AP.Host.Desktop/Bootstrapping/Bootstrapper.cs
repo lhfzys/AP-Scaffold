@@ -10,7 +10,9 @@ using AP.Core.Lifecycle;
 using AP.Core.PluginFramework.Abstractions;
 using AP.Core.PluginFramework.Loading;
 using AP.Host.Desktop.Views;
+using AP.Infra.Database.Backup;
 using AP.Infra.Database.Configuration;
+using AP.Infra.Database.Migration;
 using AP.Infra.Grpc.Client;
 using AP.Infra.Grpc.Server;
 using AP.Infra.Hardware.Extensions;
@@ -66,6 +68,29 @@ public class Bootstrapper : PrismBootstrapper
     protected override void InitializeShell(DependencyObject shell)
     {
         Application.Current.MainWindow = (Window)shell;
+
+        // 数据库启动流程（仅 SQLite）：先做一致性备份，再执行版本化迁移。
+        // 备份或迁移失败即中止启动，避免在未备份/半迁移的库上继续写入。
+        var databaseProvider = _configuration["Database:Provider"] ?? "SQLite";
+        if (!databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var backupService = Container.Resolve<IDatabaseBackupService>();
+                var backupPath = backupService.CreateBackup();
+                if (!string.IsNullOrWhiteSpace(backupPath))
+                    Log.Information("启动前数据库备份完成: {Backup}", backupPath);
+
+                var migrator = Container.Resolve<IDatabaseSchemaMigrator>();
+                migrator.Migrate();
+                Log.Information("数据库 schema 迁移检查完成");
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "数据库备份/迁移失败，中止启动");
+                throw;
+            }
+        }
 
         var securityEnabled = _configuration.GetValue<bool?>("Security:Enabled") ?? true;
         if (securityEnabled)

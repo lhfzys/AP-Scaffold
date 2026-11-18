@@ -1,6 +1,5 @@
 using AP.Contracts.Recipe.Abstractions;
 using AP.Contracts.Recipe.Models;
-using FreeSql;
 
 namespace AP.Infra.Recipe.Data;
 
@@ -9,20 +8,16 @@ namespace AP.Infra.Recipe.Data;
 /// </summary>
 public class RecipeDbInitializer : IRecipeDbInitializer
 {
-    private readonly IFreeSql _freeSql;
     private readonly IRecipeManager _recipeManager;
 
-    public RecipeDbInitializer(IFreeSql freeSql, IRecipeManager recipeManager)
+    public RecipeDbInitializer(IRecipeManager recipeManager)
     {
-        _freeSql = freeSql ?? throw new ArgumentNullException(nameof(freeSql));
         _recipeManager = recipeManager ?? throw new ArgumentNullException(nameof(recipeManager));
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        // 同步表结构
-        _freeSql.CodeFirst.SyncStructure(typeof(Entities.Recipe));
-
+        // 表结构由 DatabaseSchemaMigrator 的 RecipeSchemaContributor 创建；这里只做种子。
         // 首次启动时创建一个默认配方示例
         var existing = await _recipeManager.GetByCodeAsync("DEFAULT", ct);
         if (existing != null) return;

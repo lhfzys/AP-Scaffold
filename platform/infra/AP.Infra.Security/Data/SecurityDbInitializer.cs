@@ -38,15 +38,8 @@ public class SecurityDbInitializer : ISecurityDbInitializer
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        // 1. 自动同步表结构（仅安全模块相关表）
-        _freeSql.CodeFirst.SyncStructure(
-            typeof(User),
-            typeof(Role),
-            typeof(UserRole),
-            typeof(Permission),
-            typeof(RolePermission),
-            typeof(AuditLog));
-
+        // 表结构由 DatabaseSchemaMigrator 统一创建（SecuritySchemaContributor）；
+        // 这里只做种子数据，避免每个模块启动时各跑一次 SyncStructure。
         // 2. 初始化默认权限
         var existingPermissions = await _freeSql.Select<Permission>().ToListAsync(ct);
         var existingCodes = existingPermissions.Select(p => p.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
