@@ -37,7 +37,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AP.Host.Desktop (启动宿主)                 │
-│  角色识别 → 插件扫描 → 服务注册 → 登录 → 初始化 → gRPC → UI   │
+│  角色识别 → 插件扫描 → 服务注册 → 数据库备份/迁移 → 登录 → 初始化 → UI │
 ├─────────────────────────────────────────────────────────────┤
 │                     Plugins (插件层)                          │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐     │
@@ -55,7 +55,7 @@
 │  Security │ Recipe │ Report                                 │
 ├──────────────────────────┼──────────────────────────────────┤
 │      Infra (基础设施层)   │                                   │
-│  Database │ Grpc │ Hardware │ Logging │ Report │             │
+│  Database │ Hardware │ Logging │ Report │ Security   │
 │  Resilience │ Security │ Recipe                              │
 ├─────────────────────────────────────────────────────────────┤
 │                    AP.Core (核心框架)                         │
@@ -346,7 +346,7 @@ public interface IEventBus
 |------|------|
 | `AP.Contracts.Core` | `OperationResult<T>`、`ErrorCode`、`PlatformException`、`AppInitializedEvent`（Prism PubSubEvent） |
 | `AP.Contracts.Hardware` | `IPlcService` / `IPlcBatchReadWrite` / `IScannerService` / `IPlcDriverFactory`、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR + Prism 双形式）、`ConnectDeviceCommand` |
-| `AP.Contracts.Communication` | gRPC proto 契约（`automation_gate.proto`：`AutomationGate` 服务，`StreamPlcData` 服务端流 + `Heartbeat`；`common.proto`） |
+| `AP.Contracts.Communication` ❄ | gRPC proto（已移出主解决方案，不构建）；原：`automation_gate.proto` / `common.proto` |
 | `AP.Contracts.System` | `ILoginService`、`ISettingsDialogService`、`ISystemMonitorService`、`SystemMetrics` |
 | `AP.Contracts.Security` | `IIdentityService`、`IUserRepository` / `IRoleRepository` / `IPermissionRepository` / `IPasswordHasher`、`ISecurityDbInitializer`、`IAuditService` / `AuditLogEntry` / `AuditActionType`、用户/角色/权限模型 |
 | `AP.Contracts.Recipe` | `IRecipeManager`（含 `CurrentRecipe`、`SwitchAsync`）、`IRecipeDbInitializer`、`RecipeInfo` / `RecipeParameter` |
@@ -367,8 +367,8 @@ public interface IEventBus
 基于 FreeSql 的 Repository 模式，`AddPlatformDatabase(configuration, appRole)` 注册：
 
 - 按 `Database:Provider` 选择 SQLite / PostgreSQL（**当前仅 SQLite 受支持**，PostgreSQL ❄ 冻结）
-- **SQLite**：启动前自动备份（`.db → .db.bak`，连同 `-wal`/`-shm`），启用 WAL 等 PRAGMA 优化
-- `UseAutoSyncStructure(false)`：**不自动建表**，各模块初始化器显式 `CodeFirst.SyncStructure<T>()`
+- **SQLite**：启动前 `VACUUM INTO` 生成 `backups/local_data-*.db` + `quick_check`，默认保留 10 代；失败中止启动；启用 WAL 等 PRAGMA 优化
+- `UseAutoSyncStructure(false)`：**不自动建表**；`DatabaseSchemaMigrator` 按 `schema_migrations` + `PRAGMA user_version` 执行 security/recipe/report contributors，模块初始化器只写种子数据
 - `IRepository<T>` / `FreeSqlRepository<T>`（Scoped）：`GetAsync / GetListAsync / InsertAsync / UpdateAsync / DeleteAsync`
 - `BaseEntity`：`Id` 自增主键、`CreatedAt` / `UpdatedAt`
 
@@ -377,7 +377,7 @@ public interface IEventBus
 - `AddPlatformSecurity(configuration)`，配置键 `Security:Enabled`（代码缺省 true；随附 appsettings 默认显式 `false`，即免登录）、`Security:Audit:Enabled`（缺省回退到 `Security:Enabled`，随附配置显式 `true`）
 - 实体：`User`/`Role`/`Permission`/`UserRole`/`RolePermission`/`AuditLog`（表：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`）
 - `PasswordHasher`：PBKDF2-SHA256，16 字节盐 + 32 字节密钥 + 100,000 次迭代，定时间比较验证
-- `SecurityDbInitializer`：建表 + 种子数据（12 个权限、3 个角色、admin/admin123 强制改密）；`sys_audit_logs` 表另由 `AuditService` 构造函数幂等自建
+- `SecurityDbInitializer`：只写种子数据（12 个权限、3 个角色、admin/admin123 强制改密）；建表由 `SecuritySchemaContributor` 在数据库迁移阶段完成（含 `sys_audit_logs`）
 - `Security:Enabled=false` 时：`IIdentityService` 替换为 `AnonymousIdentityService`（全部权限）；审计按 `Security:Audit:Enabled` 独立判断，关闭时用 `NullAuditService`
 
 ### AP.Infra.Recipe — 配方管理
@@ -385,11 +385,11 @@ public interface IEventBus
 - `AddPlatformRecipe(configuration)`；`RecipeManager` 实现 `IRecipeManager`
 - 实体 `Recipe`（表 `recipes`）：`Code`/`Name`/`Version`/`IsDefault`/`ParametersJson`（JSON 序列化的参数列表）
 - `UpdateAsync` 自动 `Version+1`；`SetDefaultAsync` 先清除其他默认；`SwitchAsync` 设置内存 `CurrentRecipe`（事件发布留 TODO）
-- `RecipeDbInitializer`：建表 + 无 DEFAULT 配方时创建默认配方
+- `RecipeDbInitializer`：只写种子数据；建表由 `RecipeSchemaContributor` 在数据库迁移阶段完成
 
-### AP.Infra.Grpc — gRPC 通信（❄ 冻结，未支持）
+### AP.Infra.Grpc — gRPC 通信（❄ 已物理移出主解决方案/宿主）
 
-> Server/Client 分布式模式当前范围外：代码保留但不维护、不验证。Standalone 模式不启动 gRPC。
+> Server/Client 分布式模式当前范围外；2026-11-18 DH-6 起两个 gRPC 项目不再参与构建/发布/安装包，源文件仅冻结参考。当前交付物只支持 Standalone，`AppRole.Server/Client` 会在启动时被拒绝。
 
 | 角色 | 模式 | 行为 |
 |------|------|------|
@@ -434,9 +434,8 @@ Server 端                    Client 端
 |------|------|
 | `Database-Retry` | 指数退避重试（1s 起），捕获所有异常 |
 | `PLC-Retry` | 固定 500ms 间隔重试 |
-| `Grpc-CircuitBreaker` | 熔断器（失败率 50%、采样窗 30s、熔断时长可配置） |
 
-配置为扁平键：`Resilience:DatabaseRetryCount` / `PlcRetryCount` / `GrpcCircuitBreakerThreshold` / `CircuitBreakerDurationSeconds`。
+配置为扁平键：`Resilience:DatabaseRetryCount` / `PlcRetryCount`。`Grpc-CircuitBreaker` 已随 gRPC 移出交付链删除。
 
 所有硬件操作自动受策略保护，开发者无需手动处理重试逻辑。
 
@@ -613,8 +612,6 @@ App.OnStartup
          ├── 7. ServiceCollection 依次注册：
          │       AddPlatformLogging → AddPlatformDatabase → AddPlatformResilience
          │       → AddPlatformSecurity → AddPlatformRecipe → AddPlcHardware → AddReportFramework
-         │       （Server 角色：AddPlatformGrpcServer + StreamBroadcaster；
-         │         Client 角色：GrpcClientWorker 等客户端服务）
          ├── 8. PluginLoader.DiscoverPlugins(appRole)：扫描 → 隔离加载 → 角色过滤 → 按 Priority 排序
          ├── 9. 两阶段实例化：临时容器实例化插件 → ConfigureServices 收集服务 → 收集程序集
          ├── 10. AddMediatR（扫描插件程序集 + Host 程序集，含 MediatRToPrismBridge）
@@ -624,21 +621,20 @@ App.OnStartup
          └── 13. 创建 PluginLifecycleManager 并 RegisterPlugins；注册 ICustomDialogService 等
          │
          │  CreateShell / InitializeShell:
-         ├── 14. Resolve MainWindow；Security 启用时：先同步跑 SecurityDbInitializer
+         ├── 14. Resolve MainWindow；SQLite 先备份数据库 + 执行 schema 迁移（失败中止启动）
+         │       → Security 启用时：同步跑 SecurityDbInitializer
          │       → 关 Splash → ILoginService.ShowLoginDialog()（失败退出）
          │       → MustChangePassword 则强制改密 → MainWindow.Show()
          │
          │  OnInitialized（异步，进度写 Splash）:
          ├── 15. LogCleanupHelper 清理过期日志
-         ├── 16. Security 启用时再次 SecurityDbInitializer（幂等）
-         ├── 17. RecipeDbInitializer
-         ├── 18. ReportDatabaseInitializer.StartAsync（手动调用，IHostedService 不自动启动）
+         ├── 16. Security 启用时再次 SecurityDbInitializer（幂等，只写种子）
+         ├── 17. RecipeDbInitializer（只写种子）
+         ├── 18. ReportDatabaseInitializer.StartAsync（兼容日志，表由迁移器创建）
          ├── 19. PluginLifecycleManager.InitializePluginsAsync + StartPluginsAsync
-         ├── 20. Server 角色：内嵌 Kestrel 启动 gRPC（共享 StreamBroadcaster 单例）
-         │       Client 角色：手动 GrpcClientWorker.StartAsync
-         ├── 21. 汇总失败插件告警 → 发布 AppInitializedEvent → 关闭 Splash
+         ├── 20. 汇总失败插件告警 → 发布 AppInitializedEvent → 关闭 Splash
          │
-         └── 22. TrayIconManager.Attach(MainWindow)（托盘常驻：显示/重启/退出菜单；最小化为标准行为回任务栏，2026-08-01 起）
+         └── 21. TrayIconManager.Attach(MainWindow)（托盘常驻：显示/重启/退出菜单；最小化为标准行为回任务栏，2026-08-01 起）
 ```
 
 ---
@@ -749,7 +745,7 @@ Bootstrapper
   ├── 9. InitializePluginsAsync() → StartPluginsAsync()
   │       └── 按优先级调用，状态机迁移，失败仅记录
   │
-  └── 10. 按角色启动 gRPC / 显示主窗口 / 发布 AppInitializedEvent
+  └── 10. 显示主窗口 / 发布 AppInitializedEvent
 ```
 
 ### 运行时硬件通信

@@ -828,7 +828,9 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 | **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备、配置步骤与插件开发示例 |
 | **[docs/TESTING.md](docs/TESTING.md)** | 测试编写规范与运行指南 |
 | **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** | 项目状态与工作计划 |
-| **[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md)** | 五维度差距分析与改进计划（稳定/复用/安全/可持续/通用） |
+| **[docs/DELIVERY_HARDENING_PLAN.md](docs/DELIVERY_HARDENING_PLAN.md)** | 交付硬化 DH-1~DH-6 计划、完成记录与提交 |
+| **[docs/DATABASE_BACKUP_RESTORE.md](docs/DATABASE_BACKUP_RESTORE.md)** | SQLite 自动备份与离线恢复步骤 |
+| **[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md)** | 五维度差距分析与改进计划（2026-07 快照） |
 
 ---
 
@@ -847,6 +849,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 - [x] 中央包版本管理
 - [x] 通用报表框架（定时归档 / 手动导出 / 补档 / 定期清理）
 - [x] 身份认证与授权（本地用户/角色/权限 + 登录 + 强制改密）
+- [x] 交付硬化 DH-1~DH-6（数据根 / A 模式 / 迁移备份 / gRPC 移出 / CI / 安装冒烟）
 - [x] 用户管理 / 角色管理 / 审计日志可视化
 - [x] 配方/工艺参数管理（骨架）
 - [x] 报表中心（骨架）

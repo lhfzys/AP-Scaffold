@@ -274,7 +274,7 @@ installer/build-installer.bat
 ### 5.11 其他坑点
 
 - **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`；临时文件+替换原子写入，IO/JSON/权限错误会**抛出异常**（配置文件不存在则静默返回），调用方需处理失败。**分层写回（2026-07-31 修复）**：配置按 `appsettings.json` + `appsettings.{Role}.json` 分层加载（角色文件优先），写回必须经 `ConfigurationHelper.ResolveTargetFileName` 按节选目标文件（角色文件含该节 → 角色文件；宿主经 `AppRuntime:RoleConfigFile` 暴露活动角色文件名），否则只存在于角色文件的节会被遮蔽、保存不生效。
-- **SQLite**：数据文件默认位于 `%ProgramData%\AP-Scaffold\local_data.db`（2026-11-18 起；不再写安装目录）；启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
+- **SQLite**：数据文件默认位于 `%ProgramData%\AP-Scaffold\local_data.db`（2026-11-18 起；不再写安装目录）；启动前用 `VACUUM INTO` 生成 `backups/local_data-*.db` 并 `quick_check`，失败中止启动；默认保留 10 代。恢复见 `docs/DATABASE_BACKUP_RESTORE.md`。
 - **运行数据目录（2026-11-18 起，DH-1）**：程序文件留在 `Program Files`，数据库/日志/报表/现场点表/配置覆盖层统一走 `AppPaths` 数据根；默认 `%ProgramData%\AP-Scaffold`，不可写时回退 `%LocalAppData%\AP-Scaffold`；可用 `AP_SCAFFOLD_DATA_ROOT` 指定。配置采用“安装目录默认值 + 数据根覆盖层”，系统设置只写覆盖层；`tags.json` 首次复制到数据根、升级保留。安装器 `[Dirs]` 给数据目录 `users-modify`。
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
 - **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"`。两条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
