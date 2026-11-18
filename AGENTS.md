@@ -231,6 +231,8 @@ installer/build-installer.bat
 
 默认角色：`Administrator`（全部权限）、`Operator`（system.view / recipe.view / recipe.switch / report.view / report.export / test.start）、`Technician`（system.view / system.settings / recipe.* / report.view / report.export / device.config）。默认账号 `admin / admin123`，首次登录强制改密（仅 `Security:Enabled=true` 时涉及；当前默认配置为 false，见 5.9）。
 
+> **轻身份模式（2026-11-18，DH-4）**：默认 `Security:RoleManagement:Enabled=false`，隐藏角色/权限管理入口；保留用户管理、操作员身份与审计。密码策略为 ≥8 位 + 字母 + 数字；连续 5 次登录失败锁定 5 分钟（`Security:MaxFailedLoginAttempts` / `Security:LockoutMinutes`）；管理员重置密码生成 12 位一次性临时密码并保留原角色。登出后用 `--restart` 重启进程重建 UI/权限，避免旧菜单残留。需要完整 RBAC 的项目显式打开 `Security:RoleManagement:Enabled=true`。
+
 视图级权限控制还可用 `AP.Shared.UI` 的 `PermissionBehavior` 附加属性：`ui:PermissionBehavior.Permission="user.manage"`，`HideWhenUnauthorized=false` 时禁用而非隐藏。
 
 ### 5.9 Security:Enabled=false 的行为
@@ -240,6 +242,7 @@ installer/build-installer.bat
 - DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留），关闭时用 `NullAuditService`；审计表由 `AuditService` 构造函数幂等自建（`SyncStructure<AuditLog>`），不再依赖仅 Security 启用时注册的初始化器。
 - 宿主：跳过登录窗口与安全库初始化。
 - 菜单：Sidebar 只显示 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单内的 Target；UserManagement/RoleManagement/AuditLog 插件在 `InitializeAsync` 中检测禁用后直接 return 不注册视图（注意：RecipeManagement/ReportCenter 目前只按各自权限门控，未检查 `Security:Enabled`）。
+- 轻身份模式默认隐藏角色管理（`Security:RoleManagement:Enabled=false`）；需要多角色时显式打开。登出采用进程重启，登录/登出审计仍保留。
 
 ### 5.10 统一视觉主题
 
