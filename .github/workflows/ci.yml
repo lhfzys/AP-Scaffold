@@ -65,10 +65,9 @@ jobs:
         shell: pwsh
         run: ./scripts/install-smoke.ps1
 
-      - name: NuGet vulnerability report (informational)
+      - name: NuGet vulnerability gate
         shell: pwsh
-        continue-on-error: true
-        run: dotnet list AP-Automation.Platform.slnx package --vulnerable --include-transitive
+        run: ./scripts/check-vulnerabilities.ps1
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

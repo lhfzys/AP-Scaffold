@@ -22,11 +22,11 @@
 ### 必需工具
 
 - **Visual Studio 2022**（任意版本，推荐 Professional 或 Enterprise）
-- **.NET 10 SDK**（构建 SDK，目标框架仍为 .NET 8；`global.json` 指定 10.0.102，[下载地址](https://dotnet.microsoft.com/download)）
-- **.NET 8 桌面运行时**（仅运行已发布程序时需要；开发机装 SDK 即可）
+- **.NET 10 SDK**（构建 SDK 与目标框架均为 .NET 10；`global.json` 指定 10.0.102，[下载地址](https://dotnet.microsoft.com/download)）
+- **.NET 10 桌面运行时**（仅运行已发布程序时需要；开发机装 SDK 即可）
 - **Windows 10/11**（WPF 应用仅支持 Windows）
 
-> 安装包只需 .NET 8 桌面运行时；gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时。
+> 安装包只需 .NET 10 桌面运行时；gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时。
 
 ### 验证安装
 
@@ -115,7 +115,7 @@ cd AP.Plugin.YourFeature
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

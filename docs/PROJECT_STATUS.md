@@ -4,7 +4,7 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
-> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），GitHub Actions 首次跑绿；主解决方案 **32 个项目**，测试 **502 通过**（Core 130 / Shared 63 / Infra 309）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 8 桌面运行时。
+> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），GitHub Actions 首次跑绿；主解决方案 **32 个项目**，测试 **502 通过**（Core 130 / Shared 63 / Infra 309）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
 
 ---
 
@@ -20,9 +20,9 @@
 
 ## 项目简介
 
-AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台脚手架**，设计目标是**可快速复用、安全可靠、统一视觉**。为上位机、MES 客户端、产线监控等系统提供可插拔的通用底座：核心与业务解耦，硬件驱动、业务模块、系统功能均以插件形式存在，通过 Contracts 接口和 MediatR 事件通信。
+AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平台脚手架**，设计目标是**可快速复用、安全可靠、统一视觉**。为上位机、MES 客户端、产线监控等系统提供可插拔的通用底座：核心与业务解耦，硬件驱动、业务模块、系统功能均以插件形式存在，通过 Contracts 接口和 MediatR 事件通信。
 
-- **目标框架**：.NET 8（使用 .NET 10 SDK 构建，`global.json` 指定 SDK 10.0.102）
+- **目标框架**：.NET 10（`global.json` 指定 SDK 10.0.102）
 - **UI 框架**：WPF + Prism 9 + DryIoc + MaterialDesignThemes（全浅色 MD3 主题）
 - **MVVM 工具**：CommunityToolkit.Mvvm
 - **消息总线**：MediatR（关键事件桥接到 Prism IEventAggregator）
@@ -201,7 +201,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 - [x] 登录失败锁定 + 密码复杂度策略 + 重置密码随机化（2026-11-18，DH-4）
 - [x] `AP.Infra.Security` 单元测试 + CI 流水线（2026-11-18，DH-4/DH-6；CI 已跑绿）
-- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持；**暂缓，等客户 OS 清单**）
+- [x] 迁移 .NET 10（2026-11-18 完成；目标框架 net10.0/net10.0-windows，漏洞审计 0 High）
 - [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
 - [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
 - [ ] 插件市场/启用禁用机制（隔离上下文已为热卸载预留，但热卸载本身不做）
@@ -260,7 +260,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
     - 连接状态唯一事实来源是 `DeviceConnectionStateMachine`（六态）；全部硬件共享 `ConnectionSupervisor`，新设备/新品牌**不允许再写独立看门狗**。
     - 业务按逻辑点名读写（`ITagService`），点名→设备+地址在 `Configuration/tags.json` 点表配置；点表非法即**中止启动**（快速失败），这是有意策略。
     - 启动时序约束：**设备注册与点表加载必须先于插件初始化**（Bootstrapper 1.0/1.1 段）——视图在插件初始化时即可能解析 `ITagTable`（2026-07-26 踩坑修复）。
-    - 驱动 internal 地址对象经 `InternalsVisibleTo` 对 `AP.Infra.Tests` 开放测试（测试项目 TFM 为 `net8.0-windows`）。
+    - 驱动 internal 地址对象经 `InternalsVisibleTo` 对 `AP.Infra.Tests` 开放测试（测试项目 TFM 为 `net10.0-windows`）。
 
 ---
 

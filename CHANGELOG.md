@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### .NET 10 迁移（2026-11-18）
+
+变更：
+
+- **全仓目标框架升级**：`net8.0` / `net8.0-windows` → `net10.0` / `net10.0-windows`；`Microsoft.Extensions.*` 升至 10.0.15，Serilog.Extensions.* 升至 10.0.0，Serilog.Settings.Configuration 升至 10.0.1。
+- **依赖漏洞清零**：移除 net8 的 `System.Text.Json` 传递依赖；`dotnet list package --vulnerable --include-transitive` 0 High；CI 改为阻断式漏洞门禁（`scripts/check-vulnerabilities.ps1`）。
+- **安装器运行时检测**：只检测 .NET 10 桌面运行时；修复 10.x 版本前缀判断（`Copy(...,1,3)='10.'`）。
+- **验证**：502 测试在 net10 全绿；发布目录启动正常；非提权安装冒烟通过；安装包 13.2 MB。
+
 ### 交付硬化（2026-11-18，DH-1~DH-6，已合并 main）
 
 新增/变更：

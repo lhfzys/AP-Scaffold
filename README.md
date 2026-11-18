@@ -1,6 +1,6 @@
 # AP-Scaffold — 工业自动化通用平台脚手架
 
-基于 **.NET 8 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
+基于 **.NET 10 + WPF + Prism + MediatR + Polly** 的高扩展性工业软件底座，专为快速构建 **上位机、MES 客户端、产线监控系统** 设计。
 
 脚手架的三大设计目标：
 
@@ -53,7 +53,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 
 | 分类 | 技术 | 版本 | 用途 |
 |------|------|------|------|
-| 运行时 | .NET 8 | 8.0 | 应用运行时（使用 .NET 10 SDK 构建，见 `global.json`） |
+| 运行时 | .NET 10 | 10.0 | 应用运行时（SDK 与目标框架均为 .NET 10，见 `global.json`） |
 | UI 框架 | WPF + Prism | 9.0.537 | MVVM 导航、依赖注入、Region 管理 |
 | DI 容器 | DryIoc (via Prism) | 6.2 | 高性能轻量 IoC 容器 |
 | MVVM 工具 | CommunityToolkit.Mvvm | 8.4 | 属性通知、命令绑定 |
@@ -345,7 +345,7 @@ gRPC 源文件仍保留在 `AP.Contracts.Communication` / `AP.Infra.Grpc` 作为
 ### 环境准备
 
 - Visual Studio 2022（任意版本）
-- .NET 10 SDK（构建用，目标框架仍为 .NET 8；见 `global.json`）
+- .NET 10 SDK（构建与目标框架均为 .NET 10；见 `global.json`）
 - Windows 10/11
 
 ### 1. 克隆仓库
@@ -751,7 +751,7 @@ reports/
 | **Server** ❄ | 作为数据网关，连接硬件并对外提供 gRPC 服务 |
 | **Client** ❄ | 远程监控终端，通过 gRPC 获取服务端数据 |
 
-安装包：`installer/setup.iss`（Inno Setup 6），先 `dotnet publish -c Release` 再编译脚本；安装时检测 .NET 8 桌面运行时（主版本精确匹配），覆盖安装保留现场配置，应用运行中禁止安装。
+安装包：`installer/setup.iss`（Inno Setup 6），先 `dotnet publish -c Release` 再编译脚本；安装时检测 .NET 10 桌面运行时（主版本精确匹配），覆盖安装保留现场配置，应用运行中禁止安装。
 
 ---
 

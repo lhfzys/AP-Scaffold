@@ -7,7 +7,7 @@
 ;   3. 用 Inno Setup 6 打开本文件并编译
 ;   4. 安装程序会生成在 installer/Output 目录
 ;
-; 发布形态：框架依赖（现场需装 .NET 8 桌面运行时 + ASP.NET Core 8 运行时，安装时检测）。
+; 发布形态：框架依赖（现场需装 .NET 10 桌面运行时，安装时检测；gRPC/ASP.NET Core 已移出交付链）。
 ; 注意：暂勿改自包含发布——PluginLoadContext 会把 WPF 混合程序集 DirectWriteForwarder
 ; 装入可回收插件上下文导致启动崩溃（2026-07-29 实测，详见 installer/README.md）。
 
@@ -76,10 +76,10 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// 判断指定注册表视图下是否存在 .NET 8.x 版本记录。
+// 判断指定注册表视图下是否存在 .NET 10.x 版本记录。
 // 注意：版本是以"值"（值名=版本号，REG_DWORD）形式挂在 sharedfx\{框架名} 键下的，
 // 不是子键——必须用 RegGetValueNames，用 RegGetSubkeyNames 会恒判缺失（2026-07-29 实测踩坑）
-function HasNet8Version(RootKey: Integer; SubKey: String): Boolean;
+function HasNet10Version(RootKey: Integer; SubKey: String): Boolean;
 var
   ValueNames: TArrayOfString;
   I: Integer;
@@ -88,7 +88,7 @@ begin
   if RegGetValueNames(RootKey, SubKey, ValueNames) then
   begin
     for I := 0 to GetArrayLength(ValueNames) - 1 do
-      if Copy(ValueNames[I], 1, 2) = '8.' then
+      if Copy(ValueNames[I], 1, 3) = '10.' then
       begin
         Result := true;
         Exit;
@@ -96,18 +96,18 @@ begin
   end;
 end;
 
-// 检测指定 .NET 8 共享框架是否安装（按主版本精确匹配，仅装 9/10 不算满足）。
+// 检测指定 .NET 10 共享框架是否安装（按主版本精确匹配，仅装 8/9 不算满足）。
 // 覆盖两个注册表视图：HKLM 在安装程序（32 位进程）中自动落 32 位视图，
 // HKLM64 兜底 64 位视图——两种注册位置在真实机器上都存在
-function IsNet8SharedFxInstalled(SharedFxName: String): Boolean;
+function IsNet10SharedFxInstalled(SharedFxName: String): Boolean;
 var
   SubKey: String;
 begin
   SubKey := 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\' + SharedFxName;
-  Result := HasNet8Version(HKLM, SubKey) or
-            HasNet8Version(HKLM, 'SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\' + SharedFxName);
+  Result := HasNet10Version(HKLM, SubKey) or
+            HasNet10Version(HKLM, 'SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\' + SharedFxName);
   if (not Result) and IsWin64 then
-    Result := HasNet8Version(HKLM64, SubKey);
+    Result := HasNet10Version(HKLM64, SubKey);
 end;
 
 function InitializeSetup(): Boolean;
@@ -115,17 +115,17 @@ var
   ErrorCode: Integer;
   Missing: String;
 begin
-  // 框架依赖发布只需要 .NET 8 桌面运行时（WPF 本体）。
+  // 框架依赖发布只需要 .NET 10 桌面运行时（WPF 本体）。
   // gRPC/ASP.NET Core 已物理移出交付链，不再要求 ASP.NET Core 运行时。
   Missing := '';
-  if not IsNet8SharedFxInstalled('Microsoft.WindowsDesktop.App') then
-    Missing := Missing + '  - .NET 8 桌面运行时（windowsdesktop-runtime-8.x-win-x64.exe）' + #13#10;
+  if not IsNet10SharedFxInstalled('Microsoft.WindowsDesktop.App') then
+    Missing := Missing + '  - .NET 10 桌面运行时（windowsdesktop-runtime-10.x-win-x64.exe）' + #13#10;
 
   if Missing <> '' then
   begin
-    if MsgBox('未检测到以下 .NET 8 运行时（仅安装其他主版本不满足要求）：' + #13#10#13#10 + Missing + #13#10 + '是否前往下载页？', mbConfirmation, MB_YESNO) = IDYES then
+    if MsgBox('未检测到以下 .NET 10 运行时（仅安装其他主版本不满足要求）：' + #13#10#13#10 + Missing + #13#10 + '是否前往下载页？', mbConfirmation, MB_YESNO) = IDYES then
     begin
-      ShellExec('open', 'https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+      ShellExec('open', 'https://dotnet.microsoft.com/zh-cn/download/dotnet/10.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
     end;
     Result := false;
     Exit;

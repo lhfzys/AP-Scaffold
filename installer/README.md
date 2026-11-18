@@ -6,7 +6,7 @@
 
 - Windows 10/11
 - Inno Setup **6.5 及以上**（`Languages/ChineseSimplified.isl` 随仓库携带，官方发行版不含中文；该文件要求 6.5+，换机编译无需再往 Inno 安装目录拷语言文件）
-- .NET 8 SDK（仅构建机需要）
+- .NET 10 SDK（仅构建机需要）
 
 ## 发布形态：框架依赖（Framework-Dependent）
 
@@ -33,18 +33,18 @@
 
 ## 现场装机要求（仅首次）
 
-框架依赖发布只需要安装 **.NET 8 桌面运行时**（8.x 任意小版本；仅装 9/10 不满足，安装包会检测并拦截）：
+框架依赖发布只需要安装 **.NET 10 桌面运行时**（10.x 任意小版本；仅装 8/9 不满足，安装包会检测并拦截）：
 
 | 运行时 | 安装包 | 用途 |
 |--------|--------|------|
-| .NET 8 桌面运行时 | `windowsdesktop-runtime-8.x-win-x64.exe` | WPF 本体 |
+| .NET 10 桌面运行时 | `windowsdesktop-runtime-10.x-win-x64.exe` | WPF 本体 |
 
 > gRPC/ASP.NET Core 已物理移出交付链（2026-11-18，DH-6），不再要求 ASP.NET Core 运行时。
 
 下载页：<https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0>。静默安装命令（可写进取景脚本）：
 
 ```powershell
-.\windowsdesktop-runtime-8.x-win-x64.exe /install /quiet /norestart
+.\windowsdesktop-runtime-10.x-win-x64.exe /install /quiet /norestart
 ```
 
 ## 构建步骤
@@ -91,7 +91,7 @@
 - 自动复制宿主程序、插件目录、配置文件到安装目录
 - 覆盖升级时清理旧版残留（`[InstallDelete]`：gRPC/Protobuf 文件与旧插件目录），避免已移除组件继续留在 Program Files
 - 创建开始菜单和桌面快捷方式（可选）
-- 安装前检测 .NET 8 桌面运行时 + ASP.NET Core 运行时（按主版本精确匹配，仅装 .NET 9/10 会被拦截；缺失项会在提示中列出）
+- 安装前检测 .NET 10 桌面运行时（按主版本精确匹配，仅装 .NET 8/9 会被拦截；缺失项会在提示中列出）
 - 简体中文安装界面（语言文件随仓库携带）
 - 应用运行中禁止安装（AppMutex 检测，避免覆盖正在使用的文件）
 - 覆盖安装/升级时保留现场配置文件（`Configuration/appsettings*.json` 仅首次安装写入）

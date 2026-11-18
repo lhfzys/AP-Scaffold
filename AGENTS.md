@@ -9,12 +9,12 @@
 
 ## 1. 项目速览
 
-**AP-Scaffold** 是一个工业自动化上位机平台脚手架，采用 .NET 8 WPF + Prism + 插件化架构。设计目标：**可快速复用、安全可靠、统一视觉**。
+**AP-Scaffold** 是一个工业自动化上位机平台脚手架，采用 .NET 10 WPF + Prism + 插件化架构。设计目标：**可快速复用、安全可靠、统一视觉**。
 
 - **工作目录**: `D:\workspace\AP-Scaffold`
 - **解决方案**: `AP-Automation.Platform.slnx`
 - **启动项目**: `platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj`
-- **目标框架**: .NET 8（构建 SDK 为 .NET 10.0.102，见 `global.json`）
+- **目标框架**: .NET 10（构建 SDK 为 .NET 10.0.102，见 `global.json`）
 - **输出目录**: `bin/Release/`（插件输出到 `bin/Release/plugins/{PluginName}/`，由 `Directory.Build.props` 自动处理，无需构建后事件）
 
 ---
@@ -35,10 +35,10 @@
 - **测试**：**502 通过**（Core 130 / Shared 63 / Infra 309）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
 - **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
-- **DH-3 .NET 10**：**暂缓**（客户机 Windows 版本可能较低；net8 生命周期另行评估），不要主动迁移。
+- **DH-3 .NET 10**：**已完成全仓迁移**（2026-11-18，无历史客户，目标框架 net10.0/net10.0-windows，Microsoft.Extensions 10.0.15）；`System.Text.Json` 高危随框架解决，CI 漏洞门禁已改为阻断。
 - **DH-4/A 模式**：默认 `Security:Enabled=false` + `Security:Audit:Enabled=true`，匿名/系统审计、免登录、无空闲锁屏；可选登录模式保留密码策略/锁定/角色。
 - **DH-5 数据库**：`DatabaseSchemaMigrator`（`schema_migrations` + `user_version`）+ `Security/Recipe/Report` contributors；`DatabaseBackupService` 启动前 `VACUUM INTO` + `quick_check` + 保留 10 代；恢复脚本 `scripts/restore-db.ps1`。
-- **DH-6 交付链**：gRPC 两项目移出主解决方案/宿主（32 项目），发布 0 个 Grpc/Protobuf/AspNetCore 文件；安装包只要求 .NET 8 桌面运行时；`setup.iss` 的 `[InstallDelete]` 清理旧 gRPC/插件残留。
+- **DH-6 交付链**：gRPC 两项目移出主解决方案/宿主（32 项目），发布 0 个 Grpc/Protobuf/AspNetCore 文件；安装包只要求 .NET 10 桌面运行时；`setup.iss` 的 `[InstallDelete]` 清理旧 gRPC/插件残留。
 - **下一步**：按真实项目需求选 P1；.NET 10 需先拿到客户 OS 清单再决策。
 
 ### 2.2 已完成功能
@@ -279,13 +279,13 @@ installer/build-installer.bat
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
 - **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"`。两条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
 - **文件名大小写**：`appsettings.server.json` 是小写（Linux 上与 `appsettings.Server.json` 不匹配，Windows 无碍）。
-- **驱动 internal 类型的测试模式**：三个 PLC 插件通过 csproj 的 `InternalsVisibleTo("AP.Infra.Tests")` 开放 internal（地址对象/验证器）供测试；`AP.Infra.Tests` 的 TFM 为 `net8.0-windows`（引用 WPF 插件的需要）并直接引用三个 PLC 插件项目。新驱动照此办理。
+- **驱动 internal 类型的测试模式**：三个 PLC 插件通过 csproj 的 `InternalsVisibleTo("AP.Infra.Tests")` 开放 internal（地址对象/验证器）供测试；`AP.Infra.Tests` 的 TFM 为 `net10.0-windows`（引用 WPF 插件的需要）并直接引用三个 PLC 插件项目。新驱动照此办理。
 - **崩溃日志**：全局异常写入 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`，不弹窗。
 - **单实例**：`App.OnStartup` 用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 检查（非首实例弹提示退出；该互斥体同时供 Inno `AppMutex` 检测）；托盘重启给新进程传 `--restart`，新进程等待旧实例释放互斥体（最长 60s，含 `AbandonedMutexException` 处理）后再启动。
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
 - **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
-- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 8 运行；如需消除可把 TFM 升为 `net8.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。当前首页已移除趋势图（2026-08-06 框架通用化重构），上述基建为业务插件接入图表保留。
+- **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 10 运行；如需消除可把 TFM 升为 `net10.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。当前首页已移除趋势图（2026-08-06 框架通用化重构），上述基建为业务插件接入图表保留。
 - **插件禁止注入/引用 Infra 具体类型（2026-08-06 实战教训）**：插件在独立 ALC 加载，Infra DLL 不在插件目录时会经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册类型不恒等 → DryIoc 自动瞬态化 → 拿到从未 Start 的新实例（实例：DashboardViewModel 注入 `TagAcquisitionEngine`/`LatestTagValueStore` 具体类型 → 采集徽标恒"全部停止"、趋势图空白）。需要 Infra 运行时状态时走契约层只读视图接口（`ILatestTagValueStore`/`ITagAcquisitionStatus`，见 5.13）。防护：`SharedPrefixes` 含 `AP.Infra`、`CleanDuplicateLibs` 删插件输出 `AP.Infra.*`。连带坑点：`SharedPrefixes` 新增前缀时，其公开签名里的第三方类型前缀也必须已共享（AP.Infra.Resilience 返回 `Polly.ResiliencePipeline`，故 `Polly` 同步共享，否则跨 ALC 签名不匹配抛 `MissingMethodException`）。
 
 ### 5.12 Device Runtime Model（设备运行时模型）
@@ -315,7 +315,7 @@ installer/build-installer.bat
 > 2026-07-29 起。面向外包现场，发布形态为 **win-x64 框架依赖**（体积小；现场初次装机装一次运行时，后续只发应用）。
 
 - **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 46MB/243 文件；安装包约 13.4MB）。**安装包为 x64 Setup，安装到 `Program Files` 而不是 `Program Files (x86)`**。详见 `installer/README.md`。
-- **现场只需一个 .NET 8 运行时**：桌面运行时（WPF）。gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时；`setup.iss` 只检测 .NET 8 桌面共享框架（仅装 9/10 拦截）。
+- **现场只需一个 .NET 10 运行时**：桌面运行时（WPF）。gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时；`setup.iss` 只检测 .NET 10 桌面共享框架（仅装 8/9 拦截）。
 - 宿主 csproj 仅固定 `PublishDir=$(BuildRoot)publish\`；**RID 与 self-contained 只走命令行**，且必须带 `-p:AppendRuntimeIdentifierToOutputPath=true`（否则 RID 构建产物混入 `bin/Release` 根，2026-07-29 实测导致开发版 exe 无法启动）。
 - **测试产物隔离**：`Directory.Build.props` 中 `.Tests` 结尾的项目输出到 `bin/Tests/{项目名}/`，`bin/Release` 根目录不再有 TestPlatform/xunit/语言目录污染。
 - `installer/Languages/ChineseSimplified.isl` 随仓库携带（官方发行版不含中文，要求 Inno ≥ 6.5）；`installer/Output/` 已 gitignore。
