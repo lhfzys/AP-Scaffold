@@ -268,33 +268,34 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcT
         }, ct);
     }
 
-    public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
+    public Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
         // 地址预检 + 规范化：非法地址抛 S7AddressException（ArgumentException 子类）
         var normalized = S7Address.Parse(address).Normalized;
 
         var client = _client;
-        await _pipeline.ExecuteAsync(async token =>
+
+        // 写操作禁止重试：通信超时不等于 PLC 未执行；重试可能重复触发启动位/配方号/清零命令。
+        ct.ThrowIfCancellationRequested();
+
+        dynamic result;
+        switch (value)
         {
-            await Task.Yield();
-            dynamic result;
+            case bool b: result = client.Write(normalized, b); break;
+            case short s: result = client.Write(normalized, s); break;
+            case ushort us: result = client.Write(normalized, us); break;
+            case int i: result = client.Write(normalized, i); break;
+            case uint ui: result = client.Write(normalized, ui); break;
+            case float f: result = client.Write(normalized, f); break;
+            case double d: result = client.Write(normalized, (float)d); break;
+            case string s: result = client.Write(normalized, s); break;
+            default:
+                throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
+        }
 
-            switch (value)
-            {
-                case bool b: result = client.Write(normalized, b); break;
-                case short s: result = client.Write(normalized, s); break;
-                case ushort us: result = client.Write(normalized, us); break;
-                case int i: result = client.Write(normalized, i); break;
-                case uint ui: result = client.Write(normalized, ui); break;
-                case float f: result = client.Write(normalized, f); break;
-                case double d: result = client.Write(normalized, (float)d); break;
-                case string s: result = client.Write(normalized, s); break;
-                default:
-                    throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
-            }
+        if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
 
-            if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
-        }, ct);
+        return Task.CompletedTask;
     }
 
     public async Task<Dictionary<string, object>> ReadBatchAsync(string[] addresses, CancellationToken ct = default)
@@ -360,19 +361,20 @@ public class SiemensPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcT
         _ => throw new NotSupportedException($"不支持的类型: {type}"),
     };
 
-    public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
+    public Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
         // 地址预检（非法地址抛 S7AddressException）
         foreach (var address in data.Keys)
             S7Address.Parse(address);
 
-        await _pipeline.ExecuteAsync(async token =>
-        {
-            await Task.Yield();
-            var request = new Dictionary<string, object>(data);
-            var response = _client.BatchWrite(request);
-            if (!response.IsSucceed)
-                throw new Exception($"批量写入失败: {response.Err}");
-        }, ct);
+        // 批量写不套重试管道：批量写失败后重试整批可能重复执行已成功的写入。
+        ct.ThrowIfCancellationRequested();
+        var client = _client;
+        var request = new Dictionary<string, object>(data);
+        var response = client.BatchWrite(request);
+        if (!response.IsSucceed)
+            throw new Exception($"批量写入失败: {response.Err}");
+
+        return Task.CompletedTask;
     }
 }

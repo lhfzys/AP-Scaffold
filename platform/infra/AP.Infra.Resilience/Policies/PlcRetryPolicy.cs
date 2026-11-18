@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 
 namespace AP.Infra.Resilience.Policies;
 
 /// <summary>
-/// PLC 通信重试策略
+/// PLC 通信重试策略。
+///
+/// 仅用于连接/读取/探测；**写操作禁止使用本策略**：
+/// 通信超时不等于 PLC 未执行，重试可能重复触发启动位、配方号、清零命令等非幂等写入。
 /// </summary>
 public static class PlcRetryPolicy
 {

@@ -300,7 +300,7 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IP
         }, ct);
     }
 
-    public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
+    public Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
         // 地址预检 + 规范化：非法地址抛 MitsubishiAddressException（ArgumentException 子类）
         var normalized = McAddress.Parse(address).Normalized;
@@ -308,28 +308,28 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IP
         // 捕获当前客户端引用，避免重连替换实例后在同一次写入中混用不同客户端
         var client = _client;
 
-        await _pipeline.ExecuteAsync(async token =>
-        {
-            dynamic result;
-            await Task.Yield();
+        // 写操作禁止重试：通信超时不等于 PLC 未执行；重试可能重复触发启动位/配方号/清零命令。
+        ct.ThrowIfCancellationRequested();
 
-            if (value is bool b)
-                result = client.Write(normalized, b);
-            else if (value is short s)
-                result = client.Write(normalized, s);
-            else if (value is ushort us)
-                result = client.Write(normalized, us);
-            else if (value is int i)
-                result = client.Write(normalized, i);
-            else if (value is uint ui)
-                result = client.Write(normalized, ui);
-            else if (value is float f)
-                result = client.Write(normalized, f);
-            else
-                throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
+        dynamic result;
+        if (value is bool b)
+            result = client.Write(normalized, b);
+        else if (value is short s)
+            result = client.Write(normalized, s);
+        else if (value is ushort us)
+            result = client.Write(normalized, us);
+        else if (value is int i)
+            result = client.Write(normalized, i);
+        else if (value is uint ui)
+            result = client.Write(normalized, ui);
+        else if (value is float f)
+            result = client.Write(normalized, f);
+        else
+            throw new NotSupportedException($"不支持的类型: {typeof(T).Name}");
 
-            if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
-        }, ct);
+        if (!result.IsSucceed) throw new Exception($"写入失败 [{normalized}]: {result.Err}");
+
+        return Task.CompletedTask;
     }
 
     // --- 批量读写 (IoTClient 支持) ---
@@ -383,9 +383,11 @@ public class MitsubishiPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IP
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
-        await _pipeline.ExecuteAsync(async token =>
+        // 批量写不套重试管道，也不在管道内逐条调用 WriteAsync；每条写失败立即停止并上抛。
+        foreach (var kvp in data)
         {
-            foreach (var kvp in data) await WriteAsync(kvp.Key, kvp.Value, token);
-        }, ct);
+            ct.ThrowIfCancellationRequested();
+            await WriteAsync(kvp.Key, kvp.Value, ct);
+        }
     }
 }

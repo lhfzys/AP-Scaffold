@@ -272,17 +272,18 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcTyp
         }, ct);
     }
 
-    public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
+    public Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
         // 地址预检 + 规范化：非法地址抛 FinsAddressException（ArgumentException 子类）
         var normalized = FinsAddress.Parse(address).Normalized;
 
         var client = _client;
-        await _pipeline.ExecuteAsync(async token =>
-        {
-            await Task.Yield();
-            ExecuteWrite(client, normalized, value);
-        }, ct);
+
+        // 写操作禁止重试：通信超时不等于 PLC 未执行；重试可能重复触发启动位/配方号/清零命令。
+        ct.ThrowIfCancellationRequested();
+        ExecuteWrite(client, normalized, value);
+
+        return Task.CompletedTask;
     }
 
     private static void ExecuteWrite(OmronFinsClient client, string address, object? value)
@@ -373,19 +374,20 @@ public class OmronPlcService : IPlcService, IPlcBatchReadWrite, IDevice, IPlcTyp
         _ => throw new NotSupportedException($"不支持的类型: {type}"),
     };
 
-    public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
+    public Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
         // 地址预检（非法地址抛 FinsAddressException）
         foreach (var address in data.Keys)
             FinsAddress.Parse(address);
 
+        // 批量写不套重试管道：IoTClient 欧姆龙未实现 BatchWrite，逐条写；任一条失败立即停止。
         var client = _client;
-        await _pipeline.ExecuteAsync(async token =>
+        foreach (var (address, value) in data)
         {
-            await Task.Yield();
-            // IoTClient 欧姆龙客户端未实现 BatchWrite，退化为逐条写入
-            foreach (var (address, value) in data)
-                ExecuteWrite(client, address, value);
-        }, ct);
+            ct.ThrowIfCancellationRequested();
+            ExecuteWrite(client, address, value);
+        }
+
+        return Task.CompletedTask;
     }
 }
