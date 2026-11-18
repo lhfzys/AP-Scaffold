@@ -258,7 +258,8 @@ installer/build-installer.bat
 ### 5.11 其他坑点
 
 - **配置写回**：`ConfigurationHelper.UpdateAppSetting` 写入的是 `{BaseDirectory}/Configuration/appsettings.json`；临时文件+替换原子写入，IO/JSON/权限错误会**抛出异常**（配置文件不存在则静默返回），调用方需处理失败。**分层写回（2026-07-31 修复）**：配置按 `appsettings.json` + `appsettings.{Role}.json` 分层加载（角色文件优先），写回必须经 `ConfigurationHelper.ResolveTargetFileName` 按节选目标文件（角色文件含该节 → 角色文件；宿主经 `AppRuntime:RoleConfigFile` 暴露活动角色文件名），否则只存在于角色文件的节会被遮蔽、保存不生效。
-- **SQLite**：启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
+- **SQLite**：数据文件默认位于 `%ProgramData%\AP-Scaffold\local_data.db`（2026-11-18 起；不再写安装目录）；启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
+- **运行数据目录（2026-11-18 起，DH-1）**：程序文件留在 `Program Files`，数据库/日志/报表/现场点表/配置覆盖层统一走 `AppPaths` 数据根；默认 `%ProgramData%\AP-Scaffold`，不可写时回退 `%LocalAppData%\AP-Scaffold`；可用 `AP_SCAFFOLD_DATA_ROOT` 指定。配置采用“安装目录默认值 + 数据根覆盖层”，系统设置只写覆盖层；`tags.json` 首次复制到数据根、升级保留。安装器 `[Dirs]` 给数据目录 `users-modify`。
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
 - **gRPC 配置键**：服务端 `Grpc:ServerPort`（默认 5000）；客户端 `Grpc:ServerUrl`、`Grpc:ClientId`、`Grpc:ClientName`。
 - **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`、`Resilience:GrpcCircuitBreakerThreshold`、`Resilience:CircuitBreakerDurationSeconds`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"` / `Grpc="Grpc-CircuitBreaker"`。三条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
@@ -298,7 +299,7 @@ installer/build-installer.bat
 
 > 2026-07-29 起。面向外包现场，发布形态为 **win-x64 框架依赖**（体积小；现场初次装机装一次运行时，后续只发应用）。
 
-- **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 26MB/227 文件；安装包约 7.7MB）。详见 `installer/README.md`。
+- **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 46MB/243 文件；安装包约 13.4MB）。详见 `installer/README.md`。
 - **现场需装两个 .NET 8 运行时**：桌面运行时 + ASP.NET Core 运行时（宿主编译期 `FrameworkReference Microsoft.AspNetCore.App`，缺失启动即失败）；`setup.iss` 安装时按注册表主版本精确检测并列出缺失项（仅装 9/10 拦截）。
 - 宿主 csproj 仅固定 `PublishDir=$(BuildRoot)publish\`；**RID 与 self-contained 只走命令行**，且必须带 `-p:AppendRuntimeIdentifierToOutputPath=true`（否则 RID 构建产物混入 `bin/Release` 根，2026-07-29 实测导致开发版 exe 无法启动）。
 - **测试产物隔离**：`Directory.Build.props` 中 `.Tests` 结尾的项目输出到 `bin/Tests/{项目名}/`，`bin/Release` 根目录不再有 TestPlatform/xunit/语言目录污染。
