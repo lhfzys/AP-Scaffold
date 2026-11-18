@@ -302,7 +302,7 @@ installer/build-installer.bat
 
 > 2026-07-29 起。面向外包现场，发布形态为 **win-x64 框架依赖**（体积小；现场初次装机装一次运行时，后续只发应用）。
 
-- **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 46MB/243 文件；安装包约 13.4MB）。详见 `installer/README.md`。
+- **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 46MB/243 文件；安装包约 13.4MB）。**安装包为 x64 Setup，安装到 `Program Files` 而不是 `Program Files (x86)`**。详见 `installer/README.md`。
 - **现场需装两个 .NET 8 运行时**：桌面运行时 + ASP.NET Core 运行时（宿主编译期 `FrameworkReference Microsoft.AspNetCore.App`，缺失启动即失败）；`setup.iss` 安装时按注册表主版本精确检测并列出缺失项（仅装 9/10 拦截）。
 - 宿主 csproj 仅固定 `PublishDir=$(BuildRoot)publish\`；**RID 与 self-contained 只走命令行**，且必须带 `-p:AppendRuntimeIdentifierToOutputPath=true`（否则 RID 构建产物混入 `bin/Release` 根，2026-07-29 实测导致开发版 exe 无法启动）。
 - **测试产物隔离**：`Directory.Build.props` 中 `.Tests` 结尾的项目输出到 `bin/Tests/{项目名}/`，`bin/Release` 根目录不再有 TestPlatform/xunit/语言目录污染。

@@ -45,7 +45,7 @@
 | DH-3 | .NET 10 迁移 + 依赖漏洞清零 | P0 | 待开始 | 4d |
 | DH-4 | 轻身份 + 审计闭环（A 模式：免登录 + 审计） | P0 | 进行中（A 模式已收口；可选登录保留） | 4d |
 | DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 待开始 | 5d |
-| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 进行中（非提权安装冒烟通过） | 4d |
+| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 进行中（正式安装冒烟完成；CI/gRPC 未做） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 待开始 | 2d |
@@ -159,11 +159,11 @@
 
 ### 3.6 验收标准
 
-- [x] 发布目录启动写入 DataRoot 成功；`Program Files` 标准用户实机安装待 DH-6；
+- [x] 发布目录启动写入 DataRoot 成功；正式 `Program Files` 标准用户安装已在 DH-6 实测；
 - [x] 显式 DataRoot 可写探测/异常路径已实现（未模拟 ACL 拒绝）；
 - [x] 修改系统配置写入 `%ProgramData%\AP-Scaffold\Configuration` 的路径已有单元测试；
-- [ ] 升级后 `tags.json` 保留：代码已实现数据根副本优先，真实升级实测待 DH-6；
-- [ ] 旧版 `local_data.db` 迁移：代码已实现“目标不存在时复制”，真实旧库迁移实测待 DH-6；
+- [x] 升级/重装后 `tags.json` 保留：正式安装、卸载、重装后 SHA256 不变；
+- [ ] 旧版 `local_data.db` 迁移：代码已实现“目标不存在时复制”，真实旧库迁移实测待补；
 - [x] 现有测试通过；新增 `AppPaths` / 配置覆盖层测试通过。
 
 > **验证记录（2026-11-18，commit `43ace41`）**
@@ -171,7 +171,7 @@
 > - 测试 130 + 56 + 303 = **489 通过**（新增 `AppPathsTests` 4 例，含 DataRoot 初始化 + 配置覆盖层写入）；
 > - 发布目录实际启动：自动创建 `C:\ProgramData\AP-Scaffold`，数据库/日志/`Configuration\tags.json` 均落在数据根；进程正常进入主窗口；
 > - 安装包（Inno Setup 6.7.3）编译成功，`[Dirs]` 的 `users-modify` 与快捷方式 `WorkingDir` 语法通过；
-> - 未完成：真实 `Program Files` 安装 + 标准用户实机验证（需要 UAC），列入 DH-6 安装冒烟。
+> - 正式安装（2026-11-18，DH-6）：安装到 `C:\Program Files\自动化监控系统`，标准用户启动成功；数据库/日志/点表写入 `C:\ProgramData\AP-Scaffold`；`Program Files` 配置目录对标准用户只读，验证了“程序与数据分离”。详见 DH-6 记录。
 
 ### 3.7 风险与回滚
 
@@ -265,19 +265,23 @@
 - build + tests + publish + 标准用户安装启动 + 漏洞审计；
 - 物理移出 gRPC/Server/Client，Host 删除 `Microsoft.AspNetCore.App`。
 
-#### DH-6 安装冒烟记录（2026-11-18，部分完成）
+#### DH-6 安装冒烟记录（2026-11-18，正式安装完成）
 
 官方安装包：`installer/Output/自动化监控系统-1.0.0-Setup.exe`（约 13.45 MB，Inno 6.7.3 编译通过）。
 
-本次在没有 UAC 提权的会话里做了一个**非提权安装冒烟**：
+**正式安装（有 UAC）结果：**
 
-1. 复制 `setup.iss` 为临时脚本，改为 `PrivilegesRequired=lowest`、`DefaultDirName={localappdata}\AP-Scaffold-Smoke`，移除 `{commonappdata}` 的 `[Dirs]`（仅测试用，未改仓库正式脚本）；
-2. 编译并静默安装：退出码 0，文件、开始菜单快捷方式、卸载项均创建；
-3. 从安装目录启动 `AP.Host.Desktop.exe`，主窗口正常；用 `AP_SCAFFOLD_DATA_ROOT` 指到临时目录，成功创建 `local_data.db`、`logs`、`reports`、`Configuration\tags.json`；
-4. 静默卸载：退出码 0，安装目录与快捷方式删除，数据根按设计保留；
-5. 测试产物已清理，仓库无残留。
+1. 首次编译的安装包是 32 位 Setup，虽然应用是 win-x64，却装到了 `C:\Program Files (x86)\自动化监控系统`。已在 `setup.iss` 增加 `ArchitecturesAllowed=x64compatible` + `ArchitecturesInstallIn64BitMode=x64compatible` 并重新编译。
+2. 用旧安装包的卸载程序静默卸载（UAC）：退出码 0，安装目录删除，`C:\ProgramData\AP-Scaffold` 保留；`KEEP-MARKER.txt` 与 `tags.json` SHA256 未变。
+3. 重新安装 x64 包（UAC）：退出码 0，安装到 `C:\Program Files\自动化监控系统`，开始菜单快捷方式/卸载项创建，无重启要求。
+4. `C:\ProgramData\AP-Scaffold` ACL 为 `BUILTIN\Users:(OI)(CI)(M)`，标准用户可写。
+5. 以当前**标准用户**从 `C:\Program Files\自动化监控系统\AP.Host.Desktop.exe` 启动：主窗口正常（`自动化系统 - 自动化监控系统`），数据库/日志/点表均写入 `C:\ProgramData\AP-Scaffold`。
+6. 对 `C:\Program Files\自动化监控系统\Configuration` 做写探测：**Access denied**，证明程序目录未被运行期写入；数据确实走 ProgramData。
+7. 重装后 `KEEP-MARKER.txt` 仍存在，`tags.json` SHA256 仍为 `08D4580038165D343EDE317F51734941982448B02D2E4A8E8A74422C69E046C2`；日志显示审计日志插件加载。
 
-**未完成（需要一次 UAC）**：正式安装包写入 `Program Files` + `{commonappdata}\AP-Scaffold` 的实机验证；`[Dirs]` 的 `users-modify` 只做了编译验证，没有在标准用户下实际读写。建议下一步在测试虚拟机（干净 Windows + 目标运行时）用标准用户跑一次正式安装包。
+**补充（非提权安装）**：同一安装脚本的 `PrivilegesRequired=lowest` 变体也做过安装/启动/数据根/卸载验证，作为无 UAC 环境的回归路径。
+
+**未完成**：CI 流水线、gRPC 物理移出；新安装包的卸载未重复执行（旧包卸载已验证）；没有独立干净虚拟机，使用的是当前开发机。
 
 ### DH-7 ~ DH-13
 
@@ -292,7 +296,8 @@
 | 2026-11-18 | 计划文档 | `14f4e7e` | 文档评审 |
 | 2026-11-18 | DH-1 | `43ace41` | 构建 0 错误；489 测试通过；发布目录启动写入 `C:\ProgramData\AP-Scaffold`；安装包编译通过 |
 | 2026-11-18 | DH-2 | `07e3174` | 构建 0 错误；489 测试通过；写路径静态审查通过；真机待现场 |
-| 2026-11-18 | DH-6（部分） | 待提交 | 非提权安装/启动/数据根/卸载冒烟通过；正式 Program Files 安装待 UAC |
+| 2026-11-18 | DH-6（非提权） | 待提交 | 非提权安装/启动/数据根/卸载冒烟通过 |
+| 2026-11-18 | DH-6（正式） | 待提交 | x64 安装到 Program Files；标准用户启动；ProgramData 可写、Program Files 只读；数据保留 |
 | 2026-11-18 | DH-4 | `cfdc58c` | 502 测试通过；安全模式启动完成安全库初始化；登录 UI 自动化未做 |
 | 2026-11-18 | DH-4b（取消） | `ec38e0e`（回退） | 用户确认 A 模式：免登录 + 审计；空闲锁屏代码/配置移除，审计视图在免登录白名单可见 |
 | 2026-11-18 | A 模式收口 | `6e58c0a` | 免登录启动（无登录框）；日志显示“审计日志插件已加载”；Sidebar/快捷入口出现“审计日志”；502 测试通过 |
@@ -301,5 +306,5 @@
 
 ---
 
-**文档版本**：v1.5（2026-11-18，A 模式收口：免登录 + 审计）
-**下一步**：优先补正式安装冒烟（DH-6）；A 模式可选做审计保留；DH-3 .NET 10 继续暂缓，等客户 OS 清单。
+**文档版本**：v1.6（2026-11-18，正式安装冒烟完成）
+**下一步**：DH-6 剩余 CI/gRPC 移出；或 DH-5 数据库迁移/备份；DH-3 .NET 10 继续暂缓，等客户 OS 清单。

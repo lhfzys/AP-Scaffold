@@ -87,6 +87,7 @@
 
 ## 安装包特性
 
+- **x64 安装**：Setup 使用 `ArchitecturesInstallIn64BitMode=x64compatible`，装到 `C:\Program Files\自动化监控系统`，不要装进 `Program Files (x86)`；
 - 自动复制宿主程序、插件目录、配置文件到安装目录
 - 创建开始菜单和桌面快捷方式（可选）
 - 安装前检测 .NET 8 桌面运行时 + ASP.NET Core 运行时（按主版本精确匹配，仅装 .NET 9/10 会被拦截；缺失项会在提示中列出）

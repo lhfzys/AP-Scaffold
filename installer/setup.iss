@@ -24,6 +24,9 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
+; 应用发布为 win-x64；安装到 64 位 Program Files，而不是 Program Files (x86)
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=Output
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Setup
 Compression=lzma2
