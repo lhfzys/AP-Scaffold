@@ -9,6 +9,18 @@
 
 ## [Unreleased]
 
+### 交付硬化（2026-11-18，DH-1~DH-6，已合并 main）
+
+新增/变更：
+
+- **运行数据目录（DH-1）**：默认 `%ProgramData%\AP-Scaffold`，Program Files 只读；配置/点表/日志/数据库/报表统一到数据根，支持 `AP_SCAFFOLD_DATA_ROOT` 覆盖；安装器授予 Users Modify。
+- **PLC 写路径（DH-2）**：去除写操作重试与批量嵌套写重试，避免现场重复写入。
+- **认证边界（DH-4/A 模式）**：默认免登录 + 审计（匿名/system 操作者），移除空闲锁屏；可选登录模式保留密码策略、失败锁定、角色管理。
+- **数据库迁移/备份（DH-5）**：`DatabaseSchemaMigrator`（`schema_migrations` + `PRAGMA user_version`）+ security/recipe/report contributors；启动前 `VACUUM INTO` 多代备份 + `quick_check`；恢复脚本 `scripts/restore-db.ps1`。
+- **交付链收敛（DH-6）**：gRPC 两个项目移出主解决方案/宿主（32 项目），发布/安装包无 Grpc/Protobuf/AspNetCore；只要求 .NET 8 桌面运行时；`setup.iss` 升级时清理旧 gRPC/插件残留。
+- **CI**：`.github/workflows/ci.yml`（build/test/publish/Inno/非提权安装冒烟）；`scripts/install-smoke.ps1`；GitHub Actions 已跑绿。
+- **测试**：新增迁移/备份/密码策略/锁定/数据根测试；全量 **502** 通过（Core 130 / Shared 63 / Infra 309）。
+
 ### 点表热重载（2026-08-07）
 
 新增：

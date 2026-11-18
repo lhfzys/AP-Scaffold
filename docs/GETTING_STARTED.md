@@ -23,7 +23,10 @@
 
 - **Visual Studio 2022**（任意版本，推荐 Professional 或 Enterprise）
 - **.NET 10 SDK**（构建 SDK，目标框架仍为 .NET 8；`global.json` 指定 10.0.102，[下载地址](https://dotnet.microsoft.com/download)）
+- **.NET 8 桌面运行时**（仅运行已发布程序时需要；开发机装 SDK 即可）
 - **Windows 10/11**（WPF 应用仅支持 Windows）
+
+> 安装包只需 .NET 8 桌面运行时；gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时。
 
 ### 验证安装
 
@@ -60,10 +63,10 @@ cd AP-Scaffold
 
 支持的运行模式：
 - `Standalone` - 单机模式（PLC + UI 在同一台机器，**当前唯一受支持**）
-- `Server` ❄ - 服务端模式（仅连接 PLC，提供 gRPC 服务；冻结，未支持）
-- `Client` ❄ - 客户端模式（仅 UI，通过 gRPC 连接服务端；冻结，未支持）
+- `Server` ❄ - 已物理移出主解决方案/宿主，当前交付物不支持
+- `Client` ❄ - 已物理移出主解决方案/宿主，当前交付物不支持
 
-也可以用命令行参数覆盖：`AP.Host.Desktop.exe --role=Server`（❄ 冻结角色请勿使用）
+也可以用命令行参数 `--role=Standalone`；传入 `Server`/`Client` 会在启动时被显式拒绝。
 
 ### 4. 配置数据库
 
@@ -80,7 +83,7 @@ cd AP-Scaffold
 }
 ```
 
-> 数据库表不会自动创建（`UseAutoSyncStructure` 已关闭），由各模块初始化器在启动时显式建表并写入种子数据。
+> 数据库表由 `DatabaseSchemaMigrator` 统一按版本创建（`schema_migrations` + `PRAGMA user_version`），各模块初始化器只写种子数据；新增表/改表请新增 contributor，不要在各模块里直接 `SyncStructure`。SQLite 启动前会 `VACUUM INTO` 备份到 `backups/` 并 `quick_check`，失败会中止启动。详见 `docs/DATABASE_BACKUP_RESTORE.md`。
 
 ### 5. 运行项目
 
@@ -149,7 +152,7 @@ namespace AP.Plugin.YourFeature;
     "AP.Plugin.YourFeature",           // 插件 ID（必须与目录名和 DLL 名一致）
     Name = "我的功能插件",              // 显示名称
     Version = "1.0.0",
-    SupportedRoles = AppRole.Standalone | AppRole.Server,  // 支持的角色
+    SupportedRoles = AppRole.Standalone,  // 当前交付物只支持 Standalone
     Priority = 100                      // 加载优先级（数值越小越先加载）
 )]
 public class YourFeaturePlugin : PluginBase, INavigationContributor
@@ -363,19 +366,10 @@ Configuration/
     "Audit": { "Enabled": true }
   },
 
-  // gRPC 配置 ❄ 冻结（服务端用 ServerPort；客户端用 ServerUrl/ClientName）
-  "Grpc": {
-    "ServerPort": 5000,
-    "ServerUrl": "http://192.168.1.100:5000",
-    "ClientName": "Station-01"
-  },
-
-  // 容错策略配置（扁平键）
+  // 容错策略配置（扁平键；gRPC 管道已随 gRPC 移出交付链删除）
   "Resilience": {
     "DatabaseRetryCount": 3,
-    "PlcRetryCount": 5,
-    "GrpcCircuitBreakerThreshold": 5,
-    "CircuitBreakerDurationSeconds": 30
+    "PlcRetryCount": 5
   },
 
   // 报表配置
@@ -747,8 +741,10 @@ public class PlcConnectionHandler : INotificationHandler<DeviceConnectedEvent>
 3. 磁盘空间不足
 
 **解决方案**:
-- 备份失败不会阻断启动，仅记录警告日志
-- 确保应用有写入 `local_data.db.bak` 的权限
+- 备份/迁移失败会**中止启动**（这是刻意设计，避免在未备份/半迁移的库上继续写入）
+- 查看日志中的 `DatabaseBackupService` / `DatabaseSchemaMigrator` 错误
+- 确保应用对数据根（默认 `C:\ProgramData\AP-Scaffold`）有写权限，且磁盘有空间
+- 备份文件在 `backups/local_data-*.db`；恢复用 `scripts/restore-db.ps1`（见 `docs/DATABASE_BACKUP_RESTORE.md`）
 
 ### Q: 日志文件占用磁盘空间过大
 
@@ -770,7 +766,7 @@ AP-Scaffold/
 ├── platform/
 │   ├── hosts/                         # 启动宿主
 │   │   └── AP.Host.Desktop/           # WPF 桌面端启动项目
-│   │       ├── Bootstrapping/         # 启动器（插件加载、gRPC 启动）
+│   │       ├── Bootstrapping/         # 启动器（插件加载、数据库迁移/备份）
 │   │       ├── Configuration/         # 配置文件
 │   │       ├── ViewModels/            # 主窗口 ViewModel
 │   │       └── Views/                 # 主窗口/Splash XAML
@@ -785,7 +781,7 @@ AP-Scaffold/
 │   ├── contracts/                     # 接口契约层
 │   │   ├── AP.Contracts.Core/         # OperationResult、错误模型、应用事件
 │   │   ├── AP.Contracts.Hardware/     # 硬件服务接口、设备事件
-│   │   ├── AP.Contracts.Communication/ # gRPC proto 契约
+│   │   ├── AP.Contracts.Communication/ # ❄ gRPC proto（冻结，已移出主解决方案）
 │   │   ├── AP.Contracts.System/       # 系统服务接口
 │   │   ├── AP.Contracts.Security/     # 安全/权限/审计日志契约
 │   │   ├── AP.Contracts.Recipe/       # 配方管理契约
@@ -793,7 +789,7 @@ AP-Scaffold/
 │   │
 │   ├── infra/                         # 基础设施层
 │   │   ├── AP.Infra.Database/         # 数据访问（FreeSql）
-│   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端
+│   │   ├── AP.Infra.Grpc/             # ❄ gRPC 实现（冻结，已移出主解决方案）
 │   │   ├── AP.Infra.Hardware/         # PLC 驱动注册表与统一激活服务
 │   │   ├── AP.Infra.Logging/          # Serilog 日志
 │   │   ├── AP.Infra.Report/           # 报表框架

@@ -4,6 +4,8 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
+> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），GitHub Actions 首次跑绿；主解决方案 **32 个项目**，测试 **502 通过**（Core 130 / Shared 63 / Infra 309）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 8 桌面运行时。
+
 ---
 
 ## 目录
@@ -154,7 +156,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 近期（当前 Sprint）
 
-> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 33 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**此后不接新框架功能，等真实外包项目驱动需求**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)**。
+> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 33 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**2026-11-18 另完成 DH-1~DH-6 交付硬化（数据目录/写路径/A 模式/迁移备份/gRPC 移出/CI），不改变“不接新框架功能”的主基调**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)** 与 **[docs/DELIVERY_HARDENING_PLAN.md](DELIVERY_HARDENING_PLAN.md)**。
 
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
@@ -197,15 +199,15 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 长期
 
-- [ ] （保留项）登录失败锁定 + 密码复杂度策略 + 重置密码随机化——联网部署/等保要求出现时启动
-- [ ] （保留项）服务层权限校验、`AP.Infra.Security` 单元测试 + CI 流水线——开放插件生态/CI 环境出现时启动
-- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持）
+- [x] 登录失败锁定 + 密码复杂度策略 + 重置密码随机化（2026-11-18，DH-4）
+- [x] `AP.Infra.Security` 单元测试 + CI 流水线（2026-11-18，DH-4/DH-6；CI 已跑绿）
+- [ ] 迁移 .NET 10（net8 于 2026-11 停止支持；**暂缓，等客户 OS 清单**）
 - [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
 - [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
 - [ ] 插件市场/启用禁用机制（隔离上下文已为热卸载预留，但热卸载本身不做）
 - [ ] `RequiresCapabilitiesAttribute` 能力声明的运行时强制执行
 - [ ] 多语言/国际化支持
-- [ ] 完善的安装包与自动更新
+- [x] 完善安装包（x64 / Program Files / 数据根 ACL / 升级残留清理；自动更新未做）
 - [ ] ❄（冻结，需求出现时再议）Server/Client 分布式模式、PostgreSQL/SQL Server 支持
 
 ---
@@ -214,7 +216,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 1. **IHostedService 不会自动启动**
    - `AP.Host.Desktop` 使用 `PrismBootstrapper` 手动构建容器，不会调用 `IHost.StartAsync()`。
-   - 当前安全/配方/报表的数据库初始化器已在 `Bootstrapper` 中手动调用；`GrpcClientWorker` 手动 Start。
+   - 当前安全/配方/报表的数据库初始化器已在 `Bootstrapper` 中手动调用；gRPC 客户端 Worker 已随 gRPC 移出交付链删除。
    - `ReportScheduler` / `ReportCleanupService` 已修复：注册为"单例 + `AddHostedService` 转发"并由 `Bootstrapper` 显式 `StartAsync`（2026-07-21）。
    - 若未来新增 `IHostedService`，需沿用同一模式在 `Bootstrapper.OnInitialized` 中显式解析并调用。
 
@@ -222,9 +224,11 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
    - 插件通过 `PluginLoadContext` 隔离加载，但共享契约程序集必须能被主程序默认上下文加载，否则 MediatR 扫描类型时抛出 `ReflectionTypeLoadException`。
    - 解决方案：在 `AP.Host.Desktop.csproj` 中直接引用相关 Contracts / Infra 项目。
 
-3. **数据库自动建表已关闭**
-   - `AddPlatformDatabase` 设置了 `.UseAutoSyncStructure(false)`，所有表必须通过初始化器显式 `SyncStructure` 创建。
-   - 表清单：`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`、`recipes`、`report_archives`。
+3. **数据库自动建表已关闭，改由版本化迁移统一管理**
+   - `AddPlatformDatabase` 设置了 `.UseAutoSyncStructure(false)`。
+   - `DatabaseSchemaMigrator` 启动时按 `schema_migrations`/`PRAGMA user_version` 执行 security/recipe/report contributors；各模块初始化器只写种子数据。
+   - 表清单：`schema_migrations`、`sys_users`、`sys_roles`、`sys_permissions`、`sys_user_roles`、`sys_role_permissions`、`sys_audit_logs`、`recipes`、`report_archives`。
+   - SQLite 启动前 `VACUUM INTO` 备份并 `quick_check`；失败中止启动；恢复见 `docs/DATABASE_BACKUP_RESTORE.md`。
 
 4. **PLC 品牌切换机制**
    - 统一通过 `Plc` 配置节（`Plc:DriverType` 等）切换三菱/西门子/欧姆龙，各品牌插件只注册 `IPlcDriverFactory`。
@@ -233,7 +237,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 5. **安全模块可关闭（当前默认关闭）**
    - 随附配置默认 `Security:Enabled=false`（2026-07-22 起）：跳过登录窗口、注入匿名身份（全部权限），Sidebar 按 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单过滤菜单。
-   - 审计开关 `Security:Audit:Enabled` 独立判断，缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留（审计表由 `AuditService` 构造函数幂等自建）。
+   - 审计开关 `Security:Audit:Enabled` 独立判断，缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留（审计表由 `SecuritySchemaContributor` 统一创建）。
    - 注意：RecipeManagement / ReportCenter 视图注册只检查各自权限，未检查 Security 开关（匿名身份下权限恒 true，行为一致）。
 
 6. **插件输出目录**

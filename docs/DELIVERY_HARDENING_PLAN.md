@@ -45,7 +45,7 @@
 | DH-3 | .NET 10 迁移 + 依赖漏洞清零 | P0 | 待开始 | 4d |
 | DH-4 | 轻身份 + 审计闭环（A 模式：免登录 + 审计） | P0 | 进行中（A 模式已收口；可选登录保留） | 4d |
 | DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 已完成（核心迁移/备份/恢复脚本；事务/单写者待评估） | 5d |
-| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 已完成（本地验证；待远程跑一次 CI） | 4d |
+| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 已完成（CI 绿，已合并 main） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 待开始 | 2d |
@@ -289,8 +289,9 @@
 4. **安装冒烟脚本**：新增 `scripts/install-smoke.ps1`，本机实际运行通过（`INSTALL_SMOKE_OK`）：安装到 `%LocalAppData%\AP-Scaffold-CI-Smoke`、启动、验证 DB/日志/点表、卸载、数据根保留。
 5. **正式安装**：DH-6 之前已用 UAC 验证 x64 Program Files 安装、标准用户启动、ProgramData 写入；本次 gRPC 移出后重新编译发布/安装包。
 6. **升级残留清理（实测发现）**：gRPC-free 包首次覆盖安装后，Program Files 仍残留 10 个旧 gRPC/Protobuf 文件（Inno 只覆盖新文件，不删除已移除文件）。已在 `setup.iss` 增加 `[InstallDelete]`：清理 `AP.Infra.Grpc.*`、`AP.Contracts.Communication.*`、`Grpc.*`、`Google.Protobuf.*`，并重建 `plugins\AP.Plugin.*` 目录。重新覆盖安装后残留 = 0、插件 14 个，应用正常启动。
+7. **CI 实测与合并**：CI 首次失败暴露 `Backup/` 被 `.gitignore` 忽略、源码未入库；改为 `DatabaseBackup/` 后修复。第二次失败为 Chocolatey 无 Inno 6.7.3 包，固定 6.7.1 后通过。最终 CI：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>；`fix/delivery-hardening` 快进合并 `main`（`0523fcf`）。
 
-**未完成**：GitHub Actions 尚未实际远程运行（当前仓库未 push）；NuGet 漏洞门禁待 STJ 补丁后再设为阻断。
+**未完成**：NuGet 漏洞门禁待 STJ 补丁后再设为阻断；CI 目前只跑 Windows 构建/测试/安装冒烟，无真机 PLC 测试。
 
 ### DH-7 ~ DH-13
 
@@ -307,7 +308,7 @@
 | 2026-11-18 | DH-2 | `07e3174` | 构建 0 错误；489 测试通过；写路径静态审查通过；真机待现场 |
 | 2026-11-18 | DH-6（非提权） | `43ace41` 后验证 | 非提权安装/启动/数据根/卸载冒烟通过 |
 | 2026-11-18 | DH-6（正式） | `acb4b9d` | x64 安装到 Program Files；标准用户启动；ProgramData 可写、Program Files 只读；数据保留 |
-| 2026-11-18 | DH-6（CI/gRPC） | `3b860a2` | 主解决方案 32 项目；publish 无 Grpc/Aspnet；install-smoke 通过；502 测试通过；升级残留 0 |
+| 2026-11-18 | DH-6（CI/gRPC） | `0523fcf` | 主解决方案 32 项目；publish 无 Grpc/Aspnet；install-smoke 通过；502 测试通过；升级残留 0；CI 绿 |
 | 2026-11-18 | DH-4 | `cfdc58c` | 502 测试通过；安全模式启动完成安全库初始化；登录 UI 自动化未做 |
 | 2026-11-18 | DH-4b（取消） | `ec38e0e`（回退） | 用户确认 A 模式：免登录 + 审计；空闲锁屏代码/配置移除，审计视图在免登录白名单可见 |
 | 2026-11-18 | A 模式收口 | `6e58c0a` | 免登录启动（无登录框）；日志显示“审计日志插件已加载”；Sidebar/快捷入口出现“审计日志”；502 测试通过 |
@@ -317,5 +318,5 @@
 
 ---
 
-**文档版本**：v1.9（2026-11-18，DH-6 CI/gRPC 完成本地验证 + 升级残留清理）
-**下一步**：把分支推到远程跑一次 GitHub Actions；按客户 OS 清单决定 DH-3；其余 P1 按项目需求排期。
+**文档版本**：v2.0（2026-11-18，DH-6 CI 绿并合并 main）
+**下一步**：按真实项目需求选 P1；.NET 10 先拿到客户 OS 清单再决策；STJ 漏洞单独补丁。

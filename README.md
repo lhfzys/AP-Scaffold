@@ -38,7 +38,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 - 🛡️ 工业级容错与自愈机制（断线重连、断路器、看门狗）
 - 🔐 完整的安全体系（登录、用户/角色/权限、审计日志，可一键关闭）
 - 🖥️ 全浅色 Material Design 3 统一视觉主题
-- 📡 进程内消息总线（gRPC 分布式通信 ❄ 冻结，未支持）
+- 📡 进程内消息总线（gRPC 分布式通信已移出交付链，源文件冻结参考）
 
 ### 适用场景
 
@@ -154,7 +154,7 @@ AP-Scaffold/
 │  └────────── ─────────── ──────────────┘      │
 ├──────────────┬───────────────────────────────┤
 │  Contracts   │  Infra (基础设施)              │
-│  (接口契约)   │  Database│gRPC│Report│Security │
+│  (接口契约)   │  Database│Report│Security      │
 ├──────────────┴───────────────────────────────┤
 │  AP.Core (核心框架)                            │
 │  PluginFramework │ EventBus │ StateMachine    │
@@ -182,7 +182,7 @@ AP-Scaffold/
 ```csharp
 // 定义一个插件只需这样
 [PluginMetadata("AP.Plugin.MyPlugin", Name = "我的插件", Version = "1.0.0",
-    SupportedRoles = AppRole.Server | AppRole.Standalone, Priority = 100)]
+    SupportedRoles = AppRole.Standalone, Priority = 100)]
 public class MyPlugin : PluginBase
 {
     public MyPlugin(ILogger<MyPlugin> logger) : base(logger) { }
@@ -268,13 +268,12 @@ public class MyPlugin : PluginBase, INavigationContributor
 
 ### 6. Polly 工业级容错
 
-`ResiliencePipelineFactory` 统一管理策略，内置三条管道：
+`ResiliencePipelineFactory` 统一管理策略，内置两条管道：
 
 | 管道 Key | 用途 |
 |----------|------|
 | `Database-Retry` | 数据库操作指数退避重试 |
 | `PLC-Retry` | PLC 连接/读写固定间隔重试 |
-| `Grpc-CircuitBreaker` | gRPC 调用熔断保护 |
 
 ```csharp
 var pipeline = resilienceFactory.GetPipeline(ResiliencePipelineFactory.Keys.Plc);
@@ -362,7 +361,7 @@ cd AP-Scaffold
 
 ### 3. 配置运行模式
 
-项目支持三种运行模式（**当前仅 Standalone 受支持**，Server/Client ❄ 冻结），配置文件位于 `platform/hosts/AP.Host.Desktop/Configuration/`：
+项目当前只支持 **Standalone 单机模式**；Server/Client 的 gRPC 代码已物理移出主解决方案/宿主，配置文件保留但不会被读取：
 
 ```
 Configuration/
@@ -372,7 +371,7 @@ Configuration/
 └── appsettings.Client.json      # 客户端模式 ❄ 冻结
 ```
 
-通过 `appsettings.json` 的 `AppRole` 键或命令行参数 `--role=Server` 选择模式（❄ 冻结角色请勿使用）。
+通过 `appsettings.json` 的 `AppRole` 键选择模式；当前只接受 `Standalone`。`--role=Server` / `--role=Client` 会在启动时被显式拒绝，不会静默降级。
 
 ### 4. 修改硬件配置
 
@@ -403,6 +402,21 @@ Configuration/
 
 将 `AP.Host.Desktop` 设为启动项目，按 F5 运行。默认 `Security:Enabled=false`，免登录直接进入主界面。如需登录与权限控制，将 `Security:Enabled` 改为 `true`，使用 `admin / admin123` 登录（首次登录强制改密）。
 
+### 6. 运行数据与备份
+
+默认数据根为 `%ProgramData%\AP-Scaffold`（可用 `AP_SCAFFOLD_DATA_ROOT` 覆盖；不可写时回退 `%LocalAppData%`）：
+
+```text
+C:\ProgramData\AP-Scaffold\
+├── local_data.db
+├── Configuration\        # 现场配置覆盖层 + tags.json
+├── logs\
+├── reports\
+└── backups\              # 启动前 VACUUM INTO 备份，默认保留 10 代
+```
+
+安装目录（Program Files）只读；数据库/日志/点表/报表都写数据根。备份/迁移失败会中止启动，恢复见 [DATABASE_BACKUP_RESTORE.md](docs/DATABASE_BACKUP_RESTORE.md)。
+
 ---
 
 ## 配置说明
@@ -417,7 +431,7 @@ Configuration/
 | `Server` ❄ | 服务端（gRPC） | 已物理移出主解决方案/宿主，当前交付物不支持 |
 | `Client` ❄ | 客户端（gRPC） | 已物理移出主解决方案/宿主，当前交付物不支持 |
 
-一个插件可以同时支持多种模式：`SupportedRoles = AppRole.Server | AppRole.Standalone`
+一个插件可以声明多个角色，但当前交付物只加载 `Standalone` 组合：`SupportedRoles = AppRole.Standalone`（`Server`/`Client` 位已无宿主支持）。
 
 ### 应用与导航
 
@@ -455,7 +469,7 @@ Configuration/
 }
 ```
 
-> 注意：`UseAutoSyncStructure` 已关闭，数据库表由各模块初始化器显式创建。SQLite 启动前会自动备份数据库文件。
+> 注意：`UseAutoSyncStructure` 已关闭。数据库表由 `DatabaseSchemaMigrator` 统一按版本创建（`schema_migrations` + `PRAGMA user_version`），各模块初始化器只写种子数据。SQLite 启动前会用 `VACUUM INTO` 生成一致性备份到 `backups/`，并通过 `PRAGMA quick_check` 校验；备份/迁移失败会中止启动。恢复见 `docs/DATABASE_BACKUP_RESTORE.md`。
 
 ### 安全
 
@@ -555,7 +569,7 @@ namespace AP.Plugin.MyFeature;
     "AP.Plugin.MyFeature",           // 插件 ID（必须与目录名及 DLL 名一致）
     Name = "我的功能插件",            // 显示名称
     Version = "1.0.0",
-    SupportedRoles = AppRole.Server | AppRole.Standalone,
+    SupportedRoles = AppRole.Standalone,
     Priority = 100                   // 越小越先加载
 )]
 public class MyFeaturePlugin : PluginBase, INavigationContributor
@@ -743,13 +757,13 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **18 个测试文件 / 222 个测试**（全部通过），覆盖核心框架、共享库与基础设施配置。
+项目当前包含 **3 个测试项目 / 502 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份与安全身份。
 
 ### 测试项目结构
 
 ```
 platform/tests/
-├── AP.Core.Tests/                       # 核心框架测试（8 个文件 / 123 个测试）
+├── AP.Core.Tests/                       # 核心框架测试（130 个测试）
 │   ├── StateMachine/
 │   │   ├── StateTransitionValidatorTests.cs   # 状态转换验证
 │   │   └── PluginStateMachineTests.cs         # 插件状态机
@@ -764,7 +778,7 @@ platform/tests/
 │       ├── RequiresCapabilitiesAttributeTests.cs  # 能力依赖特性
 │       └── PluginInterfaceTests.cs            # IPlugin 接口契约
 │
-├── AP.Shared.Tests/                     # 共享库测试（4 个文件 / 46 个测试）
+├── AP.Shared.Tests/                     # 共享库测试（63 个测试）
 │   ├── PluginSDK/
 │   │   ├── PluginBaseTests.cs                 # 插件基类
 │   │   └── NavigationMenuItemBuilderTests.cs  # 导航菜单构建器
@@ -772,7 +786,7 @@ platform/tests/
 │       ├── SerializationHelperTests.cs        # JSON 序列化/反序列化
 │       └── ConfigurationHelperTests.cs        # appsettings.json 配置更新
 │
-└── AP.Infra.Tests/                      # 基础设施层测试（5 个文件 / 44 个测试）
+└── AP.Infra.Tests/                      # 基础设施层测试（309 个测试）
     ├── Hardware/
     │   ├── ActivePlcServiceTests.cs           # PLC 统一激活服务
     │   └── PlcDriverRegistryTests.cs          # PLC 驱动注册表
@@ -796,13 +810,10 @@ platform/tests/
 ### 运行测试
 
 ```bash
-# 运行所有测试
-dotnet test
-
-# 运行特定项目测试
-dotnet test platform/tests/AP.Core.Tests/AP.Core.Tests.csproj
-dotnet test platform/tests/AP.Shared.Tests/AP.Shared.Tests.csproj
-dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
+# 测试不在 slnx 主解决方案内，按三个项目运行
+dotnet test platform/tests/AP.Core.Tests/AP.Core.Tests.csproj -c Release
+dotnet test platform/tests/AP.Shared.Tests/AP.Shared.Tests.csproj -c Release
+dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 ```
 
 ---

@@ -28,6 +28,19 @@
 - **验证状态**: 西门子仿真环境真机验证通过（连接/掉线/重连/混合类型批量/Dashboard 联动/优雅关闭）；三菱/欧姆龙待真机
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
+### 2.1.1 交付硬化（2026-11-18，已合并 main）
+
+- **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；分支与远端同步。
+- **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
+- **测试**：**502 通过**（Core 130 / Shared 63 / Infra 309）。
+- **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
+- **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
+- **DH-3 .NET 10**：**暂缓**（客户机 Windows 版本可能较低；net8 生命周期另行评估），不要主动迁移。
+- **DH-4/A 模式**：默认 `Security:Enabled=false` + `Security:Audit:Enabled=true`，匿名/系统审计、免登录、无空闲锁屏；可选登录模式保留密码策略/锁定/角色。
+- **DH-5 数据库**：`DatabaseSchemaMigrator`（`schema_migrations` + `user_version`）+ `Security/Recipe/Report` contributors；`DatabaseBackupService` 启动前 `VACUUM INTO` + `quick_check` + 保留 10 代；恢复脚本 `scripts/restore-db.ps1`。
+- **DH-6 交付链**：gRPC 两项目移出主解决方案/宿主（32 项目），发布 0 个 Grpc/Protobuf/AspNetCore 文件；安装包只要求 .NET 8 桌面运行时；`setup.iss` 的 `[InstallDelete]` 清理旧 gRPC/插件残留。
+- **下一步**：按真实项目需求选 P1；.NET 10 需先拿到客户 OS 清单再决策。
+
 ### 2.2 已完成功能
 
 - 插件化核心框架（加载、隔离上下文、生命周期、14 态状态机、MediatR 事件总线）
@@ -49,7 +62,7 @@
 
 ### 2.3 活跃问题 / 待办
 
-> **范围决策（2026-07-21）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**。Server/Client（gRPC 技术栈）与 PostgreSQL/SQL Server 支持**冻结**——代码保留但不维护、不验证、不投入改进；`AppRole.Server`/`AppRole.Client` 保留但视为"未支持"。除非用户明确要求解冻，不要在这些方向做改动。详见 `docs/IMPROVEMENT_PLAN.md` 1.3 节与第八章末「冻结事项清单」。
+> **范围决策（2026-07-21，2026-11-18 执行）**：当前仅聚焦 **Standalone 单机模式 + SQLite 数据库**。Server/Client（gRPC 技术栈）与 PostgreSQL/SQL Server 支持**冻结**——gRPC 两个项目已物理移出主解决方案/宿主，源文件仅冻结参考；`AppRole.Server`/`AppRole.Client` 会在启动时被显式拒绝。除非用户明确要求解冻，不要在这些方向做改动。详见 `docs/DELIVERY_HARDENING_PLAN.md`。
 >
 > **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
 
@@ -239,7 +252,7 @@ installer/build-installer.bat
 
 > **当前默认配置即为 `Security:Enabled=false`**（2026-07-22 起，面向免登录单机场景）；需要登录与权限时改为 `true`。
 
-- DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留），关闭时用 `NullAuditService`；审计表由 `AuditService` 构造函数幂等自建（`SyncStructure<AuditLog>`），不再依赖仅 Security 启用时注册的初始化器。
+- DI 层：不注册用户/角色/权限 Repository 与初始化器；`IIdentityService` 替换为 `AnonymousIdentityService`（anonymous / Roles=["Administrator"] / Permissions=["*"]，HasPermission 恒 true）；审计按 `Security:Audit:Enabled` 独立判断（缺省回退到 `Security:Enabled`；当前配置显式 `true`，免登录下审计保留），关闭时用 `NullAuditService`；审计表由 `SecuritySchemaContributor` 在数据库迁移阶段统一创建，不再由 `AuditService` 构造函数建表。
 - 宿主：跳过登录窗口与安全库初始化。
 - 菜单：Sidebar 只显示 `AppConfiguration:NavigationWhenSecurityDisabled` 白名单内的 Target；UserManagement/RoleManagement 插件在 `InitializeAsync` 中检测禁用后直接 return 不注册视图；AuditLog 插件在 `Security:Audit:Enabled=true` 时仍注册只读视图（免登录审计），审计关闭才跳过。
 - 轻身份模式默认隐藏角色管理（`Security:RoleManagement:Enabled=false`）；需要多角色时显式打开。默认 A 模式不登录、不锁屏；可选登录模式登出采用进程重启，登录/登出审计仍保留。
