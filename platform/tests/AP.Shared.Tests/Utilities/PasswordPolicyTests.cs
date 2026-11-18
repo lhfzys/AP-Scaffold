@@ -28,4 +28,15 @@ public class PasswordPolicyTests
         password.Any(char.IsDigit).Should().BeTrue();
         password.Any(c => "IO01".Contains(c)).Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData(9, 10, false)]
+    [InlineData(10, 10, true)]
+    [InlineData(30, 10, true)]
+    [InlineData(60, 0, false)]
+    public void IdleLockPolicy_TriggersAtThreshold_UnlessDisabled(int idleMinutes, int timeoutMinutes, bool expected)
+    {
+        IdleLockPolicy.ShouldLock(TimeSpan.FromMinutes(idleMinutes), timeoutMinutes)
+            .Should().Be(expected);
+    }
 }
