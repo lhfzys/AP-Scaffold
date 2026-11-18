@@ -44,17 +44,6 @@ public class ResilienceRegistrationTests
     }
 
     [Fact]
-    public void AddPlatformResilience_RegistersGrpcPipeline()
-    {
-        using var provider = BuildProvider();
-        var registry = provider.GetRequiredService<ResiliencePipelineProvider<string>>();
-
-        var pipeline = registry.GetPipeline(ResiliencePipelineFactory.Keys.Grpc);
-
-        pipeline.Should().NotBeNull();
-    }
-
-    [Fact]
     public void AddPlatformResilience_DoesNotRegisterMisleadingEmptyPipeline()
     {
         using var provider = BuildProvider();
@@ -70,6 +59,5 @@ public class ResilienceRegistrationTests
 
         factory.GetPipeline(ResiliencePipelineFactory.Keys.Database).Should().NotBeNull();
         factory.GetPipeline(ResiliencePipelineFactory.Keys.Plc).Should().NotBeNull();
-        factory.GetPipeline(ResiliencePipelineFactory.Keys.Grpc).Should().NotBeNull();
     }
 }

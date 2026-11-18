@@ -8,7 +8,7 @@
 - **安全可靠** — 本地用户/角色/权限体系、审计日志、PBKDF2 密码哈希、Polly 容错、PLC 看门狗自愈、崩溃日志
 - **统一视觉** — 全浅色 Material Design 3 主题、统一控件/文字/间距资源、权限行为附加属性
 
-> **当前范围（2026-07-21）**：项目聚焦 **Standalone 单机模式 + SQLite**。Server/Client（gRPC 分布式通信）与 PostgreSQL/SQL Server 支持为**冻结能力**——代码保留、文档保留，但标注 ❄ 的内容未维护、未验证，请勿用于新部署。详见 `docs/IMPROVEMENT_PLAN.md`。
+> **当前范围（2026-11-18）**：项目聚焦 **Standalone 单机模式 + SQLite**。Server/Client（gRPC 分布式通信）与 PostgreSQL/SQL Server 支持为**冻结能力**——gRPC 两个项目已物理移出主解决方案与交付链，源文件仅作参考；标注 ❄ 的内容未维护、未验证，请勿用于新部署。详见 `docs/IMPROVEMENT_PLAN.md`。
 
 ---
 
@@ -63,7 +63,7 @@ AP-Scaffold 是一个**框架级脚手架项目**，提供工业自动化软件�
 | 容错框架 | Polly | 8.6 | 重试、断路器、超时策略 |
 | 日志 | Serilog | 4.3 | 结构化日志（文件 + 控制台） |
 | 数据库 ORM | FreeSql | 3.5 | SQLite（PostgreSQL ❄ 冻结） |
-| gRPC | Grpc.AspNetCore | 2.76 | 服务端 / 客户端通信（❄ 冻结，未支持） |
+| gRPC | Grpc.AspNetCore | 2.76 | ❄ 已移出主解决方案/交付链（冻结参考，不构建） |
 | PLC 通信 | IoTClient | 1.0 | 三菱 MC 协议 / 西门子 S7 协议 / 欧姆龙 FINS(TCP) 协议 |
 | 串口通信 | System.IO.Ports | 4.6 | 串口扫码枪等设备 |
 | Excel | MiniExcel | 1.42 | 轻量级 Excel 导入导出 |
@@ -77,7 +77,7 @@ AP-Scaffold/
 ├── platform/
 │   ├── hosts/                         # 启动宿主
 │   │   └── AP.Host.Desktop/           # WPF 桌面端启动项目
-│   │       ├── Bootstrapping/         # 启动器 (角色识别、插件加载、gRPC启动)
+│   │       ├── Bootstrapping/         # 启动器 (角色识别、插件加载、数据库迁移/备份)
 │   │       ├── Configuration/         # 多角色配置文件
 │   │       ├── ViewModels/            # 主窗口 ViewModel
 │   │       └── Views/                 # 主窗口/Splash XAML
@@ -94,7 +94,7 @@ AP-Scaffold/
 │   ├── contracts/                     # 接口契约层 (核心与业务之间的桥梁)
 │   │   ├── AP.Contracts.Core/         # OperationResult、ErrorCode、应用事件
 │   │   ├── AP.Contracts.Hardware/     # IPlcService、IPlcDriverFactory、PlcOptions、设备事件
-│   │   ├── AP.Contracts.Communication/ # gRPC proto 契约
+│   │   ├── AP.Contracts.Communication/ # ❄ gRPC proto（冻结，已移出主解决方案）
 │   │   ├── AP.Contracts.System/       # 系统服务接口（登录/设置对话框）
 │   │   ├── AP.Contracts.Security/     # 安全/权限/审计日志契约
 │   │   ├── AP.Contracts.Recipe/       # 配方管理契约（IRecipeManager）
@@ -102,7 +102,7 @@ AP-Scaffold/
 │   │
 │   ├── infra/                         # 基础设施层 (可复用的横切关注点)
 │   │   ├── AP.Infra.Database/         # 数据访问 (FreeSql + Repository模式)
-│   │   ├── AP.Infra.Grpc/             # gRPC 服务端/客户端/拦截器
+│   │   ├── AP.Infra.Grpc/             # ❄ gRPC 实现（冻结，已移出主解决方案）
 │   │   ├── AP.Infra.Hardware/         # PLC 驱动注册表与统一激活服务
 │   │   ├── AP.Infra.Logging/          # Serilog 日志配置与清理
 │   │   ├── AP.Infra.Report/           # 通用报表框架 (归档/导出/清理)
@@ -283,12 +283,14 @@ await pipeline.ExecuteAsync(async token => {
 }, ct);
 ```
 
-### 7. gRPC 分布式通信（❄ 冻结，未支持）
+### 7. gRPC 分布式通信（❄ 已移出交付链）
 
-> 该能力仅在 Server/Client 模式下使用，当前范围外，代码保留但不维护、不验证。
+gRPC 源文件仍保留在 `AP.Contracts.Communication` / `AP.Infra.Grpc` 作为冻结参考，但已从 `AP-Automation.Platform.slnx` 和宿主引用中移除，不再参与构建/发布/安装包，也不再要求 ASP.NET Core 运行时。解冻需专项评审。
 
-- **服务端**：Server 模式下内嵌 Kestrel（仅 HTTP/2）+ gRPC 服务，proto 契约定义于 `AP.Contracts.Communication`
-- **客户端**：Client 模式下 `GrpcClientWorker` 保持连接，接收数据流并经 MediatR 转发
+> 以下为冻结前的设计说明，仅供解冻参考；当前版本不编译/不启动这些组件。
+
+- **原服务端**：Server 模式下内嵌 Kestrel（仅 HTTP/2）+ gRPC 服务
+- **原客户端**：Client 模式下 `GrpcClientWorker` 保持连接，接收数据流并经 MediatR 转发
 - `StreamBroadcaster`：基于 `Channel<T>` 的服务端广播，按客户端背压
 - `LoggingInterceptor`：统一的请求日志记录
 
@@ -412,8 +414,8 @@ Configuration/
 | 角色 | 说明 | 加载的插件范围 |
 |------|------|----------------|
 | `Standalone` | 单机模式（默认，当前唯一受支持） | 所有 `Standalone` 标记的插件 |
-| `Server` ❄ | 服务端（含 gRPC Server） | `Server` 标记的插件 + 启动 Kestrel |
-| `Client` ❄ | 客户端（含 gRPC Client） | `Client` 标记的插件 + 启动 gRPC Worker |
+| `Server` ❄ | 服务端（gRPC） | 已物理移出主解决方案/宿主，当前交付物不支持 |
+| `Client` ❄ | 客户端（gRPC） | 已物理移出主解决方案/宿主，当前交付物不支持 |
 
 一个插件可以同时支持多种模式：`SupportedRoles = AppRole.Server | AppRole.Standalone`
 
@@ -472,14 +474,14 @@ Configuration/
 {
   "Resilience": {
     "DatabaseRetryCount": 3,
-    "PlcRetryCount": 5,
-    "GrpcCircuitBreakerThreshold": 5,
-    "CircuitBreakerDurationSeconds": 30
+    "PlcRetryCount": 5
   }
 }
 ```
 
-### gRPC 配置（❄ 冻结，未支持）
+### gRPC 配置（❄ 已移出交付链）
+
+gRPC 项目已从主解决方案/宿主移除，以下配置仅作为冻结参考保留，当前版本不会读取：
 
 ```json
 // 服务端
@@ -827,7 +829,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj
 - [x] 西门子 PLC 通信（S7 协议 + 统一驱动切换）
 - [x] 欧姆龙 PLC 通信（FINS/TCP 协议）
 - [x] 串口扫码枪集成
-- [x] gRPC 服务端 / 客户端通信
+- [x] gRPC 服务端 / 客户端通信（❄ 已物理移出交付链，源文件冻结保留）
 - [x] Polly 容错策略工厂
 - [x] MediatR 消息总线
 - [x] Material Design 3 全浅色统一主题

@@ -1,4 +1,4 @@
-﻿namespace AP.Infra.Resilience.Configuration;
+namespace AP.Infra.Resilience.Configuration;
 
 /// <summary>
 /// 韧性策略配置选项 (对应 appsettings.json 中的 Resilience 节点)
@@ -16,14 +16,4 @@ public class ResilienceOptions
     /// PLC 连接重试次数
     /// </summary>
     public int PlcRetryCount { get; set; } = 5;
-
-    /// <summary>
-    /// gRPC 熔断前允许的失败次数
-    /// </summary>
-    public int GrpcCircuitBreakerThreshold { get; set; } = 5;
-
-    /// <summary>
-    /// 熔断持续时间 (秒)
-    /// </summary>
-    public int CircuitBreakerDurationSeconds { get; set; } = 30;
 }

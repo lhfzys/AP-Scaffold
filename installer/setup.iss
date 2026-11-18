@@ -53,6 +53,14 @@ Name: "{commonappdata}\AP-Scaffold\Configuration"; Permissions: users-modify
 Name: "{commonappdata}\AP-Scaffold\logs"; Permissions: users-modify
 Name: "{commonappdata}\AP-Scaffold\reports"; Permissions: users-modify
 
+[InstallDelete]
+; 升级时清理旧版本残留（Inno 默认只覆盖新文件，不删除已从发布中移除的文件）
+Type: files; Name: "{app}\AP.Infra.Grpc.*"
+Type: files; Name: "{app}\AP.Contracts.Communication.*"
+Type: files; Name: "{app}\Grpc.*"
+Type: files; Name: "{app}\Google.Protobuf.*"
+Type: filesandordirs; Name: "{app}\plugins\AP.Plugin.*"
+
 [Files]
 ; 发布目录下的所有文件（现场配置文件除外，单独处理）
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Configuration\appsettings*.json"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -107,13 +115,11 @@ var
   ErrorCode: Integer;
   Missing: String;
 begin
-  // 框架依赖发布需要两个运行时：
-  //   桌面运行时（WPF 本体）+ ASP.NET Core 运行时（gRPC 组件经 FrameworkReference 声明，缺失启动即失败）
+  // 框架依赖发布只需要 .NET 8 桌面运行时（WPF 本体）。
+  // gRPC/ASP.NET Core 已物理移出交付链，不再要求 ASP.NET Core 运行时。
   Missing := '';
   if not IsNet8SharedFxInstalled('Microsoft.WindowsDesktop.App') then
     Missing := Missing + '  - .NET 8 桌面运行时（windowsdesktop-runtime-8.x-win-x64.exe）' + #13#10;
-  if not IsNet8SharedFxInstalled('Microsoft.AspNetCore.App') then
-    Missing := Missing + '  - ASP.NET Core 8 运行时（aspnetcore-runtime-8.x-win-x64.exe）' + #13#10;
 
   if Missing <> '' then
   begin

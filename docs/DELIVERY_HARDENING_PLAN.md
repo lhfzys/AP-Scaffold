@@ -45,7 +45,7 @@
 | DH-3 | .NET 10 迁移 + 依赖漏洞清零 | P0 | 待开始 | 4d |
 | DH-4 | 轻身份 + 审计闭环（A 模式：免登录 + 审计） | P0 | 进行中（A 模式已收口；可选登录保留） | 4d |
 | DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 已完成（核心迁移/备份/恢复脚本；事务/单写者待评估） | 5d |
-| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 进行中（正式安装冒烟完成；CI/gRPC 未做） | 4d |
+| DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 已完成（本地验证；待远程跑一次 CI） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 待开始 | 2d |
@@ -276,23 +276,21 @@
 - build + tests + publish + 标准用户安装启动 + 漏洞审计；
 - 物理移出 gRPC/Server/Client，Host 删除 `Microsoft.AspNetCore.App`。
 
-#### DH-6 安装冒烟记录（2026-11-18，正式安装完成）
+#### DH-6 完成记录（2026-11-18）
 
-官方安装包：`installer/Output/自动化监控系统-1.0.0-Setup.exe`（约 13.45 MB，Inno 6.7.3 编译通过）。
+1. **gRPC 物理移出**：
+   - `AP.Contracts.Communication`、`AP.Infra.Grpc` 从 `AP-Automation.Platform.slnx` 移除（主解决方案 34 → 32 个项目）；
+   - Host 删除 `FrameworkReference Microsoft.AspNetCore.App`、两个 gRPC ProjectReference、`ServerBootstrap`/`ClientBootstrap`、Kestrel/gRPC 启动/关闭分支；
+   - `RoleResolver` 显式拒绝 Server/Client，避免“以为在跑服务端、实际跑单机 UI”；
+   - `AP.Infra.Resilience` 删除 Grpc-CircuitBreaker 管道/选项/测试；
+   - 源文件与 proto 保留，`FROZEN.md` 说明冻结；发布目录 0 个 Grpc/Protobuf/AspNetCore 文件。
+2. **安装包运行时**：`setup.iss` 只检测 .NET 8 桌面运行时，不再要求 ASP.NET Core；发布目录 239 文件/45.3MB，安装包 13.18MB。
+3. **CI**：新增 `.github/workflows/ci.yml`（windows-latest）：build → 三个测试项目 → publish → 校验无 gRPC → 安装 Inno Setup → 编译安装包 → `scripts/install-smoke.ps1` 非提权安装/启动/数据根/卸载 → 上传安装包；NuGet 漏洞报告暂为 informational（STJ 8.0.0 已知，待 DH-3a 处理）。
+4. **安装冒烟脚本**：新增 `scripts/install-smoke.ps1`，本机实际运行通过（`INSTALL_SMOKE_OK`）：安装到 `%LocalAppData%\AP-Scaffold-CI-Smoke`、启动、验证 DB/日志/点表、卸载、数据根保留。
+5. **正式安装**：DH-6 之前已用 UAC 验证 x64 Program Files 安装、标准用户启动、ProgramData 写入；本次 gRPC 移出后重新编译发布/安装包。
+6. **升级残留清理（实测发现）**：gRPC-free 包首次覆盖安装后，Program Files 仍残留 10 个旧 gRPC/Protobuf 文件（Inno 只覆盖新文件，不删除已移除文件）。已在 `setup.iss` 增加 `[InstallDelete]`：清理 `AP.Infra.Grpc.*`、`AP.Contracts.Communication.*`、`Grpc.*`、`Google.Protobuf.*`，并重建 `plugins\AP.Plugin.*` 目录。重新覆盖安装后残留 = 0、插件 14 个，应用正常启动。
 
-**正式安装（有 UAC）结果：**
-
-1. 首次编译的安装包是 32 位 Setup，虽然应用是 win-x64，却装到了 `C:\Program Files (x86)\自动化监控系统`。已在 `setup.iss` 增加 `ArchitecturesAllowed=x64compatible` + `ArchitecturesInstallIn64BitMode=x64compatible` 并重新编译。
-2. 用旧安装包的卸载程序静默卸载（UAC）：退出码 0，安装目录删除，`C:\ProgramData\AP-Scaffold` 保留；`KEEP-MARKER.txt` 与 `tags.json` SHA256 未变。
-3. 重新安装 x64 包（UAC）：退出码 0，安装到 `C:\Program Files\自动化监控系统`，开始菜单快捷方式/卸载项创建，无重启要求。
-4. `C:\ProgramData\AP-Scaffold` ACL 为 `BUILTIN\Users:(OI)(CI)(M)`，标准用户可写。
-5. 以当前**标准用户**从 `C:\Program Files\自动化监控系统\AP.Host.Desktop.exe` 启动：主窗口正常（`自动化系统 - 自动化监控系统`），数据库/日志/点表均写入 `C:\ProgramData\AP-Scaffold`。
-6. 对 `C:\Program Files\自动化监控系统\Configuration` 做写探测：**Access denied**，证明程序目录未被运行期写入；数据确实走 ProgramData。
-7. 重装后 `KEEP-MARKER.txt` 仍存在，`tags.json` SHA256 仍为 `08D4580038165D343EDE317F51734941982448B02D2E4A8E8A74422C69E046C2`；日志显示审计日志插件加载。
-
-**补充（非提权安装）**：同一安装脚本的 `PrivilegesRequired=lowest` 变体也做过安装/启动/数据根/卸载验证，作为无 UAC 环境的回归路径。
-
-**未完成**：CI 流水线、gRPC 物理移出；新安装包的卸载未重复执行（旧包卸载已验证）；没有独立干净虚拟机，使用的是当前开发机。
+**未完成**：GitHub Actions 尚未实际远程运行（当前仓库未 push）；NuGet 漏洞门禁待 STJ 补丁后再设为阻断。
 
 ### DH-7 ~ DH-13
 
@@ -309,6 +307,7 @@
 | 2026-11-18 | DH-2 | `07e3174` | 构建 0 错误；489 测试通过；写路径静态审查通过；真机待现场 |
 | 2026-11-18 | DH-6（非提权） | `43ace41` 后验证 | 非提权安装/启动/数据根/卸载冒烟通过 |
 | 2026-11-18 | DH-6（正式） | `acb4b9d` | x64 安装到 Program Files；标准用户启动；ProgramData 可写、Program Files 只读；数据保留 |
+| 2026-11-18 | DH-6（CI/gRPC） | 待提交 | 主解决方案 32 项目；publish 无 Grpc/Aspnet；install-smoke 通过；502 测试通过；升级残留 0 |
 | 2026-11-18 | DH-4 | `cfdc58c` | 502 测试通过；安全模式启动完成安全库初始化；登录 UI 自动化未做 |
 | 2026-11-18 | DH-4b（取消） | `ec38e0e`（回退） | 用户确认 A 模式：免登录 + 审计；空闲锁屏代码/配置移除，审计视图在免登录白名单可见 |
 | 2026-11-18 | A 模式收口 | `6e58c0a` | 免登录启动（无登录框）；日志显示“审计日志插件已加载”；Sidebar/快捷入口出现“审计日志”；502 测试通过 |
@@ -318,5 +317,5 @@
 
 ---
 
-**文档版本**：v1.7（2026-11-18，DH-5 迁移/备份完成）
-**下一步**：DH-6 剩余 CI/gRPC 移出；或按客户需求评估写事务/单写者；DH-3 .NET 10 继续暂缓，等客户 OS 清单。
+**文档版本**：v1.9（2026-11-18，DH-6 CI/gRPC 完成本地验证 + 升级残留清理）
+**下一步**：把分支推到远程跑一次 GitHub Actions；按客户 OS 清单决定 DH-3；其余 P1 按项目需求排期。

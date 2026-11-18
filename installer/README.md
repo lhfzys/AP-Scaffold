@@ -33,18 +33,18 @@
 
 ## 现场装机要求（仅首次）
 
-框架依赖发布需要现场安装**两个** .NET 8 运行时（8.x 任意小版本；仅装 9/10 不满足，安装包会检测并拦截）：
+框架依赖发布只需要安装 **.NET 8 桌面运行时**（8.x 任意小版本；仅装 9/10 不满足，安装包会检测并拦截）：
 
 | 运行时 | 安装包 | 用途 |
 |--------|--------|------|
 | .NET 8 桌面运行时 | `windowsdesktop-runtime-8.x-win-x64.exe` | WPF 本体 |
-| ASP.NET Core 8 运行时 | `aspnetcore-runtime-8.x-win-x64.exe` | gRPC 组件（宿主经 `FrameworkReference` 声明，缺失启动即失败） |
+
+> gRPC/ASP.NET Core 已物理移出交付链（2026-11-18，DH-6），不再要求 ASP.NET Core 运行时。
 
 下载页：<https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0>。静默安装命令（可写进取景脚本）：
 
 ```powershell
 .\windowsdesktop-runtime-8.x-win-x64.exe /install /quiet /norestart
-.\aspnetcore-runtime-8.x-win-x64.exe /install /quiet /norestart
 ```
 
 ## 构建步骤
@@ -89,6 +89,7 @@
 
 - **x64 安装**：Setup 使用 `ArchitecturesInstallIn64BitMode=x64compatible`，装到 `C:\Program Files\自动化监控系统`，不要装进 `Program Files (x86)`；
 - 自动复制宿主程序、插件目录、配置文件到安装目录
+- 覆盖升级时清理旧版残留（`[InstallDelete]`：gRPC/Protobuf 文件与旧插件目录），避免已移除组件继续留在 Program Files
 - 创建开始菜单和桌面快捷方式（可选）
 - 安装前检测 .NET 8 桌面运行时 + ASP.NET Core 运行时（按主版本精确匹配，仅装 .NET 9/10 会被拦截；缺失项会在提示中列出）
 - 简体中文安装界面（语言文件随仓库携带）

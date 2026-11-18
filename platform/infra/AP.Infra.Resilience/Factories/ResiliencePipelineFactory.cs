@@ -1,4 +1,4 @@
-﻿using AP.Infra.Resilience.Configuration;
+using AP.Infra.Resilience.Configuration;
 using AP.Infra.Resilience.Policies;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,7 +19,6 @@ public class ResiliencePipelineFactory
     {
         public const string Database = "Database-Retry";
         public const string Plc = "PLC-Retry";
-        public const string Grpc = "Grpc-CircuitBreaker";
     }
 
     public ResiliencePipelineFactory(
@@ -42,15 +41,6 @@ public class ResiliencePipelineFactory
         // 2. PLC 策略
         _registry.TryAddBuilder(Keys.Plc,
             (builder, context) => { builder.AddPipeline(PlcRetryPolicy.Create(config.PlcRetryCount, logger)); });
-
-        // 3. gRPC 策略
-        _registry.TryAddBuilder(Keys.Grpc, (builder, context) =>
-        {
-            builder.AddPipeline(GrpcCircuitBreakerPolicy.Create(
-                config.GrpcCircuitBreakerThreshold,
-                config.CircuitBreakerDurationSeconds,
-                logger));
-        });
     }
 
     /// <summary>

@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test-package:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore / build
+        shell: pwsh
+        run: |
+          dotnet build AP-Automation.Platform.slnx -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test
+        shell: pwsh
+        run: |
+          dotnet test platform/tests/AP.Core.Tests/AP.Core.Tests.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test platform/tests/AP.Shared.Tests/AP.Shared.Tests.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Publish host
+        shell: pwsh
+        run: |
+          dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify gRPC removed from publish
+        shell: pwsh
+        run: |
+          $grpc = Get-ChildItem bin/Release/publish -Recurse -File | Where-Object { $_.Name -match 'Grpc|Protobuf' }
+          if ($grpc) {
+            $grpc | Select-Object FullName
+            throw "发布目录仍包含 gRPC 文件"
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --version=6.7.3 -y --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/setup.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Non-admin install smoke
+        shell: pwsh
+        run: ./scripts/install-smoke.ps1
+
+      - name: NuGet vulnerability report (informational)
+        shell: pwsh
+        continue-on-error: true
+        run: dotnet list AP-Automation.Platform.slnx package --vulnerable --include-transitive
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: installer/Output/*.exe
+          if-no-files-found: error

@@ -34,14 +34,6 @@ public static class ResilienceServiceExtensions
             var (options, logger) = Resolve(context.ServiceProvider);
             builder.AddPipeline(PlcRetryPolicy.Create(options.PlcRetryCount, logger));
         });
-        services.AddResiliencePipeline<string>(ResiliencePipelineFactory.Keys.Grpc, (builder, context) =>
-        {
-            var (options, logger) = Resolve(context.ServiceProvider);
-            builder.AddPipeline(GrpcCircuitBreakerPolicy.Create(
-                options.GrpcCircuitBreakerThreshold,
-                options.CircuitBreakerDurationSeconds,
-                logger));
-        });
 
         // 3. 注册自定义工厂（PLC 插件等通过 GetPipeline 便捷取管道；
         //    其构造器内的 TryAddBuilder 与上面的注册幂等共存）

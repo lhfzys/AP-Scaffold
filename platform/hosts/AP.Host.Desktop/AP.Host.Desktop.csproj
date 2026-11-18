@@ -24,10 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\contracts\AP.Contracts.Hardware\AP.Contracts.Hardware.csproj" />
     <ProjectReference Include="..\..\contracts\AP.Contracts.Report\AP.Contracts.Report.csproj" />
     <ProjectReference Include="..\..\contracts\AP.Contracts.System\AP.Contracts.System.csproj" />
@@ -42,7 +38,6 @@
     <ProjectReference Include="..\..\infra\AP.Infra.Security\AP.Infra.Security.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Recipe\AP.Infra.Recipe.csproj" />
     <ProjectReference Include="..\..\infra\AP.Infra.Report\AP.Infra.Report.csproj" />
-    <ProjectReference Include="..\..\infra\AP.Infra.Grpc\AP.Infra.Grpc.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,8 +13,6 @@ using AP.Host.Desktop.Views;
 using AP.Infra.Database.Backup;
 using AP.Infra.Database.Configuration;
 using AP.Infra.Database.Migration;
-using AP.Infra.Grpc.Client;
-using AP.Infra.Grpc.Server;
 using AP.Infra.Hardware.Extensions;
 using AP.Infra.Logging.Configuration;
 using AP.Infra.Logging.Helpers;
@@ -25,7 +23,6 @@ using AP.Infra.Security.Configuration;
 using AP.Shared.UI.Services;
 using AP.Shared.Utilities.Paths;
 using DryIoc.Microsoft.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,7 +46,6 @@ public class Bootstrapper : PrismBootstrapper
     private readonly List<(string PluginName, string Error)> _failedPlugins = new();
     // 致命插件错误（Required 插件失败 / 插件图致命问题），非空时中止启动
     private readonly List<string> _fatalPluginErrors = new();
-    private WebApplication? _grpcApp;
     private PluginLifecycleManager? _lifecycleManager;
 
     public Bootstrapper(AppRole appRole, Views.SplashWindow? splashWindow = null)
@@ -234,17 +230,6 @@ public class Bootstrapper : PrismBootstrapper
         services.AddPlatformRecipe(_configuration);
         services.AddPlcHardware(_configuration);
         services.AddReportFramework(_configuration);
-
-        // --- 添加 gRPC 服务 (根据角色) ---
-        // ❄ 封存：Server/Client 分布式模式代码保留但不维护、不验证，解冻需专项评审（docs/EVOLUTION_PLAN.md 0.1 节）
-        if (_appRole.HasFlag(AppRole.Server))
-        {
-            services.AddPlatformGrpcServer(_configuration);
-            ServerBootstrap.RegisterServices(services);
-        }
-
-        if (_appRole.HasFlag(AppRole.Client))
-            ClientBootstrap.RegisterServices(services);
 
         // --- 扫描插件元数据 ---
         _loadedPlugins = _pluginLoader.DiscoverPlugins(_appRole);
@@ -484,20 +469,6 @@ public class Bootstrapper : PrismBootstrapper
                     acquisitionEngine.Start();
                 }
 
-                // --- 4. 启动 gRPC Server (如果是服务端) --- ❄ 封存，见上文注释
-                if (_appRole.HasFlag(AppRole.Server)) StartKestrelServer(container);
-
-                // --- 4. 启动 gRPC Client Worker (如果是客户端) --- ❄ 封存，见上文注释
-                if (_appRole.HasFlag(AppRole.Client))
-                {
-                    var clientWorker = container.GetService<GrpcClientWorker>();
-                    if (clientWorker != null)
-                    {
-                        await clientWorker.StartAsync(CancellationToken.None);
-                        Log.Information("gRPC 客户端后台服务已启动");
-                    }
-                }
-
                 UpdateSplashStatus("正在完成启动...", 95);
 
                 // 汇总展示加载失败的插件（工业现场关键：操作员需知道功能缺失）
@@ -536,39 +507,6 @@ public class Bootstrapper : PrismBootstrapper
         });
     }
 
-    private void StartKestrelServer(IServiceProvider provider)
-    {
-        try
-        {
-            var port = _configuration.GetValue<int>("Grpc:ServerPort", 5000);
-            var builder = WebApplication.CreateBuilder();
-
-            // 配置 Kestrel
-            builder.ConfigureKestrelForGrpc(port);
-
-            // 使用 Serilog
-            builder.Host.UseSerilog();
-
-            // 注册 gRPC
-            builder.Services.AddGrpc();
-
-            // 桥接单例服务：从 WPF 容器获取 Broadcaster，共享给 ASP.NET Core
-            var broadcaster = provider.GetRequiredService<StreamBroadcaster>();
-            builder.Services.AddSingleton(broadcaster);
-
-            var app = builder.Build();
-            app.MapGrpcService<GrpcGateService>();
-
-            _grpcApp = app; // 保存引用以便优雅关闭
-            app.RunAsync();
-            Log.Information("gRPC Server 正在监听端口: {Port}", port);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Kestrel 服务器启动失败");
-        }
-    }
-
     /// <summary>
     /// 优雅停止所有插件和服务
     /// 应在应用退出时调用
@@ -589,26 +527,6 @@ public class Bootstrapper : PrismBootstrapper
             if (_lifecycleManager != null)
             {
                 await _lifecycleManager.StopPluginsAsync(cts.Token);
-            }
-
-            // 2. 停止 gRPC Server
-            if (_grpcApp != null)
-            {
-                Log.Information("正在停止 gRPC Server...");
-                await _grpcApp.StopAsync(cts.Token);
-                Log.Information("gRPC Server 已停止");
-            }
-
-            // 3. 停止 gRPC Client Worker ❄ 封存，见上文注释
-            if (_appRole.HasFlag(AppRole.Client))
-            {
-                var clientWorker = container.GetService<GrpcClientWorker>();
-                if (clientWorker != null)
-                {
-                    Log.Information("正在停止 gRPC Client Worker...");
-                    await clientWorker.StopAsync(cts.Token);
-                    Log.Information("gRPC Client Worker 已停止");
-                }
             }
 
             Log.Information("=== 优雅关闭完成 ===");

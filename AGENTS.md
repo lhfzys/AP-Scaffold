@@ -1,7 +1,7 @@
 # AP-Scaffold — AI 协作交接文档
 
 > 本文档面向 Kimi / Cursor / Copilot 等 AI 编码助手。当你在一个新 Session 中接手本项目时，请先完整阅读本文件，再继续处理用户请求。
-> 本文档以**实际代码**为准整理（已核对全部 36 个项目）。
+> 本文档以**实际代码**为准整理（2026-11-18 起主解决方案 32 个项目；gRPC 两个项目已移出主解决方案，仅保留源文件作冻结参考）。
 >
 > **新 Session 阅读顺序（避免重复探索）**：① 本文件（现状与约定）→ ② `docs/EVOLUTION_PLAN.md`（架构演进史、任务铁律、停车场）→ ③ `docs/conventions/`（四份规范：ERROR_HANDLING / LOGGING / LAYERING / DEPENDENCIES）。读完这三处即具备完整上下文，无需再扫描全仓库。
 
@@ -35,7 +35,7 @@
 - **设置贡献者模式**（`ISettingsContributor`，见 5.2）
 - 三菱 / 西门子 / 欧姆龙 PLC 驱动与统一切换机制（`IPlcDriverFactory` + `ActivePlcService`）
 - 串口扫码枪硬件驱动（`Plugins:Configuration:AP.Plugin.Scanner:Enabled=false` 可整体禁用：不注册服务/设备、不连接，系统配置页有勾选；2026-07-31 起）
-- gRPC Server/Client 分布式通信（proto 契约 + StreamBroadcaster 广播）❄ 已封存（代码保留不维护，文件头有标注）
+- gRPC Server/Client 分布式通信（proto 契约 + StreamBroadcaster 广播）❄ **已物理移出主解决方案与宿主**（2026-11-18，DH-6）：源文件保留在 `AP.Contracts.Communication` / `AP.Infra.Grpc`，不再参与构建/发布/安装包，安装包不再要求 ASP.NET Core 运行时。
 - 安全模块：本地用户/角色/权限（12 个种子权限、3 个默认角色）、登录、强制改密、审计日志
 - 用户管理、角色管理、审计日志可视化、配方管理骨架、报表中心骨架
 - 全浅色统一视觉主题（`Industrial.Teal.MD3.xaml`，文件名保留但内容已是浅色）
@@ -80,10 +80,10 @@ AP-Scaffold/
 │   │   └── AP.Contracts.Report           # IReportCenterService、ReportArchiveDto
 │   ├── infra/                            # 基础设施实现
 │   │   ├── AP.Infra.Database             # FreeSql (SQLite/PostgreSQL)，UseAutoSyncStructure(false)
-│   │   ├── AP.Infra.Grpc                 # gRPC Server/Client、StreamBroadcaster、LoggingInterceptor
+│   │   ├── AP.Infra.Grpc                 # ❄ 已移出主解决方案（冻结参考，不构建）
 │   │   ├── AP.Infra.Hardware             # PlcDriverRegistry、ActivePlcService（统一 IPlcService 代理）；DeviceRuntime/（状态机/ConnectionSupervisor/DeviceRegistry/TagTable/TagService/采集引擎/最新值表）
 │   │   ├── AP.Infra.Logging              # Serilog、LogCleanupHelper
-│   │   ├── AP.Infra.Resilience           # Polly 策略工厂（Database-Retry / PLC-Retry / Grpc-CircuitBreaker）
+│   │   ├── AP.Infra.Resilience           # Polly 策略工厂（Database-Retry / PLC-Retry）
 │   │   ├── AP.Infra.Security             # 安全/权限/审计实现、SecurityDbInitializer
 │   │   ├── AP.Infra.Recipe               # RecipeManager、RecipeDbInitializer
 │   │   └── AP.Infra.Report               # 报表框架（IReportDataProvider/ReportData 在契约层 AP.Contracts.Report）
@@ -201,7 +201,7 @@ installer/build-installer.bat
 ### 5.6 IHostedService 不自动启动
 
 - `AP.Host.Desktop` 使用 `PrismBootstrapper` 手动构建容器，不启动 `IHost`，因此 `AddHostedService<T>()` 注册的服务**不会自动运行**。
-- 若需要在启动时执行，必须在 `Bootstrapper.OnInitialized` 中显式解析并调用（参考 `ReportDatabaseInitializer`、`GrpcClientWorker`）。
+- 若需要在启动时执行，必须在 `Bootstrapper.OnInitialized` 中显式解析并调用（参考 `ReportScheduler`、`ReportCleanupService`）。
 - `ReportScheduler` / `ReportCleanupService` 已修复（2026-07-21）：注册改为"单例 + `AddHostedService` 转发"，并由 `Bootstrapper.OnInitialized` 在报表初始化段显式 `StartAsync`。新增同类后台服务请沿用同一模式。
 
 ### 5.7 契约程序集必须被 Host 直接引用
@@ -264,8 +264,7 @@ installer/build-installer.bat
 - **SQLite**：数据文件默认位于 `%ProgramData%\AP-Scaffold\local_data.db`（2026-11-18 起；不再写安装目录）；启动前自动备份 `.db → .db.bak`（连同 -wal/-shm，失败仅警告）；已启用 WAL 等 PRAGMA 优化。
 - **运行数据目录（2026-11-18 起，DH-1）**：程序文件留在 `Program Files`，数据库/日志/报表/现场点表/配置覆盖层统一走 `AppPaths` 数据根；默认 `%ProgramData%\AP-Scaffold`，不可写时回退 `%LocalAppData%\AP-Scaffold`；可用 `AP_SCAFFOLD_DATA_ROOT` 指定。配置采用“安装目录默认值 + 数据根覆盖层”，系统设置只写覆盖层；`tags.json` 首次复制到数据根、升级保留。安装器 `[Dirs]` 给数据目录 `users-modify`。
 - **数据库配置键**：`Database:Provider`（SQLite/PostgreSQL）、`Database:SQLite:ConnectionString`、`Database:PostgreSQL:ConnectionString`（嵌套结构，不是扁平键）。
-- **gRPC 配置键**：服务端 `Grpc:ServerPort`（默认 5000）；客户端 `Grpc:ServerUrl`、`Grpc:ClientId`、`Grpc:ClientName`。
-- **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`、`Resilience:GrpcCircuitBreakerThreshold`、`Resilience:CircuitBreakerDurationSeconds`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"` / `Grpc="Grpc-CircuitBreaker"`。三条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
+- **Resilience 配置键**（扁平结构）：`Resilience:DatabaseRetryCount`、`Resilience:PlcRetryCount`。管道 Key 常量：`ResiliencePipelineFactory.Keys.Database="Database-Retry"` / `Plc="PLC-Retry"`。两条管道在 `AddPlatformResilience` 中直接登记到 Registry（注册表自描述，不依赖工厂解析时机），不再有 `ResiliencePipeline.Empty` 瞬态注册；`FreeSqlRepository` 五个方法已套 `Database-Retry` 管道（构造参数 `ResiliencePipelineProvider<string>?` 可空，未注册韧性服务时退化为 Empty）。
 - **文件名大小写**：`appsettings.server.json` 是小写（Linux 上与 `appsettings.Server.json` 不匹配，Windows 无碍）。
 - **驱动 internal 类型的测试模式**：三个 PLC 插件通过 csproj 的 `InternalsVisibleTo("AP.Infra.Tests")` 开放 internal（地址对象/验证器）供测试；`AP.Infra.Tests` 的 TFM 为 `net8.0-windows`（引用 WPF 插件的需要）并直接引用三个 PLC 插件项目。新驱动照此办理。
 - **崩溃日志**：全局异常写入 `logs/crash-yyyyMMdd.log`，致命异常 `Environment.Exit(1)`，不弹窗。
@@ -303,7 +302,7 @@ installer/build-installer.bat
 > 2026-07-29 起。面向外包现场，发布形态为 **win-x64 框架依赖**（体积小；现场初次装机装一次运行时，后续只发应用）。
 
 - **两步流程**（顺序不可颠倒，publish 只复制插件目录不构建插件）：先 `dotnet build AP-Automation.Platform.slnx -c Release`，再 `dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true`（输出 `bin/Release/publish/`，约 46MB/243 文件；安装包约 13.4MB）。**安装包为 x64 Setup，安装到 `Program Files` 而不是 `Program Files (x86)`**。详见 `installer/README.md`。
-- **现场需装两个 .NET 8 运行时**：桌面运行时 + ASP.NET Core 运行时（宿主编译期 `FrameworkReference Microsoft.AspNetCore.App`，缺失启动即失败）；`setup.iss` 安装时按注册表主版本精确检测并列出缺失项（仅装 9/10 拦截）。
+- **现场只需一个 .NET 8 运行时**：桌面运行时（WPF）。gRPC/ASP.NET Core 已移出交付链，不再要求 ASP.NET Core 运行时；`setup.iss` 只检测 .NET 8 桌面共享框架（仅装 9/10 拦截）。
 - 宿主 csproj 仅固定 `PublishDir=$(BuildRoot)publish\`；**RID 与 self-contained 只走命令行**，且必须带 `-p:AppendRuntimeIdentifierToOutputPath=true`（否则 RID 构建产物混入 `bin/Release` 根，2026-07-29 实测导致开发版 exe 无法启动）。
 - **测试产物隔离**：`Directory.Build.props` 中 `.Tests` 结尾的项目输出到 `bin/Tests/{项目名}/`，`bin/Release` 根目录不再有 TestPlatform/xunit/语言目录污染。
 - `installer/Languages/ChineseSimplified.isl` 随仓库携带（官方发行版不含中文，要求 Inno ≥ 6.5）；`installer/Output/` 已 gitignore。

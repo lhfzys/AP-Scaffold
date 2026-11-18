@@ -25,7 +25,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 - **MVVM 工具**：CommunityToolkit.Mvvm
 - **消息总线**：MediatR（关键事件桥接到 Prism IEventAggregator）
 - **数据库 ORM**：FreeSql（SQLite / PostgreSQL）
-- **通信**：gRPC（Server / Client / Standalone）
+- **通信**：进程内 MediatR 事件总线；gRPC（Server/Client）已于 2026-11-18 物理移出主解决方案/宿主，源文件仅冻结参考
 - **日志**：Serilog
 - **容错**：Polly
 - **测试**：xUnit + NSubstitute + FluentAssertions
@@ -62,10 +62,10 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | 项目 | 说明 |
 |------|------|
 | `AP.Infra.Database` | `AddPlatformDatabase(config, appRole)`：FreeSql 配置（`UseAutoSyncStructure(false)`）、SQLite 启动前自动备份 + WAL 优化、`IRepository<T>` / `FreeSqlRepository<T>`、`BaseEntity` |
-| `AP.Infra.Grpc` | `GrpcGateService`（proto 生成基类实现）、`StreamBroadcaster`（Channel 背压广播）、`GrpcClientWorker`、`GrpcChannelFactory`、`LoggingInterceptor` |
+| `AP.Infra.Grpc` ❄ | **已移出主解决方案/宿主（2026-11-18 DH-6）**；源文件保留，不构建、不发布。原实现：`GrpcGateService`、`StreamBroadcaster`、`GrpcClientWorker`、`GrpcChannelFactory`、`LoggingInterceptor` |
 | `AP.Infra.Hardware` | `AddPlcHardware`：`PlcDriverRegistry`（按 DriverType 索引工厂）+ `ActivePlcService`（懒加载代理，统一 `IPlcService`）；**DeviceRuntime/**（2026-07-25 起）：`DeviceConnectionStateMachine`、`ConnectionSupervisor`（全部硬件共享的连接监督器）、`DeviceRegistry`、`PlcDeviceAdapter`、`TagTable`（点表加载/快速失败校验）、`TagService`（按点名读写）、`TagAcquisitionEngine`（采集引擎）、`LatestTagValueStore`（最新值表）、事件发布器 |
 | `AP.Infra.Logging` | Serilog 配置（控制台 + 按天滚动文件，含 MachineName/ThreadId/ProcessId 增强器）、`LogCleanupHelper`（启动时清理过期日志） |
-| `AP.Infra.Resilience` | `ResiliencePipelineFactory`（Keys：`Database-Retry` / `PLC-Retry` / `Grpc-CircuitBreaker`）、扁平配置键 `Resilience:*RetryCount` 等 |
+| `AP.Infra.Resilience` | `ResiliencePipelineFactory`（Keys：`Database-Retry` / `PLC-Retry`）、扁平配置键 `Resilience:*RetryCount` 等 |
 | `AP.Infra.Security` | 安全模块实现：用户/角色/权限 Repository、PBKDF2-SHA256 密码哈希（10 万次迭代）、`IdentityService` / `AnonymousIdentityService`、`AuditService` / `NullAuditService`、`SecurityDbInitializer`（12 权限 + 3 角色 + admin 种子数据） |
 | `AP.Infra.Recipe` | `RecipeManager`（CRUD + 版本 + 默认配方 + 切换；`SwitchAsync` 事件发布留 TODO）、`RecipeDbInitializer`（自动创建 DEFAULT 配方） |
 | `AP.Infra.Report` | 报表框架：`ReportService`、`ReportCenterService`、`ExcelExporter`（MiniExcel）、`ReportStorage`、`ReportScheduler`、`ReportCleanupService`、`ReportDatabaseInitializer`、`SampleReportDataProvider` 示例（`IReportDataProvider`/`ReportData` 已移至契约层） |
@@ -108,7 +108,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 
 ### 8. 启动宿主 `platform/hosts/AP.Host.Desktop`
 
-- `Bootstrapper`（`PrismBootstrapper`）：配置读取 → Serilog → Infra 服务注册（Database/Resilience/Security/Recipe/Hardware/Report，按角色加 gRPC）→ 插件发现 → 两阶段实例化（先收集 `ConfigureServices`，再造最终容器）→ MediatR 扫描 → DryIoc 桥接（`Populate` + 注册插件实例，含 `INavigationContributor`）→ 登录窗口 → 数据库初始化器（Security/Recipe/Report）→ 插件 Initialize/Start → 按角色启动 Kestrel gRPC / GrpcClientWorker
+- `Bootstrapper`（`PrismBootstrapper`）：配置读取 → Serilog → Infra 服务注册（Database/Resilience/Security/Recipe/Hardware/Report）→ 插件发现 → 两阶段实例化（先收集 `ConfigureServices`，再造最终容器）→ MediatR 扫描 → DryIoc 桥接（`Populate` + 注册插件实例，含 `INavigationContributor`）→ 数据库迁移/备份 → 登录窗口 → 数据库初始化器（Security/Recipe/Report）→ 插件 Initialize/Start
 - `MainWindow`：仅一个 `MainRegion`（布局由 Layout 插件注入），`RootDialogHost` 对话框宿主，启动遮罩在 `AppInitializedEvent` 后关闭
 - `SplashWindow`：启动画面，按初始化进度实时更新百分比与状态文本
 - `TrayIconManager`：WinForms NotifyIcon 常驻托盘（显示主窗口/重启/退出菜单，关闭需确认；最小化为标准行为回任务栏，2026-08-01 起不再隐藏到托盘）
@@ -143,7 +143,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 8 WPF 插件化平台
 | Tag 系统 | 可用 | 点表校验/`ITagService`/采集引擎/最新值表/变化事件端到端贯通；点表目前为示例条目，批量合并待带类型批量契约（2026-07-25） |
 | AP.Plugin.Plc.Mitsubishi / Siemens / Omron | 完善 | 三品牌驱动统一：共享连接监督器 + `IDevice` + 地址对象/验证器（2026-07-25 重构） |
 | AP.Plugin.Scanner | 可用 | 重连已迁入统一监督器；首开失败保留同步抛出（A 方案例外） |
-| gRPC Server/Client | ❄ 冻结 | 已实现但范围外（Standalone 不启用）；不再投入验证与改进 |
+| gRPC Server/Client | ❄ 已移出交付链 | 2026-11-18 从主解决方案/宿主移除；源文件冻结保留，安装包不再要求 ASP.NET Core 运行时 |
 | Dashboard 仪表盘 | 可用 | 全部真实数据：设备状态/采集点/Tag 变化/真实事件流（2026-07-26） |
 
 ---
