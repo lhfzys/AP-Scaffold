@@ -30,7 +30,7 @@
 
 ### 2.1.1 交付硬化（2026-11-18，已合并 main）
 
-- **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；分支与远端同步。
+- **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；DH-3 .NET 10 迁移提交 `d72acbe`；分支与远端同步。
 - **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
 - **测试**：**502 通过**（Core 130 / Shared 63 / Infra 309）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。

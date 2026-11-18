@@ -4,7 +4,7 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
-> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），GitHub Actions 首次跑绿；主解决方案 **32 个项目**，测试 **502 通过**（Core 130 / Shared 63 / Infra 309）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
+> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）；GitHub Actions 已跑绿；主解决方案 **32 个项目**，测试 **502 通过**（Core 130 / Shared 63 / Infra 309）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
 
 ---
 
