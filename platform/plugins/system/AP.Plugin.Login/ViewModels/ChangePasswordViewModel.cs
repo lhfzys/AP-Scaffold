@@ -2,6 +2,7 @@ using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
 using AP.Shared.UI.Base;
+using AP.Shared.Utilities.Security;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -67,6 +68,13 @@ public partial class ChangePasswordViewModel : ViewModelBase
         if (NewPassword != ConfirmPassword)
         {
             ErrorMessage = "两次输入的新密码不一致";
+            return;
+        }
+
+        var policy = PasswordPolicy.Validate(NewPassword);
+        if (!policy.Succeeded)
+        {
+            ErrorMessage = policy.Message;
             return;
         }
 

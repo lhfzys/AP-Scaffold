@@ -20,6 +20,7 @@ public static class SecurityServiceExtensions
     {
         var enabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
 
+        services.Configure<SecurityOptions>(configuration.GetSection("Security"));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         if (enabled)

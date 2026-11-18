@@ -38,6 +38,16 @@ public class User : BaseEntity
     public bool MustChangePassword { get; set; }
 
     /// <summary>
+    /// 连续登录失败次数（成功后清零）。
+    /// </summary>
+    public int FailedLoginCount { get; set; }
+
+    /// <summary>
+    /// 锁定截止时间；null 表示未锁定。
+    /// </summary>
+    public DateTime? LockoutUntil { get; set; }
+
+    /// <summary>
     /// 关联角色
     /// </summary>
     [Navigate(ManyToMany = typeof(UserRole))]

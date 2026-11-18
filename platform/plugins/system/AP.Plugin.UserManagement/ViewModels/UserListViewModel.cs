@@ -7,6 +7,7 @@ using AP.Contracts.Security.Audit;
 using AP.Contracts.Security.Models;
 using AP.Shared.UI.Base;
 using AP.Shared.UI.Services;
+using AP.Shared.Utilities.Security;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -170,7 +171,8 @@ public partial class UserListViewModel : ViewModelBase
         if (SelectedUser == null) return;
 
         var confirm = await _dialogService.ShowConfirmAsync(
-            $"确定要重置用户 {SelectedUser.DisplayName}（{SelectedUser.UserName}）的密码吗？\n重置后密码为：admin123",
+            $"确定要重置用户 {SelectedUser.DisplayName}（{SelectedUser.UserName}）的密码吗？\n" +
+            "重置后会生成一个临时密码，用户首次登录必须修改。",
             "重置密码确认");
 
         if (!confirm) return;
@@ -178,7 +180,9 @@ public partial class UserListViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var hash = _passwordHasher.HashPassword("admin123");
+            // 随机一次性密码：不再固定 admin123
+            var temporaryPassword = PasswordGenerator.Generate(12);
+            var hash = _passwordHasher.HashPassword(temporaryPassword);
             await _userRepository.UpdatePasswordAsync(SelectedUser.Id, hash);
             await _userRepository.UpdateAsync(new UserInfo
             {
@@ -186,11 +190,16 @@ public partial class UserListViewModel : ViewModelBase
                 UserName = SelectedUser.UserName,
                 DisplayName = SelectedUser.DisplayName,
                 IsEnabled = SelectedUser.IsEnabled,
-                MustChangePassword = true
+                MustChangePassword = true,
+                // 必须带回原角色：UpdateAsync 会先删除全部 UserRole 再按此集合重建
+                Roles = SelectedUser.Roles.ToList()
             });
 
             await LogAuditAsync(AuditActionType.Update, SelectedUser.UserName, true, "重置密码");
-            await _dialogService.ShowAlertAsync("密码已重置为 admin123，首次登录需修改密码。", "重置成功");
+            await _dialogService.ShowAlertAsync(
+                $"密码已重置。\n\n临时密码：{temporaryPassword}\n\n" +
+                "请立即告知用户；该密码只显示这一次，首次登录必须修改。",
+                "重置成功");
         }
         catch (Exception ex)
         {

@@ -19,6 +19,8 @@ namespace AP.Plugin.RoleManagement;
 [PluginMetadata("AP.Plugin.RoleManagement", Name = "角色权限管理", Version = "1.0.0", Priority = 6, Required = false)]
 public class RoleManagementPlugin : PluginBase, INavigationContributor
 {
+    private bool _enabled = true;
+
     public RoleManagementPlugin(ILogger logger) : base(logger)
     {
     }
@@ -41,7 +43,17 @@ public class RoleManagementPlugin : PluginBase, INavigationContributor
         var securityEnabled = configuration.GetValue<bool?>("Security:Enabled") ?? true;
         if (!securityEnabled)
         {
+            _enabled = false;
             Logger.LogInformation("安全模块已禁用，跳过角色管理视图注册");
+            return;
+        }
+
+        // 轻身份模式默认隐藏角色/权限管理：操作员身份 + 审计已足够，
+        // 需要完整 RBAC 的项目显式配置 Security:RoleManagement:Enabled=true。
+        if (!(configuration.GetValue<bool?>("Security:RoleManagement:Enabled") ?? false))
+        {
+            _enabled = false;
+            Logger.LogInformation("轻身份模式：已隐藏角色管理入口（Security:RoleManagement:Enabled=false）");
             return;
         }
 
@@ -68,16 +80,15 @@ public class RoleManagementPlugin : PluginBase, INavigationContributor
 
     public IEnumerable<NavigationMenuItem> GetMenuItems()
     {
-        return new[]
+        if (!_enabled) yield break;
+
+        yield return new NavigationMenuItem
         {
-            new NavigationMenuItem
-            {
-                Label = "角色管理",
-                IconKind = "ShieldAccount",
-                NavigationTarget = "RoleListView",
-                Order = 4100,
-                Permission = "role.manage"
-            }
+            Label = "角色管理",
+            IconKind = "ShieldAccount",
+            NavigationTarget = "RoleListView",
+            Order = 4100,
+            Permission = "role.manage"
         };
     }
 }

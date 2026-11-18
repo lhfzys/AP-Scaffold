@@ -7,6 +7,7 @@ using AP.Contracts.Security.Models;
 using System.Linq;
 using AP.Shared.UI.Base;
 using AP.Shared.UI.Services;
+using AP.Shared.Utilities.Security;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -140,6 +141,16 @@ public partial class UserEditViewModel : ViewModelBase
         {
             await _dialogService.ShowErrorAsync("两次输入的密码不一致");
             return;
+        }
+
+        if (!string.IsNullOrEmpty(Password))
+        {
+            var policy = PasswordPolicy.Validate(Password);
+            if (!policy.Succeeded)
+            {
+                await _dialogService.ShowErrorAsync(policy.Message);
+                return;
+            }
         }
 
         BusyText = "正在保存用户...";

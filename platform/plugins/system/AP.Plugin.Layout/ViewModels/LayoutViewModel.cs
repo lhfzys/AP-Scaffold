@@ -1,5 +1,6 @@
 #region
 
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
 using AP.Contracts.Hardware.DeviceRuntime;
@@ -23,7 +24,6 @@ public partial class LayoutViewModel : ViewModelBase
 {
     private readonly IIdentityService _identityService;
     private readonly IAuditService _auditService;
-    private readonly ILoginService _loginService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IDeviceRegistry _deviceRegistry;
     private readonly IEventAggregator _eventAggregator;
@@ -47,7 +47,6 @@ public partial class LayoutViewModel : ViewModelBase
         IConfiguration configuration,
         IIdentityService identityService,
         IAuditService auditService,
-        ILoginService loginService,
         IServiceProvider serviceProvider,
         IDeviceRegistry deviceRegistry,
         IEventAggregator eventAggregator,
@@ -55,7 +54,6 @@ public partial class LayoutViewModel : ViewModelBase
     {
         _identityService = identityService;
         _auditService = auditService;
-        _loginService = loginService;
         _serviceProvider = serviceProvider;
         _deviceRegistry = deviceRegistry;
         _eventAggregator = eventAggregator;
@@ -141,23 +139,43 @@ public partial class LayoutViewModel : ViewModelBase
         var userName = _identityService.CurrentUser?.UserName ?? "unknown";
 
         await _identityService.LogoutAsync();
-        RefreshCurrentUser();
-
         await LogAuditAsync(AuditActionType.Logout, userName, true, "用户退出登录");
 
-        var mainWindow = Application.Current.MainWindow;
-        mainWindow.Hide();
+        // 轻身份模式：用新进程重建整棵 UI（Sidebar/Region/权限视图/插件状态）。
+        // 只清 CurrentUser 再原地登录会让旧的菜单/页面/权限行为残留，已在评估中证实。
+        // --restart 会让新进程等待旧进程释放单实例互斥体（App.OnStartup）。
+        RestartForUserSwitch();
+    }
 
-        if (_loginService.ShowLoginDialog())
-        {
-            RefreshCurrentUser();
-            mainWindow.Show();
-            await LogAuditAsync(AuditActionType.Login, _identityService.CurrentUser?.UserName ?? userName, true, "重新登录");
-        }
-        else
+    private static void RestartForUserSwitch()
+    {
+        var exePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(exePath))
         {
             Application.Current.Shutdown();
+            return;
         }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = "--restart",
+                UseShellExecute = true,
+                WorkingDirectory = AppContext.BaseDirectory
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"重新登录需要重启应用，但启动新进程失败：{ex.Message}\n请手动关闭并重新打开应用。",
+                "退出登录",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        Application.Current.Shutdown();
     }
 
     [RelayCommand]

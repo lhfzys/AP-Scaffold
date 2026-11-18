@@ -8,6 +8,8 @@ namespace AP.Infra.Security.Audit;
 /// 审计日志数据库实体
 /// </summary>
 [Table(Name = "sys_audit_logs")]
+[Index("idx_audit_timestamp", nameof(Timestamp))]
+[Index("idx_audit_user", nameof(UserName))]
 public class AuditLog : BaseEntity
 {
     /// <summary>

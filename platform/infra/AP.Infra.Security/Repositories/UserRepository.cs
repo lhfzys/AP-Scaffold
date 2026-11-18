@@ -1,4 +1,4 @@
-﻿using AP.Contracts.Security.Abstractions;
+using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Models;
 using AP.Infra.Security.Entities;
 using FreeSql;
@@ -96,6 +96,39 @@ public class UserRepository : IUserRepository
     {
         var user = await _freeSql.Select<User>().Where(u => u.Id == id).ToOneAsync(ct);
         return user?.PasswordHash;
+    }
+
+    public async Task<DateTime?> GetLockoutUntilAsync(long id, CancellationToken ct = default)
+    {
+        var user = await _freeSql.Select<User>().Where(u => u.Id == id).ToOneAsync(ct);
+        return user?.LockoutUntil;
+    }
+
+    public async Task RegisterFailedLoginAsync(long id, int maxFailedAttempts, TimeSpan lockoutDuration, CancellationToken ct = default)
+    {
+        var user = await _freeSql.Select<User>().Where(u => u.Id == id).ToOneAsync(ct);
+        if (user == null) return;
+
+        user.FailedLoginCount++;
+        if (user.FailedLoginCount >= Math.Max(1, maxFailedAttempts))
+        {
+            user.LockoutUntil = DateTime.Now.Add(lockoutDuration);
+            user.FailedLoginCount = 0;
+        }
+
+        await _freeSql.Update<User>().SetSource(user).ExecuteAffrowsAsync(ct);
+    }
+
+    public async Task ResetFailedLoginAsync(long id, CancellationToken ct = default)
+    {
+        var user = await _freeSql.Select<User>().Where(u => u.Id == id).ToOneAsync(ct);
+        if (user == null) return;
+
+        if (user.FailedLoginCount == 0 && user.LockoutUntil == null) return;
+
+        user.FailedLoginCount = 0;
+        user.LockoutUntil = null;
+        await _freeSql.Update<User>().SetSource(user).ExecuteAffrowsAsync(ct);
     }
 
     /// <summary>
