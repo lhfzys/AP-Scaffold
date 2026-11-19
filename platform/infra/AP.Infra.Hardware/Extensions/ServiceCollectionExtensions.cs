@@ -35,6 +35,8 @@ public static class ServiceCollectionExtensions
             return registry;
         });
         services.AddSingleton<ActivePlcService>();
+        // 测试连接：临时驱动，不触碰运行中的 ActivePlcService
+        services.AddSingleton<IPlcConnectionTester, PlcConnectionTester>();
         // IPlcService 解析为审计装饰器：PLC 写操作自动留痕，业务无感知；
         // 审计/身份服务未注册（如独立测试）时自动降级为不审计
         services.AddSingleton<IPlcService>(sp => new AuditingPlcServiceDecorator(

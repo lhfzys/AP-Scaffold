@@ -19,6 +19,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -118,7 +119,28 @@
             <TextBox Grid.Column="1" Text="{Binding SupervisorRestartDelaySeconds, UpdateSourceTrigger=PropertyChanged}"/>
         </Grid>
 
-        <TextBlock Grid.Row="9"
+        <Grid Grid.Row="9" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="连接测试"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="{Binding TestButtonText}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Command="{Binding TestConnectionCommand}"
+                        IsEnabled="{Binding IsNotTesting}"
+                        Height="{DynamicResource Button.StandardHeight}"
+                        Margin="0,0,12,0"/>
+                <TextBlock Text="{Binding TestMessage}"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="360"
+                           Foreground="{DynamicResource Brush.OnSurfaceVariant}"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="10"
                    Text="* 切换 PLC 驱动类型后需要重启应用才能生效&#13;&#10;三菱示例：Version=Qna_3E, Port=6000, 心跳=D0.0&#13;&#10;西门子示例：Model=S7_1200, Port=102, 心跳=DB1.0.0"
                    Foreground="{DynamicResource MaterialDesignBodyLight}"
                    FontSize="12"

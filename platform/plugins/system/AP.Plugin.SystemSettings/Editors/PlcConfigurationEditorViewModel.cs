@@ -1,7 +1,9 @@
 using AP.Contracts.Hardware.Models;
+using AP.Contracts.Hardware.Services;
 using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Configuration;
 using System.Net;
 
@@ -22,19 +24,34 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
     [ObservableProperty] private int _heartbeatIntervalSeconds = 2;
     [ObservableProperty] private int _reconnectBackoffSeconds = 5;
     [ObservableProperty] private int _supervisorRestartDelaySeconds = 5;
+    [ObservableProperty] private bool _isTesting;
+    [ObservableProperty] private string _testMessage = string.Empty;
+    [ObservableProperty] private bool _testSucceeded;
+
+    private readonly IPlcConnectionTester _connectionTester;
 
     public IReadOnlyList<string> DriverTypes { get; } = new[] { "Mitsubishi", "Siemens", "Omron" };
 
     public bool RequiresRestart => true;
+
+    public bool IsNotTesting => !IsTesting;
+    public string TestButtonText => IsTesting ? "测试中..." : "测试连接";
 
     partial void OnDriverTypeChanged(string value)
     {
         ApplyDriverDefaults(value);
     }
 
-    public PlcConfigurationEditorViewModel()
+    public PlcConfigurationEditorViewModel(IPlcConnectionTester connectionTester)
     {
+        _connectionTester = connectionTester ?? throw new ArgumentNullException(nameof(connectionTester));
         ApplyDriverDefaults(DriverType);
+    }
+
+    partial void OnIsTestingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotTesting));
+        OnPropertyChanged(nameof(TestButtonText));
     }
 
     public void LoadFromConfiguration(IConfiguration configuration)
@@ -116,6 +133,38 @@ public partial class PlcConfigurationEditorViewModel : ViewModelBase, ISettingsE
             errors.Add("监督重启延迟不能为负数");
 
         return errors;
+    }
+
+    [RelayCommand]
+    private async Task TestConnectionAsync()
+    {
+        if (IsTesting) return;
+
+        var errors = Validate().ToList();
+        if (errors.Count > 0)
+        {
+            TestSucceeded = false;
+            TestMessage = string.Join("；", errors);
+            return;
+        }
+
+        IsTesting = true;
+        TestMessage = "正在连接...";
+        try
+        {
+            var result = await _connectionTester.TestAsync((PlcOptions)GetConfigurationValue());
+            TestSucceeded = result.Connected;
+            TestMessage = result.Message;
+        }
+        catch (Exception ex)
+        {
+            TestSucceeded = false;
+            TestMessage = $"测试失败：{ex.Message}";
+        }
+        finally
+        {
+            IsTesting = false;
+        }
     }
 
     public object GetConfigurationValue()
