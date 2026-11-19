@@ -48,6 +48,16 @@ public interface IRecipeManager
     Task<bool> SwitchAsync(string code, CancellationToken ct = default);
 
     /// <summary>
+    /// 读取持久化的当前配方（重启后恢复；不存在返回 null）
+    /// </summary>
+    Task<RecipeInfo?> GetCurrentAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// 获取配方历史版本（新版本在前）
+    /// </summary>
+    Task<IReadOnlyList<RecipeVersionInfo>> GetVersionsAsync(long recipeId, CancellationToken ct = default);
+
+    /// <summary>
     /// 当前已激活的配方
     /// </summary>
     RecipeInfo? CurrentRecipe { get; }

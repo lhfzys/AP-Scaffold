@@ -140,6 +140,43 @@ public partial class ReportListViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task RegenerateAsync()
+    {
+        if (!EnsurePermission("report.export")) return;
+        if (SelectedArchive == null)
+        {
+            await _dialogService.ShowErrorAsync("请先选择要补档的归档记录");
+            return;
+        }
+
+        var confirm = await _dialogService.ShowConfirmAsync(
+            $"确定补档 {SelectedArchive.ReportDate:yyyy-MM-dd} 的报表“{SelectedArchive.ReportName}”吗？",
+            "补档确认");
+        if (!confirm) return;
+
+        BusyText = "正在补档...";
+        IsBusy = true;
+        try
+        {
+            var path = await _reportCenterService.RegenerateAsync(
+                SelectedArchive.ReportType, SelectedArchive.ReportDate);
+            await LogAuditAsync(AuditActionType.ExportReport, SelectedArchive.ReportType, true, "补档报表");
+            await _dialogService.ShowAlertAsync($"报表补档完成：{path}", "补档成功");
+            await LoadArchivesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "报表补档失败");
+            await LogAuditAsync(AuditActionType.ExportReport, SelectedArchive.ReportType, false, ex.Message);
+            await _dialogService.ShowErrorAsync("报表补档失败：" + ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task OpenAsync()
     {
         if (!EnsurePermission("report.view")) return;

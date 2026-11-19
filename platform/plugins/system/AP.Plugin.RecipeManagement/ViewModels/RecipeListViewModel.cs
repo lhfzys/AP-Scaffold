@@ -228,6 +228,35 @@ public partial class RecipeListViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task ShowHistoryAsync()
+    {
+        if (SelectedRecipe == null)
+        {
+            await _dialogService.ShowErrorAsync("请先选择配方");
+            return;
+        }
+
+        try
+        {
+            var versions = await _recipeManager.GetVersionsAsync(SelectedRecipe.Id);
+            if (versions.Count == 0)
+            {
+                await _dialogService.ShowAlertAsync("该配方暂无历史版本。", "版本历史");
+                return;
+            }
+
+            var text = string.Join(Environment.NewLine, versions.Select(v =>
+                $"v{v.Version}  {v.ChangeType}  {v.CreatedAt:yyyy-MM-dd HH:mm}  {(v.IsDefault ? "默认" : "")}"));
+            await _dialogService.ShowAlertAsync(text, $"{SelectedRecipe.Name} 版本历史");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "加载配方版本历史失败");
+            await _dialogService.ShowErrorAsync("加载配方版本历史失败：" + ex.Message);
+        }
+    }
+
     private bool EnsurePermission(string permissionCode)
     {
         if (_identityService.HasPermission(permissionCode)) return true;

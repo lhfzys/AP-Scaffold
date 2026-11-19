@@ -20,7 +20,11 @@ public class RecipeDbInitializer : IRecipeDbInitializer
         // 表结构由 DatabaseSchemaMigrator 的 RecipeSchemaContributor 创建；这里只做种子。
         // 首次启动时创建一个默认配方示例
         var existing = await _recipeManager.GetByCodeAsync("DEFAULT", ct);
-        if (existing != null) return;
+        if (existing != null)
+        {
+            await EnsureCurrentAsync(ct);
+            return;
+        }
 
         var defaultRecipe = new RecipeInfo
         {
@@ -38,5 +42,16 @@ public class RecipeDbInitializer : IRecipeDbInitializer
 
         await _recipeManager.CreateAsync(defaultRecipe, ct);
         await _recipeManager.SwitchAsync("DEFAULT", ct);
+    }
+
+    /// <summary>恢复上次激活的配方；没有状态时回退默认配方。</summary>
+    private async Task EnsureCurrentAsync(CancellationToken ct)
+    {
+        var current = await _recipeManager.GetCurrentAsync(ct);
+        if (current != null) return;
+
+        var fallback = await _recipeManager.GetDefaultAsync(ct);
+        if (fallback != null)
+            await _recipeManager.SwitchAsync(fallback.Code, ct);
     }
 }

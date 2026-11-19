@@ -37,7 +37,24 @@ public class ReportScheduler : BackgroundService
         }
 
         _logger.LogInformation("报表定时归档服务已启动，执行时间: {Time}", _options.Archive.Time);
- 
+
+        // 启动先补一次：跨天/停机后不必等到下一个 02:00；已成功的日期会自动跳过。
+        try
+        {
+            await RunArchiveAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("报表定时归档服务已停止");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "启动补档失败，等待下次定时执行");
+        }
+
+        _delay = CalculateNextRunDelay();
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -70,25 +87,30 @@ public class ReportScheduler : BackgroundService
     /// </summary>
     private async Task RunArchiveAsync(CancellationToken ct)
     {
-        var yesterday = DateTime.Today.AddDays(-1);
+        var days = Math.Clamp(_options.Archive.CatchUpDays, 1, 31);
+        _logger.LogInformation("开始执行定时归档，补档天数: {Days}", days);
 
-        _logger.LogInformation("开始执行定时归档，日期: {Date}", yesterday);
-
-        var results = await _reportService.GenerateDailyReportsAsync(yesterday, ct);
-
-        foreach (var (type, path) in results)
+        for (var offset = 1; offset <= days; offset++)
         {
-            if (path.StartsWith("ERROR:"))
-            {
-                _logger.LogError("报表 {Type} 归档失败: {Error}", type, path);
-            }
-            else
-            {
-                _logger.LogInformation("报表 {Type} 归档成功: {Path}", type, path);
-            }
-        }
+            var date = DateTime.Today.AddDays(-offset);
+            _logger.LogInformation("归档日期: {Date}", date);
 
-        _logger.LogInformation("定时归档完成，共处理 {Count} 个报表", results.Count);
+            var results = await _reportService.GenerateDailyReportsAsync(date, ct);
+
+            foreach (var (type, path) in results)
+            {
+                if (path.StartsWith("ERROR:", StringComparison.Ordinal))
+                {
+                    _logger.LogError("报表 {Type} 归档失败（{Date}）: {Error}", type, date, path);
+                }
+                else
+                {
+                    _logger.LogInformation("报表 {Type} 归档成功（{Date}）: {Path}", type, date, path);
+                }
+            }
+
+            _logger.LogInformation("日期 {Date} 归档完成，共处理 {Count} 个报表", date, results.Count);
+        }
     }
 
     /// <summary>

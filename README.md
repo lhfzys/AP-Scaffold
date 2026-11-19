@@ -789,7 +789,7 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 529 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连、示例业务插件、插件超时、交付档位、PLC 测试连接与通讯日志/CSV 导入。
+项目当前包含 **3 个测试项目 / 536 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连、示例业务插件、插件超时、交付档位、PLC 诊断、报表状态/补档与配方版本/切换。
 
 ### 测试项目结构
 
@@ -818,7 +818,7 @@ platform/tests/
 │       ├── SerializationHelperTests.cs        # JSON 序列化/反序列化
 │       └── ConfigurationHelperTests.cs        # appsettings.json 配置更新
 │
-└── AP.Infra.Tests/                      # 基础设施层测试（330 个测试）
+└── AP.Infra.Tests/                      # 基础设施层测试（337 个测试）
     ├── Hardware/
     │   ├── ActivePlcServiceTests.cs           # PLC 统一激活服务
     │   └── PlcDriverRegistryTests.cs          # PLC 驱动注册表
@@ -884,8 +884,8 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 - [x] 身份认证与授权（本地用户/角色/权限 + 登录 + 强制改密）
 - [x] 交付硬化 DH-1~DH-6（数据根 / A 模式 / 迁移备份 / gRPC 移出 / CI / 安装冒烟）
 - [x] 用户管理 / 角色管理 / 审计日志可视化
-- [x] 配方/工艺参数管理（骨架）
-- [x] 报表中心（骨架）
+- [x] 配方/工艺参数管理（版本快照 / 默认唯一 / 切换持久化与事件）
+- [x] 报表中心（状态校验 / 失败重生成 / 手动补档 / 启动补档）
 - [ ] 报表/配方接入真实业务数据
 - [ ] OpenTelemetry 可观测性集成
 

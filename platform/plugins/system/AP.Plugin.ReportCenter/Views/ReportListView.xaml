@@ -124,6 +124,13 @@
                                 Margin="0,0,12,0"
                                 ui:PermissionBehavior.Permission="report.view"
                                 ui:PermissionBehavior.HideWhenUnauthorized="False"/>
+                        <Button Content="补档"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding RegenerateCommand}"
+                                Height="{DynamicResource Button.StandardHeight}"
+                                Margin="0,0,12,0"
+                                ui:PermissionBehavior.Permission="report.export"
+                                ui:PermissionBehavior.HideWhenUnauthorized="False"/>
                         <Button Content="导出到桌面"
                                 Style="{StaticResource RaisedButton.Primary}"
                                 Command="{Binding ExportCommand}"

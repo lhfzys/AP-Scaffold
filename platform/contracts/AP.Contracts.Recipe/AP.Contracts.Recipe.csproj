@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\shared\AP.Shared.Utilities\AP.Shared.Utilities.csproj" />
+    <PackageReference Include="MediatR" />
   </ItemGroup>
 
 </Project>

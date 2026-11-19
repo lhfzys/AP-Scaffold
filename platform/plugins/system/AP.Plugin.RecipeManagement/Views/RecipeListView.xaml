@@ -112,6 +112,15 @@
                                             Margin="0,0,8,0"
                                             ui:PermissionBehavior.Permission="recipe.edit"
                                             ui:PermissionBehavior.HideWhenUnauthorized="False"/>
+                                    <Button Content="历史"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Command="{Binding DataContext.ShowHistoryCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            Height="28"
+                                            Padding="12,0"
+                                            Margin="0,0,8,0"
+                                            ui:PermissionBehavior.Permission="recipe.edit"
+                                            ui:PermissionBehavior.HideWhenUnauthorized="False"/>
                                     <Button Content="默认"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
                                             Command="{Binding DataContext.SetDefaultCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"

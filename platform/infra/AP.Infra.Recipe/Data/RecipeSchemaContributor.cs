@@ -7,10 +7,12 @@ namespace AP.Infra.Recipe.Data;
 public sealed class RecipeSchemaContributor : IDatabaseSchemaContributor
 {
     public string Name => "recipe";
-    public int Version => 1;
+    public int Version => 2;
 
     public void Apply(IFreeSql freeSql)
     {
         freeSql.CodeFirst.SyncStructure(typeof(Entities.Recipe));
+        freeSql.CodeFirst.SyncStructure(typeof(Entities.RecipeState));
+        freeSql.CodeFirst.SyncStructure(typeof(Entities.RecipeVersion));
     }
 }

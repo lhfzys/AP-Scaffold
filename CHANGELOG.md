@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### 报表状态/补档 + 配方版本/切换（2026-11-19，DH-11）
+
+新增/变更：
+
+- 报表：Failed/Cleaned/文件丢失的归档不再当成功返回，自动重新生成；失败仍抛异常由 UI 显示。
+- 报表：新增“补档”按钮；调度器启动先补一次，默认向前补 7 天（`Archive.CatchUpDays`），成功日期跳过。
+- 配方：首个配方自动成为默认；`CreateAsync` 尊重 `IsDefault`；Code 重复拒绝；默认配方不可删除。
+- 配方：新增 `recipe_versions` 版本快照与“历史”查看；新增 `recipe_state` 持久化当前配方，重启恢复。
+- 配方：切换成功后发布 MediatR `RecipeSwitchedEvent`；recipe schema 1→2。
+- 验证：报表 Failed 重生成/成功跳过、配方默认/重复/删除/持久化/事件/版本测试；启动 recipe v2 迁移实测；全量 **536** 通过（Core 133 / Shared 66 / Infra 337）。
+
 ### PLC 通讯日志 / 点表 CSV 导入（2026-11-19，DH-12）
 
 新增/变更：

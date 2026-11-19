@@ -60,12 +60,25 @@ public class ReportService
             throw new ArgumentException($"未找到报表类型: {reportType}");
         }
 
-        // 检查是否已存在归档记录
+        // 检查是否已存在可用的归档记录：
+        // Success 且文件仍在 -> 跳过；Failed/Cleaned/文件丢失 -> 重新生成，绝不把失败路径当成功返回。
         var existingArchive = await _repository.GetByDateAndTypeAsync(date, reportType, ct);
         if (existingArchive != null && !forceRegenerate)
         {
-            _logger.LogInformation("报表已存在，跳过生成: {Type}, {Date}", reportType, date);
-            return existingArchive.FilePath;
+            var reusable = existingArchive.Status == ArchiveStatus.Success
+                           && _storage.FileExists(existingArchive.FilePath);
+            if (reusable)
+            {
+                _logger.LogInformation("报表已存在，跳过生成: {Type}, {Date}", reportType, date);
+                return existingArchive.FilePath;
+            }
+
+            _logger.LogWarning(
+                "已有归档不可复用（状态={Status}，文件存在={Exists}），重新生成: {Type}, {Date}",
+                existingArchive.Status,
+                _storage.FileExists(existingArchive.FilePath),
+                reportType,
+                date);
         }
 
         // 获取报表数据

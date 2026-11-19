@@ -73,6 +73,12 @@ public class ArchiveOptions
     /// 为空则归档所有已注册的报表类型
     /// </summary>
     public List<string> ReportTypes { get; set; } = [];
+
+    /// <summary>
+    /// 启动/每日归档时向前补档的天数（默认 7，最多 31）。
+    /// 跨天停机后会自动补齐缺失日期；已成功的报表会跳过，不会重复生成。
+    /// </summary>
+    public int CatchUpDays { get; set; } = 7;
 }
 
 /// <summary>

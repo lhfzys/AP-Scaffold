@@ -32,7 +32,7 @@
 
 - **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；DH-3 .NET 10 迁移提交 `d72acbe`；分支与远端同步。
 - **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
-- **测试**：**529 通过**（Core 133 / Shared 66 / Infra 330）。
+- **测试**：**536 通过**（Core 133 / Shared 66 / Infra 337）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
 - **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
 - **DH-3 .NET 10**：**已完成全仓迁移**（2026-11-18，无历史客户，目标框架 net10.0/net10.0-windows，Microsoft.Extensions 10.0.15）；`System.Text.Json` 高危随框架解决，CI 漏洞门禁已改为阻断。
@@ -45,7 +45,8 @@
 - **DH-8 单容器/超时**：插件只构造一次并注册进 DryIoc；初始化/启动单插件 15s 超时；启动日志与 Layout“插件状态”页展示状态。
 - **DH-7 插件档位**：`Configuration/plugins.catalog.json` 定义 Full/Minimal；`Plugins:Profile`/`Plugins:Disabled` 过滤；`build-installer.bat Minimal` 裁剪安装包。
 - **DH-12 现场诊断**：测试连接（临时驱动/超时/心跳读取）；“通讯日志”页显示 Read/Write/Batch 环形缓冲；点表配置支持 CSV 导入（全量校验后加入，保存生效）。
-- **下一步**：DH-11 报表/配方闭环，或按项目需要继续扩展诊断能力。
+- **DH-11 报表/配方**：Failed 报表自动重生成，新增补档按钮与启动补档（7 天）；配方默认唯一/Code 重复拒绝/版本快照/当前配方持久化/切换事件。
+- **下一步**：P1 收尾，做发布前全量回归与交付演练。
 
 ### 2.2 已完成功能
 
