@@ -178,7 +178,8 @@ AP-Scaffold/
 2. 为每个插件创建隔离的 `PluginLoadContext`（AssemblyLoadContext）
 3. 加载 DLL → 扫描 `IPlugin` 实现 → 读取 `[PluginMetadata]` 特性
 4. 校验角色匹配（Server / Client / Standalone）
-5. 按优先级排序 → 实例化 → 收集服务注册 → 初始化 → 启动
+5. 按优先级排序 → 单次实例化 → 收集服务注册 → 初始化 → 启动
+6. 单插件初始化/启动 15 秒超时；失败不拖死其他插件，状态可在“插件状态”页查看
 
 ```csharp
 // 定义一个插件只需这样
@@ -771,13 +772,13 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 512 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连与示例业务插件。
+项目当前包含 **3 个测试项目 / 513 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连、示例业务插件与插件超时。
 
 ### 测试项目结构
 
 ```
 platform/tests/
-├── AP.Core.Tests/                       # 核心框架测试（130 个测试）
+├── AP.Core.Tests/                       # 核心框架测试（131 个测试）
 │   ├── StateMachine/
 │   │   ├── StateTransitionValidatorTests.cs   # 状态转换验证
 │   │   └── PluginStateMachineTests.cs         # 插件状态机

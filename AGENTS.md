@@ -32,7 +32,7 @@
 
 - **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；DH-3 .NET 10 迁移提交 `d72acbe`；分支与远端同步。
 - **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
-- **测试**：**512 通过**（Core 130 / Shared 65 / Infra 317）。
+- **测试**：**513 通过**（Core 131 / Shared 65 / Infra 317）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
 - **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
 - **DH-3 .NET 10**：**已完成全仓迁移**（2026-11-18，无历史客户，目标框架 net10.0/net10.0-windows，Microsoft.Extensions 10.0.15）；`System.Text.Json` 高危随框架解决，CI 漏洞门禁已改为阻断。
@@ -42,7 +42,8 @@
 - **DH-9 配置保存**：`ConfigurationHelper` 改为递归 merge，保存基础信息不再抹掉 `LayoutMode`/`DefaultNavigationTarget`/白名单/未知键；编辑器补齐字段；配置中心底部有备份/恢复入口；备份时间戳毫秒级、恢复限制在配置目录内。
 - **DH-10 扫码枪**：首开失败不再抛异常/中止，状态进入 Reconnecting 并启动 `ConnectionSupervisor`，插上设备后自动恢复；数据通道改为有界 `Channel`（默认 1000，满时丢弃新码并告警），`ReadLine` 增加 1s 超时。
 - **DH-13 模板/示例**：新增 `AP.Plugin.Sample`（导航 + 设置 + 报表 + 测试）和 `templates/ap-plugin`（`dotnet new ap-plugin`）；生成后需加入 slnx 并构建宿主。
-- **下一步**：按项目需要选 DH-7 插件 profile、DH-8 单容器、DH-11 报表/配方或 DH-12 现场诊断。
+- **DH-8 单容器/超时**：插件只构造一次并注册进 DryIoc；初始化/启动单插件 15s 超时；启动日志与 Layout“插件状态”页展示状态。
+- **下一步**：按项目需要选 DH-7 插件 profile、DH-11 报表/配方或 DH-12 现场诊断。
 
 ### 2.2 已完成功能
 
@@ -128,7 +129,7 @@ AP-Scaffold/
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
 │   └── tests/                            # xUnit 测试（45 个测试文件 / 475 个测试）
-│       ├── AP.Core.Tests                 # 9 文件 / 130 测试
+│       ├── AP.Core.Tests                 # 9 文件 / 131 测试
 │       ├── AP.Shared.Tests               # 4 文件 / 48 测试
 │       └── AP.Infra.Tests                # 32 文件 / 293 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
 ├── docs/                                 # 架构/使用/测试/状态文档

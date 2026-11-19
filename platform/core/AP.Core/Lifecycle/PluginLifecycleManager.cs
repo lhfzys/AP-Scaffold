@@ -11,15 +11,22 @@ namespace AP.Core.Lifecycle;
 /// </summary>
 public class PluginLifecycleManager
 {
+    /// <summary>单插件初始化/启动默认超时：卡死插件不能拖死整个宿主启动。</summary>
+    public static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromSeconds(15);
+
     private readonly ILogger<PluginLifecycleManager> _logger;
+    private readonly TimeSpan _operationTimeout;
     private readonly List<PluginDescriptor> _loadedPlugins = new();
 
     // 存储每个插件的状态机
     private readonly Dictionary<string, PluginStateMachine> _stateMachines = new();
 
-    public PluginLifecycleManager(ILogger<PluginLifecycleManager> logger)
+    public PluginLifecycleManager(ILogger<PluginLifecycleManager> logger, TimeSpan? operationTimeout = null)
     {
         _logger = logger;
+        _operationTimeout = operationTimeout ?? DefaultOperationTimeout;
+        if (_operationTimeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(operationTimeout), "插件操作超时必须大于 0");
     }
 
     /// <summary>
@@ -73,10 +80,17 @@ public class PluginLifecycleManager
             {
                 sm.TransitionTo(PluginState.Initializing);
 
-                await descriptor.Instance!.InitializeAsync(rootProvider, ct);
+                await descriptor.Instance!.InitializeAsync(rootProvider, ct)
+                    .WaitAsync(_operationTimeout, ct);
 
                 sm.TransitionTo(PluginState.Initialized);
                 _logger.LogInformation("插件已初始化: {Name}", descriptor.Metadata.Name);
+            }
+            catch (TimeoutException ex)
+            {
+                sm.TransitionTo(PluginState.Failed);
+                _logger.LogError(ex, "插件 {Name} 初始化超时（{TimeoutSeconds} 秒），已标记失败",
+                    descriptor.Metadata.Name, _operationTimeout.TotalSeconds);
             }
             catch (Exception ex)
             {
@@ -105,10 +119,17 @@ public class PluginLifecycleManager
             {
                 sm.TransitionTo(PluginState.Starting);
 
-                await descriptor.Instance!.StartAsync(ct);
+                await descriptor.Instance!.StartAsync(ct)
+                    .WaitAsync(_operationTimeout, ct);
 
                 sm.TransitionTo(PluginState.Running);
                 _logger.LogInformation("插件已启动: {Name}", descriptor.Metadata.Name);
+            }
+            catch (TimeoutException ex)
+            {
+                sm.TransitionTo(PluginState.Failed);
+                _logger.LogError(ex, "插件 {Name} 启动超时（{TimeoutSeconds} 秒），已标记失败",
+                    descriptor.Metadata.Name, _operationTimeout.TotalSeconds);
             }
             catch (Exception ex)
             {
@@ -152,6 +173,22 @@ public class PluginLifecycleManager
                 _logger.LogError(ex, "插件 {Name} 停止失败", descriptor.Metadata.Name);
             }
         }
+    }
+
+    /// <summary>
+    /// 获取全部已加载插件的状态快照（按优先级升序），供启动报告/状态页使用。
+    /// </summary>
+    public IReadOnlyList<PluginStatusInfo> GetPluginStatuses()
+    {
+        return _loadedPlugins
+            .OrderBy(p => p.Metadata.Priority)
+            .Select(p => new PluginStatusInfo(
+                p.Metadata.Id,
+                p.Metadata.Name,
+                p.Metadata.Priority,
+                p.Metadata.Required,
+                _stateMachines.TryGetValue(p.Metadata.Id, out var sm) ? sm.CurrentState : PluginState.Unloaded))
+            .ToList();
     }
 
     /// <summary>

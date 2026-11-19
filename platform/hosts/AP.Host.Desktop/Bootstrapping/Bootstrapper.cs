@@ -244,30 +244,30 @@ public class Bootstrapper : PrismBootstrapper
 
         var pluginAssemblies = new List<Assembly> { typeof(Bootstrapper).Assembly }; // 包含 Host 自身
 
-        // ===== 第一阶段：用仅包含平台服务的临时容器实例化插件，收集服务注册和程序集 =====
-        // 注意：ConfigureServices 里通常只注册服务，不解析服务，因此临时容器足够
-        var tempProvider = services.BuildServiceProvider();
+        // ===== 插件实例化（单容器）：只用 ILogger 构造一次，调用 ConfigureServices 收集注册，复用同一实例 =====
+        // 插件构造函数只允许依赖 ILogger；需要业务服务时在 InitializeAsync(serviceProvider) 中解析。
+        // 这样不会出现临时实例 + 最终实例两份单例，也不需要临时平台容器。
+        using var registrationProvider = new ServiceCollection().BuildServiceProvider();
 
         foreach (var descriptor in _loadedPlugins)
             try
             {
                 var pluginLogger = pluginLoggerFactory.CreateLogger(descriptor.PluginType);
 
-                // 临时实例仅用于调用 ConfigureServices，不会被最终容器使用
-                var tempInstance = ActivatorUtilities
-                    .CreateInstance(tempProvider, descriptor.PluginType, pluginLogger) as IPlugin;
+                var instance = ActivatorUtilities
+                    .CreateInstance(registrationProvider, descriptor.PluginType, pluginLogger) as IPlugin;
 
-                if (tempInstance == null)
+                if (instance == null)
                 {
                     descriptor.IsLoaded = false;
                     continue;
                 }
 
-                // 注册插件自身的服务（这些服务会被加入最终容器）
-                if (tempInstance is IConfigurablePlugin configurable)
+                // 插件服务注册进入最终 ServiceCollection；实例本身复用为运行时实例
+                if (instance is IConfigurablePlugin configurable)
                     configurable.ConfigureServices(services, _configuration);
 
-                // 第一阶段成功，标记为待加载
+                descriptor.Instance = instance;
                 descriptor.IsLoaded = true;
 
                 // 收集程序集用于 MediatR 扫描
@@ -286,41 +286,15 @@ public class Bootstrapper : PrismBootstrapper
         // --- 注册 MediatR ---
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(pluginAssemblies.ToArray()));
 
-        // ===== 第二阶段：构建最终容器，并用最终容器重新实例化插件 =====
-        // 这样插件构造函数能解析到所有已注册的服务（包括其他插件注册的服务）
-        var finalProvider = services.BuildServiceProvider();
-
-        var finalInstances = new List<IPlugin>();
-        foreach (var descriptor in _loadedPlugins.Where(d => d.IsLoaded))
-            try
-            {
-                var pluginLogger = pluginLoggerFactory.CreateLogger(descriptor.PluginType);
-
-                var instance = ActivatorUtilities
-                    .CreateInstance(finalProvider, descriptor.PluginType, pluginLogger) as IPlugin;
-
-                if (instance == null) continue;
-
-                descriptor.Instance = instance;
-                descriptor.IsLoaded = true;
-                finalInstances.Add(instance);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "插件 {Name} 最终实例化失败", descriptor.Metadata.Name);
-                _failedPlugins.Add((descriptor.Metadata.Name, ex.Message));
-                if (descriptor.Metadata.Required)
-                    _fatalPluginErrors.Add($"必需插件 {descriptor.Metadata.Name} 实例化失败: {ex.Message}");
-                descriptor.IsLoaded = false;
-            }
-
-        // --- 桥接容器 (Microsoft DI -> DryIoc) ---
+        // --- 桥接容器 (Microsoft DI -> DryIoc)：所有服务与插件实例进入同一个 DryIoc 容器 ---
         var dryIocContainer = containerRegistry.GetContainer();
         dryIocContainer.Populate(services);
 
-        // 将最终插件实例注册到 DryIoc，便于通过 IEnumerable<IPlugin> 解析
+        // 将唯一的插件实例注册到 DryIoc，便于通过 IEnumerable<IPlugin> 解析
         // 同时注册 INavigationContributor，供布局插件收集菜单项
-        foreach (var instance in finalInstances)
+        foreach (var instance in _loadedPlugins
+                     .Where(d => d.IsLoaded && d.Instance != null)
+                     .Select(d => d.Instance!))
         {
             containerRegistry.RegisterInstance(typeof(IPlugin), instance);
             if (instance is AP.Shared.PluginSDK.Navigation.INavigationContributor navigationContributor)
@@ -456,6 +430,12 @@ public class Bootstrapper : PrismBootstrapper
                     .ToList();
                 if (requiredFailed.Count > 0)
                     AbortStartup("必需插件启动失败，系统无法启动", requiredFailed);
+
+                // 插件加载报告：状态页和启动日志共用同一份生命周期快照
+                foreach (var status in _lifecycleManager.GetPluginStatuses())
+                    Log.Information(
+                        "插件状态: {PluginName} ({PluginId}) State={State} Required={Required} Priority={Priority}",
+                        status.Name, status.Id, status.State, status.Required, status.Priority);
 
                 UpdateSplashStatus("正在启动服务...", 75);
 

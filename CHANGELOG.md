@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 插件单容器 / 超时 / 加载报告（2026-11-19，DH-8）
+
+变更：
+
+- **单容器**：移除临时平台容器与“最终容器二次实例化”；插件只构造一次，`ConfigureServices` 注册进入最终服务集合，实例直接注册到 DryIoc。插件构造函数约定只依赖 `ILogger`，业务服务从 `InitializeAsync(serviceProvider)` 解析。
+- **超时**：`PluginLifecycleManager` 为初始化/启动增加单插件 15 秒超时，超时标记 `Failed` 并继续后续插件；Required 插件失败仍中止启动。
+- **加载报告**：新增 `PluginStatusInfo`/`GetPluginStatuses()`；启动日志逐插件输出状态；Layout 新增“插件状态”页（`system.settings` 权限）。
+- **测试**：新增挂起插件超时测试；全量 **513** 通过（Core 131 / Shared 65 / Infra 317）。
+
 ### 新项目模板 / 示例业务插件（2026-11-19，DH-13）
 
 新增：

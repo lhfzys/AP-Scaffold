@@ -30,10 +30,12 @@ public class LayoutPlugin : PluginBase, INavigationContributor
         services.AddTransient<HeaderView>();
         services.AddTransient<SidebarView>();
         services.AddTransient<DashboardView>();
+        services.AddTransient<PluginStatusView>();
 
         services.AddTransient<LayoutViewModel>();
         services.AddTransient<SidebarViewModel>();
         services.AddTransient<DashboardViewModel>();
+        services.AddTransient<PluginStatusViewModel>();
 
         // 状态栏系统监控（CPU/内存），契约在 AP.Contracts.System
         services.AddSingleton<AP.Contracts.System.Services.ISystemMonitorService, Services.SystemMonitorService>();
@@ -49,6 +51,7 @@ public class LayoutPlugin : PluginBase, INavigationContributor
         ViewModelLocationProvider.Register(typeof(SinglePageLayoutView).ToString(), typeof(LayoutViewModel));
         ViewModelLocationProvider.Register(typeof(SidebarView).ToString(), typeof(SidebarViewModel));
         ViewModelLocationProvider.Register(typeof(DashboardView).ToString(), typeof(DashboardViewModel));
+        ViewModelLocationProvider.Register(typeof(PluginStatusView).ToString(), typeof(PluginStatusViewModel));
 
         var config = serviceProvider.GetRequiredService<IConfiguration>();
         var regionManager = serviceProvider.GetRequiredService<IRegionManager>();
@@ -66,6 +69,10 @@ public class LayoutPlugin : PluginBase, INavigationContributor
             regionManager.RegisterViewWithRegion(
                 AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
                 typeof(DashboardView));
+
+            regionManager.RegisterViewWithRegion(
+                AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+                typeof(PluginStatusView));
         });
 
         Logger.LogInformation("布局引擎已加载，当前模式: {Mode}", layoutMode);
@@ -82,6 +89,14 @@ public class LayoutPlugin : PluginBase, INavigationContributor
                 NavigationTarget = "DashboardView",
                 Order = 100,
                 IsDefault = true
+            },
+            new NavigationMenuItem
+            {
+                Label = "插件状态",
+                IconKind = "Puzzle",
+                NavigationTarget = "PluginStatusView",
+                Order = 1200,
+                Permission = "system.settings"
             }
         };
     }

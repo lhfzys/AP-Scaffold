@@ -129,6 +129,28 @@ public class PluginLifecycleManagerTests
     }
 
     [Fact]
+    public async Task InitializePluginsAsync_PluginHangs_TimesOutAndContinuesOtherPlugins()
+    {
+        var hanging = Substitute.For<IPlugin>();
+        hanging.InitializeAsync(Arg.Any<IServiceProvider>(), Arg.Any<CancellationToken>())
+            .Returns(Task.Delay(Timeout.InfiniteTimeSpan));
+        var healthy = Substitute.For<IPlugin>();
+
+        var manager = new PluginLifecycleManager(_logger, TimeSpan.FromMilliseconds(50));
+        manager.RegisterPlugins(new[]
+        {
+            CreateDescriptor("AP.Plugin.Hang", isLoaded: true, instance: hanging, priority: 10),
+            CreateDescriptor("AP.Plugin.Healthy", isLoaded: true, instance: healthy, priority: 20)
+        });
+
+        await manager.InitializePluginsAsync(Substitute.For<IServiceProvider>());
+
+        manager.GetPluginState("AP.Plugin.Hang").Should().Be(AP.Core.StateMachine.PluginState.Failed);
+        manager.GetPluginState("AP.Plugin.Healthy").Should().Be(AP.Core.StateMachine.PluginState.Initialized);
+        manager.GetPluginStatuses().Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task StartPluginsAsync_PluginFails_StateIsFailed()
     {
         var instance = Substitute.For<IPlugin>();
