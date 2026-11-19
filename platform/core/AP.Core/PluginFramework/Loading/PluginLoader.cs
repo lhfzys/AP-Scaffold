@@ -27,10 +27,29 @@ public class PluginLoader
     /// 发现并加载指定目录下的所有插件
     /// </summary>
     /// <param name="currentRole">当前应用运行的角色 (Server/Client)，用于过滤不适用的插件</param>
+    /// <param name="profileName">交付档位（plugins.catalog.json 的 profiles）；空则 Full</param>
+    /// <param name="disabledPlugins">配置中显式禁用的插件 Id</param>
     /// <returns>已加载的插件描述符列表</returns>
-    public List<PluginDescriptor> DiscoverPlugins(AppRole currentRole)
+    public List<PluginDescriptor> DiscoverPlugins(
+        AppRole currentRole,
+        string? profileName = null,
+        IReadOnlyCollection<string>? disabledPlugins = null)
     {
         var descriptors = new List<PluginDescriptor>();
+        var profile = string.IsNullOrWhiteSpace(profileName) ? "Full" : profileName;
+        var catalogPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Configuration",
+            "plugins.catalog.json");
+        var catalog = PluginCatalog.Load(catalogPath, _logger);
+
+        if (!catalog.IsProfileKnown(profile))
+        {
+            _logger.LogWarning("插件档位 {Profile} 不存在，回退 Full", profile);
+            profile = "Full";
+        }
+
+        _logger.LogInformation("插件交付档位: {Profile}", profile);
 
         // 获取插件根目录: AppContext.BaseDirectory + "plugins"
         var pluginsDir = Path.Combine(AppContext.BaseDirectory, GlobalConstants.Paths.Plugins);
@@ -45,7 +64,7 @@ public class PluginLoader
         foreach (var dir in Directory.GetDirectories(pluginsDir))
             try
             {
-                var descriptor = LoadPluginFromDirectory(dir, currentRole);
+                var descriptor = LoadPluginFromDirectory(dir, currentRole, catalog, profile, disabledPlugins);
                 if (descriptor != null) descriptors.Add(descriptor);
             }
             catch (Exception ex)
@@ -68,7 +87,12 @@ public class PluginLoader
         return validated.OrderBy(d => d.Metadata.Priority).ToList();
     }
 
-    private PluginDescriptor? LoadPluginFromDirectory(string pluginDir, AppRole currentRole)
+    private PluginDescriptor? LoadPluginFromDirectory(
+        string pluginDir,
+        AppRole currentRole,
+        PluginCatalog catalog,
+        string profile,
+        IReadOnlyCollection<string>? disabledPlugins)
     {
         var dirName = Path.GetFileName(pluginDir);
         // 约定：主程序集名称必须与目录名一致 (例如 plugins/AP.Plugin.Demo/AP.Plugin.Demo.dll)
@@ -109,6 +133,18 @@ public class PluginLoader
             // 5. 检查角色匹配 (核心逻辑: 如果是 Server 模式，就不加载纯 Client 插件)
             if ((metadata.SupportedRoles & currentRole) == 0)
             {
+                context.Unload();
+                return null;
+            }
+
+            // 6. 交付档位 / 启用开关过滤
+            if (disabledPlugins?.Contains(metadata.Id, StringComparer.OrdinalIgnoreCase) == true
+                || !catalog.IsEnabled(metadata.Id)
+                || !catalog.IsIncluded(profile, metadata.Id))
+            {
+                _logger.LogInformation(
+                    "跳过插件: {Name} ({Id})，档位={Profile}，启用={Enabled}",
+                    metadata.Name, metadata.Id, profile, catalog.IsEnabled(metadata.Id));
                 context.Unload();
                 return null;
             }

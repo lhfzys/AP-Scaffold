@@ -51,6 +51,14 @@
 
 **一键方式（推荐）**：双击运行 `installer/build-installer.bat`（自动完成"清理 bin → 构建 → 发布 → 编译安装包"四步），产物在 `installer/Output/`。
 
+按插件档位裁剪（可选）：
+
+```powershell
+installer\build-installer.bat Minimal
+```
+
+`Minimal` 由 `platform/hosts/AP.Host.Desktop/Configuration/plugins.catalog.json` 定义；脚本会删除 publish 中档位外的插件目录后再编译安装包。不带参数为 `Full`。
+
 **手动分步方式**：
 
 1. **清理旧产物**（可选但推荐，避免残留插件目录）

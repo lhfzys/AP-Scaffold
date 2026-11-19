@@ -231,9 +231,12 @@ public class Bootstrapper : PrismBootstrapper
         services.AddPlcHardware(_configuration);
         services.AddReportFramework(_configuration);
 
-        // --- 扫描插件元数据 ---
-        _loadedPlugins = _pluginLoader.DiscoverPlugins(_appRole);
-        Log.Information("已发现 {Count} 个适用插件", _loadedPlugins.Count);
+        // --- 扫描插件元数据（按交付档位与禁用列表过滤） ---
+        var pluginProfile = _configuration["Plugins:Profile"] ?? "Full";
+        var disabledPlugins = _configuration.GetSection("Plugins:Disabled").Get<string[]>()
+                              ?? Array.Empty<string>();
+        _loadedPlugins = _pluginLoader.DiscoverPlugins(_appRole, pluginProfile, disabledPlugins);
+        Log.Information("已发现 {Count} 个适用插件（档位: {Profile}）", _loadedPlugins.Count, pluginProfile);
 
         // 插件图致命问题（重复 ID / Required 插件依赖缺失）直接进入致命错误列表
         foreach (var issue in _pluginLoader.Issues.Where(i => i.IsFatal))

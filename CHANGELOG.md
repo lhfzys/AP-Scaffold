@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 插件交付档位 / 启用禁用（2026-11-19，DH-7）
+
+新增/变更：
+
+- **插件清单**：`Configuration/plugins.catalog.json` 定义 `Full` / `Minimal` 档位与每插件 `enabled` 状态。
+- **加载过滤**：`PluginLoader` 按 `Plugins:Profile`、`Plugins:Disabled` 和清单状态过滤；未知档位回退 `Full`。
+- **交付裁剪**：`scripts/apply-plugin-profile.ps1` 删除 publish 中档位外插件目录；`installer\build-installer.bat Minimal` 生成裁剪安装包。
+- **验证**：Minimal 运行只加载 Login/Layout/SystemSettings/Siemens/Sample；裁剪脚本与清单测试通过；全量 **515** 通过。
+
 ### 插件单容器 / 超时 / 加载报告（2026-11-19，DH-8）
 
 变更：

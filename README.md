@@ -566,6 +566,21 @@ dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plu
 
 生成后把项目加入 `AP-Automation.Platform.slnx` 的 `/platform/plugins/business/`，再构建宿主。仓库内 `AP.Plugin.Sample` 是与模板对应的可运行参考实现，测试见 `AP.Infra.Tests/Business/SamplePluginTests.cs`。
 
+### 插件交付档位
+
+`platform/hosts/AP.Host.Desktop/Configuration/plugins.catalog.json` 定义交付档位（默认 `Full`，示例 `Minimal`）：
+
+- `Plugins:Profile` 选择档位；
+- `Plugins:Disabled` 显式禁用插件 Id；
+- `plugins` 节点的 `enabled` 可关闭单个插件；
+- 裁剪安装包：
+
+```powershell
+installer\build-installer.bat Minimal
+```
+
+`Minimal` 当前包含 Login / Layout / SystemSettings / Siemens PLC / Sample，可按项目复制一份档位清单。
+
 ### 新建一个插件
 
 **第 1 步**：在 `platform/plugins/` 下创建类库项目（按分类放到 `hardware/`、`business/` 或 `system/`）。`Directory.Build.props` 会自动把 `AP.Plugin.*` 项目的输出定向到 `bin/$(Configuration)/plugins/{插件名}/`，并清理与宿主重复的共享 DLL —— **无需配置任何构建后事件**。
@@ -772,13 +787,13 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 513 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连、示例业务插件与插件超时。
+项目当前包含 **3 个测试项目 / 515 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连、示例业务插件、插件超时与交付档位。
 
 ### 测试项目结构
 
 ```
 platform/tests/
-├── AP.Core.Tests/                       # 核心框架测试（131 个测试）
+├── AP.Core.Tests/                       # 核心框架测试（133 个测试）
 │   ├── StateMachine/
 │   │   ├── StateTransitionValidatorTests.cs   # 状态转换验证
 │   │   └── PluginStateMachineTests.cs         # 插件状态机

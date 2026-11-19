@@ -1,0 +1,29 @@
+{
+  "profiles": {
+    "Full": [ "*" ],
+    "Minimal": [
+      "AP.Plugin.Login",
+      "AP.Plugin.Layout",
+      "AP.Plugin.SystemSettings",
+      "AP.Plugin.Plc.Siemens",
+      "AP.Plugin.Sample"
+    ]
+  },
+  "plugins": {
+    "AP.Plugin.AuditLog": { "enabled": true },
+    "AP.Plugin.DeviceConfiguration": { "enabled": true },
+    "AP.Plugin.Layout": { "enabled": true },
+    "AP.Plugin.Login": { "enabled": true },
+    "AP.Plugin.Plc.Mitsubishi": { "enabled": true },
+    "AP.Plugin.Plc.Omron": { "enabled": true },
+    "AP.Plugin.Plc.Siemens": { "enabled": true },
+    "AP.Plugin.RecipeManagement": { "enabled": true },
+    "AP.Plugin.ReportCenter": { "enabled": true },
+    "AP.Plugin.RoleManagement": { "enabled": true },
+    "AP.Plugin.Sample": { "enabled": true },
+    "AP.Plugin.Scanner": { "enabled": true },
+    "AP.Plugin.SystemSettings": { "enabled": true },
+    "AP.Plugin.TagConfiguration": { "enabled": true },
+    "AP.Plugin.UserManagement": { "enabled": true }
+  }
+}

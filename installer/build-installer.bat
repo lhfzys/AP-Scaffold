@@ -1,8 +1,8 @@
 @echo off
 REM ============================================================
 REM AP-Scaffold one-click build & package script
-REM Steps: clean bin -> build solution -> publish app -> Inno compile
-REM Usage: double-click this file, or run installer\build-installer.bat
+REM Steps: clean bin -> build solution -> publish app -> apply optional plugin profile -> Inno compile
+REM Usage: installer\build-installer.bat [Full|Minimal]
 REM Output: installer\Output\*-Setup.exe
 REM Requires: .NET 10 SDK (build) + Inno Setup 6 (auto-detects C/D drive, user dir, PATH)
 REM ============================================================
@@ -20,7 +20,17 @@ echo === [3/4] Publishing app (framework-dependent win-x64) ===
 dotnet publish platform/hosts/AP.Host.Desktop/AP.Host.Desktop.csproj -c Release -r win-x64 --self-contained false -p:AppendRuntimeIdentifierToOutputPath=true
 if errorlevel 1 goto :error
 
-echo === [4/4] Compiling installer (Inno Setup 6) ===
+echo === [4/5] Applying plugin profile ===
+set "PROFILE=%~1"
+if not defined PROFILE set "PROFILE=Full"
+if /I not "%PROFILE%"=="Full" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\apply-plugin-profile.ps1 -Profile "%PROFILE%" -PublishDir "bin\Release\publish"
+    if errorlevel 1 goto :error
+) else (
+    echo Full profile: keep all plugins
+)
+
+echo === [5/5] Compiling installer (Inno Setup 6) ===
 REM ISCC 路径按常见安装位置自检测（默认 C 盘 → D 盘 → 用户目录 → PATH）
 set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if not exist "%ISCC%" set "ISCC=D:\Program Files (x86)\Inno Setup 6\ISCC.exe"

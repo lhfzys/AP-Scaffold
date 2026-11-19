@@ -46,7 +46,7 @@
 | DH-4 | 轻身份 + 审计闭环（A 模式：免登录 + 审计） | P0 | 已完成（A 模式） | 4d |
 | DH-5 | 数据库版本化迁移 + 原子备份 + tags.json 升级保留 | P0 | 已完成（核心迁移/备份/恢复脚本；事务/单写者待评估） | 5d |
 | DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 已完成（CI 绿，已合并 main） | 4d |
-| DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
+| DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 已完成 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 已完成 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 已完成 | 2d |
 | DH-10 | 扫码枪首开重连 + 有界 Channel | P1 | 已完成 | 1d |
@@ -328,6 +328,15 @@
 - **测试**：全量 **512** 通过（Core 130 / Shared 65 / Infra 317）。
 - 使用说明：`dotnet new install .\templates\ap-plugin` → `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再加入 slnx。
 
+### DH-7 插件 manifest / 启用禁用 / 交付档位
+
+#### 完成记录（2026-11-19）
+
+- **插件清单**：新增 `Configuration/plugins.catalog.json`，包含 `Full` / `Minimal` 档位与每个插件的 `enabled` 状态。
+- **加载过滤**：`PluginLoader.DiscoverPlugins` 读取档位和 `Plugins:Disabled`；未知档位回退 Full；被档位/禁用/清单排除的插件不加载。
+- **交付裁剪**：`scripts/apply-plugin-profile.ps1` 按档位删除 publish 中未包含的插件目录；`build-installer.bat [Full|Minimal]` 支持生成裁剪安装包。
+- **验证**：`Minimal` 运行只有 Login/Layout/SystemSettings/Siemens/Sample 五个插件；裁剪脚本测试通过；清单单元测试通过；全量 **515** 测试通过。
+
 ### DH-8 单容器 / 超时 / 加载报告
 
 #### 完成记录（2026-11-19）
@@ -362,10 +371,11 @@
 | 2026-11-19 | DH-10 | `d746733` | 首开失败进入监督器；有界 Channel/ReadTimeout；508 测试通过；CI 绿 |
 | 2026-11-19 | DH-13 | `37047bf` + `5b862db` | 示例插件 + dotnet new 模板（含测试项目）；模板生成/构建/测试通过；512 测试通过；CI 绿 |
 | 2026-11-19 | DH-8 | `42688aa` | 单容器单实例；15s 超时；插件状态页；513 测试通过；CI 绿 |
+| 2026-11-19 | DH-7 | 待提交 | 插件清单/档位过滤；Minimal 运行验证；裁剪脚本；515 测试通过 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v2.5（2026-11-19，DH-8 单容器/超时/加载报告完成）
-**下一步**：按项目需要选 DH-7 插件 profile、DH-11 报表/配方或 DH-12 现场诊断。
+**文档版本**：v2.6（2026-11-19，DH-7 插件档位/启用禁用完成）
+**下一步**：按项目需要选 DH-12 现场诊断或 DH-11 报表/配方；DH-7 后交付包可按 Minimal 裁剪。
