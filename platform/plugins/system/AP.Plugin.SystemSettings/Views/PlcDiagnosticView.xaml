@@ -1,0 +1,64 @@
+<UserControl x:Class="AP.Plugin.SystemSettings.Views.PlcDiagnosticView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="Transparent">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <md:Card Grid.Row="0" Padding="16" md:ElevationAssist.Elevation="Dp1" Margin="0,0,0,16">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="PLC 通讯日志" Style="{DynamicResource TextStyle.Title}"/>
+                    <TextBlock Text="{Binding StatusText}"
+                               Style="{DynamicResource TextStyle.Label}"
+                               Foreground="{DynamicResource Brush.OnSurfaceVariant}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <CheckBox Content="仅失败"
+                              IsChecked="{Binding ShowOnlyFailures}"
+                              VerticalAlignment="Center"
+                              Margin="0,0,16,0"/>
+                    <Button Content="刷新"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding RefreshCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="清空"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding ClearCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"/>
+                </StackPanel>
+            </Grid>
+        </md:Card>
+
+        <md:Card Grid.Row="1" Padding="0" md:ElevationAssist.Elevation="Dp2">
+            <DataGrid ItemsSource="{Binding Entries}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="时间"
+                                        Binding="{Binding Timestamp, StringFormat=HH:mm:ss.fff}"
+                                        Width="110"/>
+                    <DataGridTextColumn Header="操作" Binding="{Binding Operation}" Width="130"/>
+                    <DataGridTextColumn Header="地址" Binding="{Binding Address}" Width="150"/>
+                    <DataGridTextColumn Header="值" Binding="{Binding Value}" Width="*"/>
+                    <DataGridTextColumn Header="耗时(ms)" Binding="{Binding ElapsedMilliseconds}" Width="90"/>
+                    <DataGridCheckBoxColumn Header="成功" Binding="{Binding Success}" Width="60"/>
+                    <DataGridTextColumn Header="错误" Binding="{Binding Error}" Width="2*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </md:Card>
+    </Grid>
+</UserControl>

@@ -63,6 +63,11 @@
                             Command="{Binding EditTagCommand}"
                             Height="{DynamicResource Button.StandardHeight}"
                             Margin="0,0,8,0"/>
+                    <Button Content="导入 CSV"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding ImportCsvCommand}"
+                            Height="{DynamicResource Button.StandardHeight}"
+                            Margin="0,0,8,0"/>
                     <Button Content="删除"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding DeleteTagCommand}"

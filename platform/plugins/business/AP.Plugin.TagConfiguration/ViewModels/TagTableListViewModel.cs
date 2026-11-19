@@ -2,6 +2,7 @@
 
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text;
 using System.Windows;
 using AP.Contracts.Hardware.DeviceRuntime;
 using AP.Contracts.Security.Abstractions;
@@ -132,6 +133,63 @@ public partial class TagTableListViewModel : ViewModelBase
 
         Rows.Remove(SelectedRow);
         SelectedRow = null;
+    }
+
+    [RelayCommand]
+    private async Task ImportCsvAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "导入点表 CSV",
+            Filter = "CSV 文件 (*.csv)|*.csv|所有文件 (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var text = await File.ReadAllTextAsync(dialog.FileName);
+            var parsed = TagCsvParser.Parse(text);
+            if (!parsed.Success)
+            {
+                await _dialogService.ShowErrorAsync(
+                    $"CSV 导入失败：{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", parsed.Errors)}");
+                return;
+            }
+
+            var existing = new HashSet<string>(
+                Rows.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+            var duplicates = parsed.Rows
+                .Where(r => existing.Contains(r.Name))
+                .Select(r => r.Name)
+                .ToList();
+            if (duplicates.Count > 0)
+            {
+                await _dialogService.ShowErrorAsync(
+                    $"以下点名已存在，未导入：{string.Join(", ", duplicates)}");
+                return;
+            }
+
+            var candidate = Rows.Concat(parsed.Rows).Select(r => r.ToDefinition()).ToList();
+            var errors = _tagTableValidator.Validate(candidate);
+            if (errors.Count > 0)
+            {
+                await _dialogService.ShowErrorAsync(
+                    $"导入后的点表校验未通过，未导入：{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
+                return;
+            }
+
+            foreach (var row in parsed.Rows)
+                Rows.Add(row);
+            SelectedRow = parsed.Rows[0];
+            await _dialogService.ShowAlertAsync(
+                $"已导入 {parsed.Rows.Count} 个点，点击“保存”后生效。", "导入成功");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DecoderFallbackException)
+        {
+            _logger.LogError(ex, "导入点表 CSV 失败");
+            await _dialogService.ShowErrorAsync("读取 CSV 失败：" + ex.Message);
+        }
     }
 
     [RelayCommand]

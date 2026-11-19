@@ -4,6 +4,7 @@ using AP.Contracts.Security.Abstractions;
 using AP.Contracts.Security.Audit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Diagnostics;
 
 namespace AP.Infra.Hardware.Services;
 
@@ -19,32 +20,69 @@ public class AuditingPlcServiceDecorator : IPlcService, IPlcBatchReadWrite
     private readonly IAuditService? _auditService;
     private readonly IIdentityService? _identityService;
     private readonly ILogger<AuditingPlcServiceDecorator> _logger;
+    private readonly IPlcDiagnosticLog? _diagnosticLog;
 
     public AuditingPlcServiceDecorator(
         IPlcService inner,
         IAuditService? auditService = null,
         IIdentityService? identityService = null,
-        ILogger<AuditingPlcServiceDecorator>? logger = null)
+        ILogger<AuditingPlcServiceDecorator>? logger = null,
+        IPlcDiagnosticLog? diagnosticLog = null)
     {
         _inner = inner;
         _auditService = auditService;
         _identityService = identityService;
         _logger = logger ?? NullLogger<AuditingPlcServiceDecorator>.Instance;
+        _diagnosticLog = diagnosticLog;
     }
 
     public PlcServiceFeatures SupportedFeatures => _inner.SupportedFeatures;
 
-    public Task ConnectAsync(CancellationToken ct = default) => _inner.ConnectAsync(ct);
+    public async Task ConnectAsync(CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        string? error = null;
+        try { await _inner.ConnectAsync(ct); }
+        catch (Exception ex) { error = ex.Message; throw; }
+        finally { Record("Connect", "-", null, sw, error); }
+    }
 
-    public Task DisconnectAsync() => _inner.DisconnectAsync();
+    public async Task DisconnectAsync()
+    {
+        var sw = Stopwatch.StartNew();
+        string? error = null;
+        try { await _inner.DisconnectAsync(); }
+        catch (Exception ex) { error = ex.Message; throw; }
+        finally { Record("Disconnect", "-", null, sw, error); }
+    }
 
     public Task<bool> IsConnectedAsync() => _inner.IsConnectedAsync();
 
-    public Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
-        => _inner.ReadAsync<T>(address, ct);
+    public async Task<T> ReadAsync<T>(string address, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        object? value = null;
+        string? error = null;
+        try
+        {
+            var result = await _inner.ReadAsync<T>(address, ct);
+            value = result;
+            return result;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            throw;
+        }
+        finally
+        {
+            Record($"Read<{typeof(T).Name}>", address, value?.ToString(), sw, error);
+        }
+    }
 
     public async Task WriteAsync<T>(string address, T value, CancellationToken ct = default)
     {
+        var sw = Stopwatch.StartNew();
         string? error = null;
         try
         {
@@ -57,20 +95,38 @@ public class AuditingPlcServiceDecorator : IPlcService, IPlcBatchReadWrite
         }
         finally
         {
+            Record($"Write<{typeof(T).Name}>", address, value?.ToString(), sw, error);
             await LogAuditSafeAsync("PLC 写入", address, $"写入 {address} = {value}", error);
         }
     }
 
-    public Task<Dictionary<string, object>> ReadBatchAsync(string[] addresses, CancellationToken ct = default)
-        => _inner is IPlcBatchReadWrite batch
-            ? batch.ReadBatchAsync(addresses, ct)
-            : throw new NotSupportedException("当前 PLC 驱动不支持批量读取");
+    public async Task<Dictionary<string, object>> ReadBatchAsync(string[] addresses, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        string? error = null;
+        try
+        {
+            return _inner is IPlcBatchReadWrite batch
+                ? await batch.ReadBatchAsync(addresses, ct)
+                : throw new NotSupportedException("当前 PLC 驱动不支持批量读取");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            throw;
+        }
+        finally
+        {
+            Record("ReadBatch", $"{addresses.Length} 个地址", null, sw, error);
+        }
+    }
 
     public async Task WriteBatchAsync(Dictionary<string, object> data, CancellationToken ct = default)
     {
         if (_inner is not IPlcBatchReadWrite batch)
             throw new NotSupportedException("当前 PLC 驱动不支持批量写入");
 
+        var sw = Stopwatch.StartNew();
         string? error = null;
         try
         {
@@ -84,8 +140,15 @@ public class AuditingPlcServiceDecorator : IPlcService, IPlcBatchReadWrite
         finally
         {
             var targets = string.Join(",", data.Keys);
+            Record("WriteBatch", $"{data.Count} 个地址", targets, sw, error);
             await LogAuditSafeAsync("PLC 批量写入", targets, $"批量写入 {data.Count} 个地址: {targets}", error);
         }
+    }
+
+    private void Record(string operation, string address, string? value, Stopwatch sw, string? error)
+    {
+        _diagnosticLog?.Record(new PlcDiagnosticEntry(
+            DateTime.Now, operation, address, value, sw.ElapsedMilliseconds, error is null, error));
     }
 
     private async Task LogAuditSafeAsync(string actionName, string targetId, string description, string? error)

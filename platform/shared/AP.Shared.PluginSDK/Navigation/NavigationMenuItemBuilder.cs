@@ -43,7 +43,8 @@ public static class NavigationMenuItemBuilder
                 Category = item.Category,
                 IsDefault = item.IsDefault
                     || (!string.IsNullOrWhiteSpace(defaultTarget)
-                        && item.NavigationTarget.Equals(defaultTarget, StringComparison.OrdinalIgnoreCase))
+                        && item.NavigationTarget.Equals(defaultTarget, StringComparison.OrdinalIgnoreCase)),
+                ShowWhenSecurityDisabled = item.ShowWhenSecurityDisabled
             })
             .ToList();
 

@@ -37,16 +37,23 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ActivePlcService>();
         // 测试连接：临时驱动，不触碰运行中的 ActivePlcService
         services.AddSingleton<IPlcConnectionTester, PlcConnectionTester>();
+        // 通讯日志：内存环形缓冲，供现场诊断页查看（测试/无日志环境降级为 NullLogger）
+        services.AddSingleton<IPlcDiagnosticLog>(sp => new PlcDiagnosticLog(
+            sp.GetService<ILogger<PlcDiagnosticLog>>()
+            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PlcDiagnosticLog>.Instance));
         // IPlcService 解析为审计装饰器：PLC 写操作自动留痕，业务无感知；
         // 审计/身份服务未注册（如独立测试）时自动降级为不审计
         services.AddSingleton<IPlcService>(sp => new AuditingPlcServiceDecorator(
             sp.GetRequiredService<ActivePlcService>(),
             sp.GetService<IAuditService>(),
             sp.GetService<IIdentityService>(),
-            sp.GetService<ILogger<AuditingPlcServiceDecorator>>()));
+            sp.GetService<ILogger<AuditingPlcServiceDecorator>>(),
+            sp.GetService<IPlcDiagnosticLog>()));
         services.AddSingleton<IPlcBatchReadWrite>(sp => (IPlcBatchReadWrite)sp.GetRequiredService<IPlcService>());
         // 带类型批量读取（驱动逐个接入，未接入的驱动经此调用抛 NotSupportedException）
-        services.AddSingleton<IPlcTypedBatchRead>(sp => sp.GetRequiredService<ActivePlcService>());
+        services.AddSingleton<IPlcTypedBatchRead>(sp => new DiagnosticTypedBatchReader(
+            sp.GetRequiredService<ActivePlcService>(),
+            sp.GetRequiredService<IPlcDiagnosticLog>()));
         // Device Runtime Model：设备注册表 + PLC 设备视图（与 IPlcService 并行的只读视图，不改变现有解析关系）
         services.AddSingleton<IDeviceRegistry, DeviceRegistry>();
         services.AddSingleton<IDevice>(sp => new PlcDeviceAdapter(

@@ -96,7 +96,8 @@ public class LayoutPlugin : PluginBase, INavigationContributor
                 IconKind = "Puzzle",
                 NavigationTarget = "PluginStatusView",
                 Order = 1200,
-                Permission = "system.settings"
+                Permission = "system.settings",
+                ShowWhenSecurityDisabled = true
             }
         };
     }

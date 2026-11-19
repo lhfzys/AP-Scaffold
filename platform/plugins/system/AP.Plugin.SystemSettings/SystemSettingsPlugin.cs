@@ -39,6 +39,8 @@ public class SystemSettingsPlugin : PluginBase, INavigationContributor
         services.AddTransient<SettingsShellView>();
         services.AddTransient<SettingsShellViewModel>();
         services.AddTransient<SettingsDialogWindow>();
+        services.AddTransient<PlcDiagnosticView>();
+        services.AddTransient<PlcDiagnosticViewModel>();
 
         // 注册配置服务
         services.AddSingleton<SettingsService>();
@@ -50,6 +52,7 @@ public class SystemSettingsPlugin : PluginBase, INavigationContributor
         await base.InitializeAsync(serviceProvider, ct);
 
         ViewModelLocationProvider.Register(typeof(SettingsShellView).ToString(), typeof(SettingsShellViewModel));
+        ViewModelLocationProvider.Register(typeof(PlcDiagnosticView).ToString(), typeof(PlcDiagnosticViewModel));
 
         // 注册 ViewModel -> View 的数据模板，供配置中心动态渲染编辑器
         RegisterEditorDataTemplates();
@@ -65,6 +68,10 @@ public class SystemSettingsPlugin : PluginBase, INavigationContributor
             regionManager.RegisterViewWithRegion(
                 AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
                 typeof(SettingsShellView));
+
+            regionManager.RegisterViewWithRegion(
+                AP.Shared.Utilities.Constants.GlobalConstants.RegionNames.ContentRegion,
+                typeof(PlcDiagnosticView));
         });
 
         Logger.LogInformation("系统配置中心已加载");
@@ -80,7 +87,17 @@ public class SystemSettingsPlugin : PluginBase, INavigationContributor
                 IconKind = "Cog",
                 NavigationTarget = "SettingsShellView",
                 Order = 1000,
-                Permission = "system.settings"
+                Permission = "system.settings",
+                ShowWhenSecurityDisabled = true
+            },
+            new NavigationMenuItem
+            {
+                Label = "通讯日志",
+                IconKind = "TextBoxSearch",
+                NavigationTarget = "PlcDiagnosticView",
+                Order = 1150,
+                Permission = "system.settings",
+                ShowWhenSecurityDisabled = true
             }
         };
     }

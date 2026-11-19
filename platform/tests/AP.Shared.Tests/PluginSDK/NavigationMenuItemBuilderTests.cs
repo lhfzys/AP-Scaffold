@@ -73,6 +73,26 @@ public class NavigationMenuItemBuilderTests
     }
 
     [Fact]
+    public void Build_ShouldPreserveShowWhenSecurityDisabled()
+    {
+        var contributors = new INavigationContributor[]
+        {
+            new TestContributor(new NavigationMenuItem
+            {
+                Label = "诊断",
+                NavigationTarget = "DiagnosticView",
+                Order = 100,
+                ShowWhenSecurityDisabled = true
+            })
+        };
+
+        var result = NavigationMenuItemBuilder.Build(contributors, _ => true);
+
+        result.Should().ContainSingle();
+        result[0].ShowWhenSecurityDisabled.Should().BeTrue();
+    }
+
+    [Fact]
     public void Build_ShouldHonorDefaultTargetFromConfiguration()
     {
         var contributors = new INavigationContributor[]

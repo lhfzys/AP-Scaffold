@@ -39,4 +39,10 @@ public sealed class NavigationMenuItem
     /// 是否作为启动默认页
     /// </summary>
     public bool IsDefault { get; set; }
+
+    /// <summary>
+    /// 免登录（Security 禁用）时是否始终显示。
+    /// 用于系统诊断/插件状态等运维页面，避免旧版配置文件的白名单没有新页面而不可见。
+    /// </summary>
+    public bool ShowWhenSecurityDisabled { get; set; }
 }

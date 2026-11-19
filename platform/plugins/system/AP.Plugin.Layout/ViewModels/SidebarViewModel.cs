@@ -63,8 +63,10 @@ public partial class SidebarViewModel : ViewModelBase
         Func<NavigationMenuItem, bool>? visibilityFilter = null;
         if (!securityEnabled)
         {
-            // 未启用安全模块时，只显示白名单中的菜单（默认回退到仪表盘）
-            visibilityFilter = item => allowedWhenSecurityDisabled.Contains(item.NavigationTarget, StringComparer.OrdinalIgnoreCase);
+            // 未启用安全模块时，只显示白名单中的菜单（默认回退到仪表盘）；
+            // 系统诊断/插件状态页标记为始终可见，兼容旧版配置文件没有新目标的情况
+            visibilityFilter = item => item.ShowWhenSecurityDisabled
+                || allowedWhenSecurityDisabled.Contains(item.NavigationTarget, StringComparer.OrdinalIgnoreCase);
         }
 
         var menuItems = NavigationMenuItemBuilder.Build(

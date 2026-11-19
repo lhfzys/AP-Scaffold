@@ -156,7 +156,8 @@ public partial class DashboardViewModel : ViewModelBase
         Func<NavigationMenuItem, bool>? visibilityFilter = null;
         if (!securityEnabled)
         {
-            visibilityFilter = item => allowedWhenSecurityDisabled.Contains(item.NavigationTarget, StringComparer.OrdinalIgnoreCase);
+            visibilityFilter = item => item.ShowWhenSecurityDisabled
+                || allowedWhenSecurityDisabled.Contains(item.NavigationTarget, StringComparer.OrdinalIgnoreCase);
         }
 
         var menuItems = NavigationMenuItemBuilder.Build(

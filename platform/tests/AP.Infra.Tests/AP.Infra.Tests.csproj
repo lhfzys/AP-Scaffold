@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Omron\AP.Plugin.Plc.Omron.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Scanner\AP.Plugin.Scanner.csproj" />
     <ProjectReference Include="..\..\plugins\business\AP.Plugin.Sample\AP.Plugin.Sample.csproj" />
+    <ProjectReference Include="..\..\plugins\business\AP.Plugin.TagConfiguration\AP.Plugin.TagConfiguration.csproj" />
     <ProjectReference Include="..\..\plugins\system\AP.Plugin.SystemSettings\AP.Plugin.SystemSettings.csproj" />
   </ItemGroup>
 
