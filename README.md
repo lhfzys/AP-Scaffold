@@ -556,7 +556,7 @@ gRPC 项目已从主解决方案/宿主移除，以下配置仅作为冻结参�
 
 ### 从模板创建新插件
 
-仓库内置 `dotnet new` 模板（导航页 + 设置页 + 报表提供者 + ViewModel 示例）：
+仓库内置 `dotnet new` 模板（导航页 + 设置页 + 报表提供者 + ViewModel + 测试项目示例）：
 
 ```powershell
 dotnet new install .\templates\ap-plugin

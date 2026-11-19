@@ -38,10 +38,10 @@ dotnet build AP-Automation.Platform.slnx -c Release
 
 ## 测试
 
-模板不自动生成测试项目；建议在 `platform/tests/AP.Infra.Tests` 或新建测试项目中引用插件，至少覆盖：
+模板同时生成 `Tests/AP.Plugin.Sample.Tests.csproj`（运行时文件名会替换为你的项目名），包含 ViewModel、设置回环、报表提供者测试。把测试项目一起加入解决方案，或单独运行：
 
-- ViewModel 配置加载与核心命令；
-- 设置编辑器 `LoadFromConfiguration` / `Validate` / `GetConfigurationValue` 回环；
-- 报表提供者（如保留）返回数据形状。
+```powershell
+dotnet test platform/plugins/business/AP.Plugin.MyBusiness/Tests/AP.Plugin.MyBusiness.Tests.csproj
+```
 
-参考仓库内 `platform/tests/AP.Infra.Tests/Business/SamplePluginTests.cs`。
+测试项目引用同目录插件项目；如移动目录，请同步修改 `..\AP.Plugin.Sample.csproj`。

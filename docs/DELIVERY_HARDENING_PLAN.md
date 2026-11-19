@@ -323,8 +323,8 @@
 #### 完成记录（2026-11-19）
 
 - **示例业务插件**：新增 `AP.Plugin.Sample`（导航页 + 设置页 + `IReportDataProvider` + 视图/VM），加入主解决方案。
-- **dotnet new 模板**：`templates/ap-plugin`，短名称 `ap-plugin`，生成后包含 `Plugin.cs`、View/ViewModel、设置贡献者、报表提供者；`sourceName` 自动替换 `AP.Plugin.Sample`。
-- **验证**：模板安装/生成/独立构建通过；生成项目与模板文件均清理；示例插件测试（配置读取/命令/设置回环/报表/导航）通过。
+- **dotnet new 模板**：`templates/ap-plugin`，短名称 `ap-plugin`，生成后包含 `Plugin.cs`、View/ViewModel、设置贡献者、报表提供者和 `Tests/*.Tests.csproj`；`sourceName` 自动替换 `AP.Plugin.Sample`。
+- **验证**：模板安装/生成/独立构建/测试项目运行通过（3 个测试）；生成项目与模板文件均清理；示例插件测试（配置读取/命令/设置回环/报表/导航）通过。
 - **测试**：全量 **512** 通过（Core 130 / Shared 65 / Infra 317）。
 - 使用说明：`dotnet new install .\templates\ap-plugin` → `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再加入 slnx。
 

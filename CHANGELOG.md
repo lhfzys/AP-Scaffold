@@ -14,7 +14,7 @@
 新增：
 
 - **`AP.Plugin.Sample`**：仓库内可运行示例业务插件，含导航页、设置页（`ISettingsContributor`）、`IReportDataProvider` 和 ViewModel 命令示例。
-- **`templates/ap-plugin`**：`dotnet new ap-plugin` 模板；生成项目含 `Plugin.cs`、View/ViewModel、设置贡献者和报表提供者，`sourceName` 自动替换 `AP.Plugin.Sample`。
+- **`templates/ap-plugin`**：`dotnet new ap-plugin` 模板；生成项目含 `Plugin.cs`、View/ViewModel、设置贡献者、报表提供者和 `Tests/*.Tests.csproj`，`sourceName` 自动替换 `AP.Plugin.Sample`。
 - **使用**：`dotnet new install .\templates\ap-plugin` → `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再加入 `AP-Automation.Platform.slnx`。
 - **测试**：示例插件配置/命令/设置回环/报表/导航测试；模板安装、生成、独立构建通过；全量 **512** 通过（Core 130 / Shared 65 / Infra 317）。
 

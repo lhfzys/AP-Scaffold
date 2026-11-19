@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\contracts\AP.Contracts.Report\AP.Contracts.Report.csproj" />
     <ProjectReference Include="..\..\..\shared\AP.Shared.PluginSDK\AP.Shared.PluginSDK.csproj" />
     <ProjectReference Include="..\..\..\shared\AP.Shared.UI\AP.Shared.UI.csproj" />

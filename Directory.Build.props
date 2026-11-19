@@ -19,12 +19,12 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('AP.Plugin'))">
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('AP.Plugin')) And !$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsPluginProject>true</IsPluginProject>
     <OutputPath>$(BuildRoot)plugins\$(MSBuildProjectName)\</OutputPath>
   </PropertyGroup>
 
-  <PropertyGroup Condition="!$(MSBuildProjectName.StartsWith('AP.Plugin'))">
+  <PropertyGroup Condition="!$(MSBuildProjectName.StartsWith('AP.Plugin')) Or $(MSBuildProjectName.EndsWith('.Tests'))">
     <IsPluginProject>false</IsPluginProject>
     <OutputPath>$(BuildRoot)</OutputPath>
   </PropertyGroup>
