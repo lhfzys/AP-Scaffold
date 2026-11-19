@@ -340,7 +340,7 @@
 | 2026-11-18 | DH-5 | `fbcf354` | 首次/二次启动迁移验证；正式安装旧库升级备份 32KB + quick_check；505 测试通过 |
 | 2026-11-18 | DH-3 | `d72acbe` | net10 全仓构建；502 测试通过；漏洞 0 High；安装冒烟通过；CI 绿 |
 | 2026-11-19 | DH-9 | `cf85718` | 配置保存 merge；备份/恢复入口；506 测试通过；CI 绿 |
-| 2026-11-19 | DH-10 | 待提交 | 首开失败进入监督器；有界 Channel/ReadTimeout；508 测试通过 |
+| 2026-11-19 | DH-10 | `d746733` | 首开失败进入监督器；有界 Channel/ReadTimeout；508 测试通过；CI 绿 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
