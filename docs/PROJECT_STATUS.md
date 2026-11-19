@@ -4,7 +4,7 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
-> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）、**DH-9 配置保存 merge**、**DH-10 扫码枪首开重连**、**DH-13 模板/示例插件**、**DH-8 单容器/超时/加载报告**、**DH-7 插件档位/启用禁用** 与 **DH-12 现场诊断（测试连接/通讯日志/CSV 导入）**；GitHub Actions 已跑绿；主解决方案 **33 个项目**，测试 **536 通过**（Core 133 / Shared 66 / Infra 337）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
+> **当前状态（2026-11-19）**：交付硬化 DH-1~DH-13 全部完成并合并 `main`（最新 DH-11 `454302d`）。已包含 **.NET 10 全仓迁移**、**DH-9 配置保存 merge**、**DH-10 扫码枪首开重连**、**DH-13 模板/示例插件**、**DH-8 单容器/超时/加载报告**、**DH-7 插件档位/启用禁用**、**DH-12 现场诊断（测试连接/通讯日志/CSV 导入）** 与 **DH-11 报表/配方闭环**；GitHub Actions 已跑绿；主解决方案 **33 个项目**，测试 **536 通过**（Core 133 / Shared 66 / Infra 337）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
 
 ---
 
@@ -121,9 +121,9 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 
 | 项目 | 文件数 | 测试数（`dotnet test` 实测，全部通过） | 覆盖范围 |
 |------|-------|--------------------------------|----------|
-| `AP.Core.Tests` | 9 | 133 | 状态机、生命周期、事件总线、插件框架、Capability |
-| `AP.Shared.Tests` | 4 | 48 | PluginBase、导航菜单构建器、序列化、配置更新 |
-| `AP.Infra.Tests` | 31 | 287 | 报表/弹性/DB 仓储/PLC 注册表与激活服务；**Device Runtime 全套**（连接状态机、监督器、桥接、设备注册表、适配器、点表、Tag 服务、采集引擎+批量合并、最新值表、发布器、审计日报）；**三品牌地址对象与批量类型映射**（经 `InternalsVisibleTo` 测试插件 internal） |
+| `AP.Core.Tests` | 10 | 133 | 状态机、生命周期、事件总线、插件框架、Capability |
+| `AP.Shared.Tests` | 6 | 66 | PluginBase、导航菜单构建器、序列化、配置更新 |
+| `AP.Infra.Tests` | 48 | 337 | 报表/配方/弹性/DB 仓储/PLC 注册表与激活服务；**Device Runtime 全套**（连接状态机、监督器、桥接、设备注册表、适配器、点表、Tag 服务、采集引擎+批量合并、最新值表、发布器、审计日报）；**三品牌地址对象与批量类型映射**（经 `InternalsVisibleTo` 测试插件 internal）；PLC 诊断/CSV/报表/配方 |
 
 ---
 
@@ -139,13 +139,13 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 | AP.Infra.Security | 可用 | 本地用户/角色/权限、审计日志服务已实现；可整体关闭 |
 | AP.Plugin.Login / UserManagement / RoleManagement | 可用 | 登录、用户/角色管理 UI 已落地，按权限显示 |
 | AP.Plugin.AuditLog | 可用 | 查询/筛选/分页 UI 已有，数据来自真实审计日志 |
-| AP.Infra.Recipe / AP.Plugin.RecipeManagement | 骨架 | 配方 CRUD、版本、默认配方 UI 已有；切换联动业务待补 |
-| AP.Infra.Report / AP.Plugin.ReportCenter | 可用 | 报表归档查询/生成/导出 UI 已有；数据提供者有真实实现（操作审计日报，数据源=审计日志），示例实现保留未注册 |
+| AP.Infra.Recipe / AP.Plugin.RecipeManagement | 可用 | 配方 CRUD、默认唯一、版本快照、当前配方持久化、切换事件/历史 UI 已落地；真实业务参数联动由项目插件订阅事件实现 |
+| AP.Infra.Report / AP.Plugin.ReportCenter | 可用 | 报表归档查询/生成/导出、失败重生成、手动补档、启动补档已落地；数据提供者含真实审计日报，示例实现保留未注册 |
 | AP.Plugin.DeviceConfiguration | 可用 | 扫码枪设置页完整（校验 + 写回配置） |
 | Device Runtime Model（设备运行时） | 完善 | 六态状态机 + 统一连接监督器（全部硬件共享、测试覆盖）+ 设备抽象/注册表/统一状态事件（2026-07-25） |
-| Tag 系统 | 可用 | 点表校验/`ITagService`/采集引擎/最新值表/变化事件端到端贯通；点表目前为示例条目，批量合并待带类型批量契约（2026-07-25） |
+| Tag 系统 | 可用 | 点表校验/`ITagService`/采集引擎/最新值表/变化事件端到端贯通；CSV 导入已落地，点表示例条目仍待真实项目替换 |
 | AP.Plugin.Plc.Mitsubishi / Siemens / Omron | 完善 | 三品牌驱动统一：共享连接监督器 + `IDevice` + 地址对象/验证器（2026-07-25 重构） |
-| AP.Plugin.Scanner | 可用 | 重连已迁入统一监督器；首开失败保留同步抛出（A 方案例外） |
+| AP.Plugin.Scanner | 可用 | 统一监督器 + 首开失败自动重连 + 有界 Channel/ReadTimeout（DH-10） |
 | gRPC Server/Client | ❄ 已移出交付链 | 2026-11-18 从主解决方案/宿主移除；源文件冻结保留，安装包不再要求 ASP.NET Core 运行时 |
 | Dashboard 仪表盘 | 可用 | 全部真实数据：设备状态/采集点/Tag 变化/真实事件流（2026-07-26） |
 
@@ -157,7 +157,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 
 ### 近期（当前 Sprint）
 
-> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 33 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**2026-11-18 另完成 DH-1~DH-6 交付硬化（数据目录/写路径/A 模式/迁移备份/gRPC 移出/CI），不改变“不接新框架功能”的主基调**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)** 与 **[docs/DELIVERY_HARDENING_PLAN.md](DELIVERY_HARDENING_PLAN.md)**。
+> **架构演进（2026-07-25/26 完成阶段 0~4；2026-07-28 全部收官）**：阶段 0~6 全部 33 个任务 + 停车场第一项（带类型批量契约）已完成。阶段：规范先行 → 连接监督收敛（四套看门狗归一）→ 地址对象化 → Device 抽象 → Tag 系统（点表/读写/采集/Dashboard 真实数据）→ 业务防线与依赖清理（LAYERING/DEPENDENCIES 规范、契约层死引用删除、PLC 插件 UI 死引用删除）。附加交付：采集引擎批量合并读、首个真实报表（操作审计日报）。西门子仿真环境真机验证通过。**2026-11-18 另完成 DH-1~DH-6 交付硬化（数据目录/写路径/A 模式/迁移备份/gRPC 移出/CI），2026-11-19 继续完成 DH-7~DH-13（插件档位/单容器/报表配方/现场诊断/模板），不改变“不接新框架功能”的主基调**。完成记录见 **[docs/EVOLUTION_PLAN.md](EVOLUTION_PLAN.md)** 与 **[docs/DELIVERY_HARDENING_PLAN.md](DELIVERY_HARDENING_PLAN.md)**。
 
 按 `IMPROVEMENT_PLAN.md` 阶段一（排雷，P0）执行：
 
@@ -199,6 +199,10 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 - [x] 配置保存 merge + 备份/恢复（2026-11-19，DH-9；保存基础信息不再丢失布局/导航键）
 - [x] 扫码枪首开失败重连 + 有界 Channel + ReadTimeout（2026-11-19，DH-10）
 - [x] 新项目模板 + 示例业务插件（2026-11-19，DH-13；`templates/ap-plugin` + `AP.Plugin.Sample`）
+- [x] 插件交付档位 / 启用禁用（2026-11-19，DH-7；`plugins.catalog.json` + `Plugins:Profile/Disabled` + 裁剪脚本）
+- [x] 单容器 + 插件初始化超时 + 插件状态页（2026-11-19，DH-8）
+- [x] 报表状态/补档 + 配方版本/切换事件（2026-11-19，DH-11）
+- [x] PLC 测试连接/通讯日志/点表 CSV 导入（2026-11-19，DH-12）
 - [x] 欧姆龙 PLC 协议支持（2026-07-24 完成：`AP.Plugin.Plc.Omron`，FINS/TCP；字符串读写不支持抛 NotSupportedException、批量写退化为逐条写入）
 
 ### 长期
@@ -208,7 +212,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 - [x] 迁移 .NET 10（2026-11-18 完成；目标框架 net10.0/net10.0-windows，漏洞审计 0 High）
 - [ ] 身份认证与授权：支持更多认证方式（如 Windows 域账号、LDAP）
 - [ ] OpenTelemetry 可观测性集成（日志、指标、追踪）
-- [ ] 插件市场/启用禁用机制（隔离上下文已为热卸载预留，但热卸载本身不做）
+- [ ] 插件市场/热卸载（DH-7 已完成交付档位/启用禁用；市场和热卸载不做）
 - [ ] `RequiresCapabilitiesAttribute` 能力声明的运行时强制执行
 - [ ] 多语言/国际化支持
 - [x] 完善安装包（x64 / Program Files / 数据根 ACL / 升级残留清理；自动更新未做）

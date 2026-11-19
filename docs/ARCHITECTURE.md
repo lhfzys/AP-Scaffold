@@ -2,6 +2,8 @@
 
 本文档详细描述 AP-Scaffold 的架构设计、分层职责、核心机制与关键设计模式。内容以当前实际代码为准。
 
+> **2026-11-19 更新（DH-7/8/11/12/13）**：插件单容器/超时、交付档位与启用禁用、报表补档/配方版本切换、PLC 测试连接/通讯日志/CSV 导入、示例插件与 `dotnet new` 模板已落地；本文对应代码结构。
+>
 > **2026-11-18 更新（DH-6）**：`AP.Contracts.Communication` 与 `AP.Infra.Grpc` 已从主解决方案/宿主物理移出，不再参与构建、发布与安装包；本文中 gRPC/Server/Client 相关章节保留为冻结参考。当前交付物只支持 Standalone 单机模式。
 
 脚手架的三大设计目标贯穿全文：
@@ -122,16 +124,21 @@ Step 4: 扫描 IPlugin 实现
 Step 5: 角色校验
   └─→ (PluginMetadata.SupportedRoles & 当前 AppRole) == 0 则卸载跳过
 
-Step 6: 排序
+Step 6: 档位/启用过滤
+  └─→ 读取 Configuration/plugins.catalog.json 的 profile + Plugins:Disabled
+       └─→ 不在当前交付档位或显式禁用的插件卸载跳过
+
+Step 6.5: 排序
   └─→ 按 Priority 升序（数值越小越先加载）
 
-Step 7: 两阶段实例化（由 Bootstrapper 执行）
-  └─→ 阶段一：临时 ServiceProvider 实例化插件 → 调 ConfigureServices 收集服务注册
-       → 收集插件程序集供 MediatR 扫描；失败插件记入 failedPlugins
-  └─→ 阶段二：用最终 ServiceProvider 重新实例化插件存入 descriptor.Instance
+Step 7: 单次实例化（由 Bootstrapper 执行，DH-8 起）
+  └─→ 用仅含 ILogger 的注册期容器创建插件一次 → 调 ConfigureServices 收集服务注册
+       → 同一实例存入 descriptor.Instance；不再用最终容器二次实例化
+       → 插件服务与实例统一注册进 DryIoc
 
 Step 8: 注册到生命周期管理器
   └─→ PluginLifecycleManager.RegisterPlugins(descriptors)
+       └─→ 初始化/启动单插件 15 秒超时；失败标记 Failed，状态页可见
 ```
 
 #### 插件元数据 (PluginMetadataAttribute)
@@ -345,11 +352,11 @@ public interface IEventBus
 | 项目 | 内容 |
 |------|------|
 | `AP.Contracts.Core` | `OperationResult<T>`、`ErrorCode`、`PlatformException`、`AppInitializedEvent`（Prism PubSubEvent） |
-| `AP.Contracts.Hardware` | `IPlcService` / `IPlcBatchReadWrite` / `IScannerService` / `IPlcDriverFactory`、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR + Prism 双形式）、`ConnectDeviceCommand` |
+| `AP.Contracts.Hardware` | `IPlcService` / `IPlcBatchReadWrite` / `IScannerService` / `IPlcDriverFactory` / `IPlcConnectionTester` / `IPlcDiagnosticLog`、`PlcOptions`、`PlcServiceFeatures`、设备事件（MediatR + Prism 双形式）、`ConnectDeviceCommand` |
 | `AP.Contracts.Communication` ❄ | gRPC proto（已移出主解决方案，不构建）；原：`automation_gate.proto` / `common.proto` |
 | `AP.Contracts.System` | `ILoginService`、`ISettingsDialogService`、`ISystemMonitorService`、`SystemMetrics` |
 | `AP.Contracts.Security` | `IIdentityService`、`IUserRepository` / `IRoleRepository` / `IPermissionRepository` / `IPasswordHasher`、`ISecurityDbInitializer`、`IAuditService` / `AuditLogEntry` / `AuditActionType`、用户/角色/权限模型 |
-| `AP.Contracts.Recipe` | `IRecipeManager`（含 `CurrentRecipe`、`SwitchAsync`）、`IRecipeDbInitializer`、`RecipeInfo` / `RecipeParameter` |
+| `AP.Contracts.Recipe` | `IRecipeManager`（含 `CurrentRecipe`、`SwitchAsync`、`GetCurrentAsync`、`GetVersionsAsync`）、`IRecipeDbInitializer`、`RecipeInfo` / `RecipeParameter` / `RecipeVersionInfo`、`RecipeSwitchedEvent` |
 | `AP.Contracts.Report` | `IReportCenterService`、`ReportTypeInfo`、`ReportArchiveDto`、`IReportDataProvider`、`ReportData` |
 
 **设计原则**：
@@ -383,9 +390,12 @@ public interface IEventBus
 ### AP.Infra.Recipe — 配方管理
 
 - `AddPlatformRecipe(configuration)`；`RecipeManager` 实现 `IRecipeManager`
-- 实体 `Recipe`（表 `recipes`）：`Code`/`Name`/`Version`/`IsDefault`/`ParametersJson`（JSON 序列化的参数列表）
-- `UpdateAsync` 自动 `Version+1`；`SetDefaultAsync` 先清除其他默认；`SwitchAsync` 设置内存 `CurrentRecipe`（事件发布留 TODO）
-- `RecipeDbInitializer`：只写种子数据；建表由 `RecipeSchemaContributor` 在数据库迁移阶段完成
+- 实体 `Recipe`（表 `recipes`）：`Code`/`Name`/`Version`/`IsDefault`/`ParametersJson`
+- `RecipeState`（表 `recipe_state`）：持久化当前激活配方，重启恢复
+- `RecipeVersion`（表 `recipe_versions`）：创建/更新写版本快照，`GetVersionsAsync` 查询
+- `CreateAsync` 尊重 `IsDefault`，首个配方自动成为默认；重复 Code 拒绝；默认配方不可删除
+- `UpdateAsync` 自动 `Version+1`；`SetDefaultAsync` 先清除其他默认；`SwitchAsync` 持久化当前配方并发布 MediatR `RecipeSwitchedEvent`
+- `RecipeDbInitializer`：只写种子数据；建表由 `RecipeSchemaContributor` v2 在数据库迁移阶段完成
 
 ### AP.Infra.Grpc — gRPC 通信（❄ 已物理移出主解决方案/宿主）
 
@@ -446,14 +456,16 @@ Server 端                    Client 端
 - `IPlcDriverFactory`（契约层）：`DriverType`、`SupportedFeatures`、`CreateDriver(PlcOptions, IServiceProvider)`
 - `PlcDriverRegistry`：收集各品牌插件注册的工厂（按 DriverType 大小写不敏感索引）
 - `ActivePlcService`：懒加载代理（`Lazy<IPlcService>`），实现 `IPlcService` / `IPlcBatchReadWrite`，首次调用时按 `Plc:DriverType` 创建真实驱动并转发全部调用
-- `AuditingPlcServiceDecorator`：包装 `ActivePlcService` 的审计拦截器（`IPlcService` 实际解析类型），`WriteAsync` / `WriteBatchAsync` 自动留痕（操作人/地址/值/结果），读操作与连接管理不审计
-- `AddPlcHardware`：宿主统一注册 `IPlcService`
+- `AuditingPlcServiceDecorator`：包装 `ActivePlcService` 的审计/诊断拦截器（`IPlcService` 实际解析类型），`WriteAsync` / `WriteBatchAsync` 自动留痕，同时把 Read/Write/Batch 记录到 `IPlcDiagnosticLog` 环形缓冲（500 条）；读操作不写审计
+- `IPlcConnectionTester`：用临时驱动实例测试连接/心跳，不触碰 `ActivePlcService`；支持超时与错误消息
+- `DiagnosticTypedBatchReader`：包装 `IPlcTypedBatchRead`，把采集引擎的批量读取记录到通讯日志
+- `AddPlcHardware`：宿主统一注册 `IPlcService`、`IPlcDiagnosticLog`、`IPlcConnectionTester`、`IPlcTypedBatchRead`
 
 业务代码只依赖 `IPlcService`，切换 PLC 品牌只需修改 `Plc:DriverType` 配置（或系统设置中的 PLC 配置页）。
 
 ### AP.Infra.Report — 报表框架
 
-完整的报表生成、归档、清理机制。详见 [报表框架使用](GETTING_STARTED.md#报表框架使用)。
+完整的报表生成、归档、清理机制。`ReportScheduler` 启动先补一次（默认向前 7 天，已成功日期跳过），之后每天 02:00 触发。详见 [报表框架使用](GETTING_STARTED.md#报表框架使用)。
 
 **内部工作流程**：
 
@@ -612,10 +624,10 @@ App.OnStartup
          ├── 7. ServiceCollection 依次注册：
          │       AddPlatformLogging → AddPlatformDatabase → AddPlatformResilience
          │       → AddPlatformSecurity → AddPlatformRecipe → AddPlcHardware → AddReportFramework
-         ├── 8. PluginLoader.DiscoverPlugins(appRole)：扫描 → 隔离加载 → 角色过滤 → 按 Priority 排序
-         ├── 9. 两阶段实例化：临时容器实例化插件 → ConfigureServices 收集服务 → 收集程序集
+         ├── 8. PluginLoader.DiscoverPlugins(appRole, profile, disabled)：扫描 → 隔离加载 → 角色/档位/禁用过滤 → 按 Priority 排序
+         ├── 9. 单次实例化：仅 ILogger 注册期容器创建插件 → ConfigureServices 收集服务 → 同一实例存入 descriptor.Instance
          ├── 10. AddMediatR（扫描插件程序集 + Host 程序集，含 MediatRToPrismBridge）
-         ├── 11. 构建最终 ServiceProvider，重新实例化插件
+         ├── 11. DryIoc Populate：插件服务与实例统一进入 Prism 容器（不再二次实例化）
          ├── 12. DryIoc 桥接：containerRegistry.GetContainer().Populate(services)
          │       + 注册插件实例（IPlugin；若为 INavigationContributor 再注册一份）
          └── 13. 创建 PluginLifecycleManager 并 RegisterPlugins；注册 ICustomDialogService 等
@@ -645,28 +657,31 @@ App.OnStartup
 
 | 插件 | Priority | 角色 | 协议 | 功能 |
 |------|---------|------|------|------|
-| `AP.Plugin.Plc.Mitsubishi` | 20 | Server\|Standalone | MC 协议 (Qna_3E) | 注册 `IPlcDriverFactory`；读写 bool/short/ushort/int/uint/float；批量为循环单点；看门狗 2 秒心跳 + 自动重连 |
-| `AP.Plugin.Plc.Siemens` | 21 | Server\|Standalone | S7 协议 (S7_200/300/400/1200/1500/Smart) | 注册 `IPlcDriverFactory`；额外支持 string；`BatchRead`/`BatchWrite` 真批量；看门狗 + 自动重连 |
-| `AP.Plugin.Scanner` | 20 | Client\|Standalone | 串口协议 | 扫码枪数据接收（SerialPort → Channel → MediatR `ScanCompletedEvent`） |
+| `AP.Plugin.Plc.Mitsubishi` | 20 | Standalone（Server/Client 冻结） | MC 协议 (Qna_3E) | 注册 `IPlcDriverFactory`；读写 bool/short/ushort/int/uint/float；批量为循环单点；看门狗 2 秒心跳 + 自动重连 |
+| `AP.Plugin.Plc.Siemens` | 21 | Standalone（Server/Client 冻结） | S7 协议 (S7_200/300/400/1200/1500/Smart) | 注册 `IPlcDriverFactory`；额外支持 string；`BatchRead`/`BatchWrite` 真批量；看门狗 + 自动重连 |
+| `AP.Plugin.Plc.Omron` | 22 | Standalone（Server/Client 冻结） | FINS/TCP | 注册 `IPlcDriverFactory`；bool/short/ushort/int/uint/float；字符串不支持；看门狗 + 自动重连 |
+| `AP.Plugin.Scanner` | 20 | Standalone（Client 冻结） | 串口协议 | 扫码枪数据接收（SerialPort → Channel → MediatR `ScanCompletedEvent`） |
 
 ### 业务功能插件
 
 | 插件 | Priority | 功能 |
 |------|---------|------|
-| `AP.Plugin.DeviceConfiguration` | 100 | 通过 `ISettingsContributor` 提供"扫码枪配置"设置页 |
+| `AP.Plugin.DeviceConfiguration` | 100 | 通过 `ISettingsContributor` 提供“扫码枪配置”设置页 |
+| `AP.Plugin.TagConfiguration` | 100 | 点表配置（增删改/CSV 导入/保存热重载/采集周期） |
+| `AP.Plugin.Sample` | 200 | 示例业务插件（导航 + 设置 + 报表），对应 `templates/ap-plugin` |
 
 ### 系统功能插件
 
 | 插件 | Priority | 功能 | 菜单（Order / 权限） |
 |------|---------|------|---------------------|
-| `AP.Plugin.Layout` | 10 | 布局（Standard/SinglePage）、Sidebar、Header、仪表盘 | 仪表板（100 / 无，IsDefault） |
+| `AP.Plugin.Layout` | 10 | 布局（Standard/SinglePage）、Sidebar、Header、仪表盘、插件状态 | 仪表板（100 / 无，IsDefault）、插件状态（1200 / `system.settings`） |
 | `AP.Plugin.Login` | 1 | 登录认证、强制改密、重新登录 | — |
-| `AP.Plugin.SystemSettings` | 5 | 系统配置中心（设置贡献者宿主） | 系统配置（1000 / `system.settings`） |
+| `AP.Plugin.SystemSettings` | 5 | 系统配置中心（设置贡献者宿主）、通讯日志 | 系统配置（1000 / `system.settings`）、通讯日志（1150 / `system.settings`） |
 | `AP.Plugin.UserManagement` | 5 | 用户 CRUD、重置密码 | 用户管理（4000 / `user.manage`） |
 | `AP.Plugin.RoleManagement` | 6 | 角色 CRUD、权限分配 | 角色管理（4100 / `role.manage`） |
 | `AP.Plugin.AuditLog` | 7 | 审计日志查询/筛选/分页 | 审计日志（4200 / `audit.view`） |
-| `AP.Plugin.RecipeManagement` | 8 | 配方 CRUD、默认配方、切换 | 配方管理（2000 / `recipe.view`） |
-| `AP.Plugin.ReportCenter` | 9 | 报表归档查询/生成/打开/导出 | 报表中心（3000 / `report.view`） |
+| `AP.Plugin.RecipeManagement` | 8 | 配方 CRUD、默认唯一、版本历史、切换事件 | 配方管理（2000 / `recipe.view`） |
+| `AP.Plugin.ReportCenter` | 9 | 报表归档查询/生成/打开/导出、失败重生成、补档 | 报表中心（3000 / `report.view`） |
 
 ---
 
@@ -701,9 +716,9 @@ await pipeline.ExecuteAsync(operation, ct);
 
 各品牌插件注册 `IPlcDriverFactory` → `PlcDriverRegistry` 按 DriverType 索引 → `ActivePlcService` 懒加载代理转发 `IPlcService` 调用。业务代码与品牌解耦。
 
-### 7. 依赖注入 + 两阶段服务收集 (Prism + MS-DI 桥接)
+### 7. 依赖注入 + 单次插件实例化 (Prism + MS-DI 桥接)
 
-插件的 `ConfigureServices` 先向 `ServiceCollection` 注册服务（阶段一），最终容器建成后重新实例化插件（阶段二），再通过 `DryIoc.Microsoft.DependencyInjection` 的 `Populate` 桥接到 Prism 的 DryIoc 容器——插件服务与 Prism 服务共用一个容器。
+插件只构造一次：`ConfigureServices` 向 `ServiceCollection` 注册服务，同一插件实例通过 `DryIoc.Microsoft.DependencyInjection` 的 `Populate` 与 Prism 的 DryIoc 容器共用；不再有临时容器 + 最终容器二次实例化。插件构造函数约定只依赖 `ILogger`，业务服务在 `InitializeAsync(serviceProvider)` 解析。
 
 ### 8. 隔离上下文 (AssemblyLoadContext)
 
@@ -720,16 +735,16 @@ Bootstrapper
   │
   ├── 1. 读取 AppRole（命令行 > 配置 > 默认 Standalone）
   │
-  ├── 2. PluginLoader.DiscoverPlugins(pluginsDir, appRole)
+  ├── 2. PluginLoader.DiscoverPlugins(pluginsDir, appRole, profile, disabled)
   │       │
   │       ├── 2a. 扫描目录 → 发现插件 DLL
   │       ├── 2b. 创建 PluginLoadContext
   │       ├── 2c. 加载程序集
   │       ├── 2d. AssemblyScanner 找 IPlugin 实现 + 读特性
-  │       ├── 2e. 校验角色匹配（不匹配则卸载）
+  │       ├── 2e. 校验角色/档位/禁用匹配（不匹配则卸载）
   │       └── 2f. 按 Priority 排序 → List<PluginDescriptor>
   │
-  ├── 3. 两阶段实例化 + ConfigureServices 收集
+  ├── 3. 单次实例化 + ConfigureServices 收集（同一实例注册进 DryIoc）
   │
   ├── 4. MediatR 扫描（插件程序集 + Host）
   │

@@ -28,10 +28,10 @@
 - **验证状态**: 西门子仿真环境真机验证通过（连接/掉线/重连/混合类型批量/Dashboard 联动/优雅关闭）；三菱/欧姆龙待真机
 - **工作区状态**: 干净（开始新任务前请再次 `git status` 确认）
 
-### 2.1.1 交付硬化（2026-11-18，已合并 main）
+### 2.1.1 交付硬化 DH-1~DH-13（2026-11-19，已合并 main）
 
-- **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；DH-3 .NET 10 迁移提交 `d72acbe`；分支与远端同步。
-- **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
+- **分支/提交**：`main` 已与远程同步，DH-1~DH-13 全部合并；最近提交 DH-11 `454302d`、DH-12 `72f53e6`、DH-7 `32d7011`、DH-8 `42688aa`。历史任务细节见 `docs/DELIVERY_HARDENING_PLAN.md`。
+- **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44498501093>。
 - **测试**：**536 通过**（Core 133 / Shared 66 / Infra 337）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
 - **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
@@ -57,7 +57,7 @@
 - 串口扫码枪硬件驱动（`Plugins:Configuration:AP.Plugin.Scanner:Enabled=false` 可整体禁用：不注册服务/设备、不连接，系统配置页有勾选；2026-07-31 起）
 - gRPC Server/Client 分布式通信（proto 契约 + StreamBroadcaster 广播）❄ **已物理移出主解决方案与宿主**（2026-11-18，DH-6）：源文件保留在 `AP.Contracts.Communication` / `AP.Infra.Grpc`，不再参与构建/发布/安装包，安装包不再要求 ASP.NET Core 运行时。
 - 安全模块：本地用户/角色/权限（12 个种子权限、3 个默认角色）、登录、强制改密、审计日志
-- 用户管理、角色管理、审计日志可视化、配方管理骨架、报表中心骨架
+- 用户管理、角色管理、审计日志可视化、配方管理（版本/默认/切换）、报表中心（状态/补档/启动补档）
 - 全浅色统一视觉主题（`Industrial.Teal.MD3.xaml`，文件名保留但内容已是浅色）
 - 系统托盘、启动画面（Splash）、全局异常崩溃日志
 - **Device Runtime Model（设备运行时模型，见 5.12）**：协议无关连接状态机 + 统一连接监督器（全部 4 个硬件驱动共享）、`IDevice`/`IDeviceRegistry` 设备抽象、统一状态事件 `DeviceStateChangedEvent`
@@ -74,7 +74,7 @@
 > **演进节奏决策（2026-07-28，用户）**：演进计划已全部收官，**当前不接新框架功能**，等真实外包项目驱动需求。`EVOLUTION_PLAN.md` 任务铁律仍然有效（一次一个 Task、单独提交、可回滚、不改公开 API 除非必须）。
 
 - [x] 点表热重载（2026-08-07，停车场议题落地）：点表编辑器保存后免重启——`ITagTableReloader` 编排（`TagTable.Reload` 原子替换快照→采集引擎 `Restart` 重建分组→`LatestTagValueStore.PruneExcept` 清理删点残留），校验失败保留旧表继续运行；仅编辑页保存触发，手工改 tags.json 仍需重启
-- [ ] 配方管理完善（**等真实项目配方需求再动**：参数校验/版本历史/`SwitchAsync` 事件 TODO，避免返工）
+- [x] 配方管理完善（2026-11-19，DH-11：默认唯一、Code 重复拒绝、版本快照、当前配方持久化、`SwitchAsync` 事件）
 - [ ] Tag 值持久化（停车场议题，设备运行日报/历史报表前置；等客户提历史数据需求再选型）
 - [x] 报表中心首个真实数据提供者（2026-07-28，操作审计日报 AuditDaily）
 - [ ] 三菱/欧姆龙真机验证（西门子仿真已验证，其余品牌随项目进场验证）
@@ -111,7 +111,7 @@ AP-Scaffold/
 │   │   ├── AP.Shared.PluginSDK           # PluginBase、INavigationContributor、ISettingsContributor
 │   │   ├── AP.Shared.UI                  # LoadingSpinner、对话框服务、PermissionBehavior、浅色主题
 │   │   └── AP.Shared.Utilities           # ConfigurationHelper、SerializationHelper、常量
-│   ├── plugins/                          # 插件（13 个）
+│   ├── plugins/                          # 插件（15 个）
 │   │   ├── hardware/
 │   │   │   ├── AP.Plugin.Plc.Mitsubishi  # Priority=20，Server|Standalone
 │   │   │   ├── AP.Plugin.Plc.Siemens     # Priority=21，Server|Standalone
@@ -131,10 +131,10 @@ AP-Scaffold/
 │   │       ├── AP.Plugin.RecipeManagement# Priority=8
 │   │       └── AP.Plugin.ReportCenter    # Priority=9
 │   ├── hosts/AP.Host.Desktop             # WPF 启动宿主（Bootstrapper）
-│   └── tests/                            # xUnit 测试（45 个测试文件 / 475 个测试）
-│       ├── AP.Core.Tests                 # 9 文件 / 133 测试
-│       ├── AP.Shared.Tests               # 4 文件 / 48 测试
-│       └── AP.Infra.Tests                # 32 文件 / 293 测试（含 DeviceRuntime/驱动地址对象/带类型批量全套）
+│   └── tests/                            # xUnit 测试（64 个测试文件 / 536 个测试）
+│       ├── AP.Core.Tests                 # 10 文件 / 133 测试
+│       ├── AP.Shared.Tests               # 6 文件 / 66 测试
+│       └── AP.Infra.Tests                # 48 文件 / 337 测试（含 DeviceRuntime/驱动地址对象/带类型批量/诊断/报表/配方全套）
 ├── docs/                                 # 架构/使用/测试/状态文档
 ├── templates/ap-plugin/                  # dotnet new 业务插件模板
 ├── installer/setup.iss                   # Inno Setup 6 安装包脚本
@@ -177,8 +177,8 @@ installer/build-installer.bat
 - 默认导航延迟到 `Dispatcher.BeginInvoke(Background)` 执行（确保 UI 就绪后再选中）；同处订阅 `ContentRegion` 的 `NavigationService.Navigated` 事件——Sidebar 之外发起的导航（如首页快捷入口 `RequestNavigate`）会回写左侧选中态（`_syncingSelection` 标志防止回写再次触发导航）。
 - 相关配置键：
   - `AppConfiguration:DefaultNavigationTarget`（当前 `"DashboardView"`）
-  - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / TagTableListView / RecipeListView / ReportListView / AuditLogListView`）
-- 当前菜单 Order：仪表板 100 → 系统配置 1000 → 点表配置 1100 → 配方管理 2000 → 报表中心 3000 → 用户管理 4000 → 角色管理 4100 → 审计日志 4200。
+  - `AppConfiguration:NavigationWhenSecurityDisabled`（字符串数组白名单；`Security:Enabled=false` 时只显示这些 Target，当前为 `DashboardView / SettingsShellView / TagTableListView / RecipeListView / ReportListView / AuditLogListView / PluginStatusView / PlcDiagnosticView`；系统配置、插件状态、通讯日志另以 `ShowWhenSecurityDisabled=true` 兼容旧配置）
+- 当前菜单 Order：仪表板 100 → 系统配置 1000 → 点表配置 1100 → 通讯日志 1150 → 插件状态 1200 → 配方管理 2000 → 报表中心 3000 → 用户管理 4000 → 角色管理 4100 → 审计日志 4200。
 
 ### 5.2 设置贡献者模式（往系统配置中心加一页）
 
@@ -190,7 +190,7 @@ installer/build-installer.bat
 ### 5.3 插件开发约定
 
 - 插件主类继承 `AP.Shared.PluginSDK.Base.PluginBase`，标注 `[PluginMetadata]`（`Id` 必须与目录名/DLL 名一致；`SupportedRoles` 默认 `AppRole.All`；`Priority` 默认 100，越小越先加载；`Required` 默认 true）。
-- **Required/Dependencies/重复 ID 语义已落地**（2026-07-21，`PluginGraphValidator`）：重复 ID 全部拒绝加载并中止启动；`Dependencies` 缺失时拒绝加载该插件并级联（Required 插件依赖缺失中止启动）；Required 插件配置/实例化/初始化/启动失败时中止启动并弹窗说明。当前仅 `Login`、`Layout` 为 Required，其余 10 个插件均 `Required = false`——新插件请按"没有它系统是否还可用"判断，功能/硬件类默认应设 `Required = false`。
+- **Required/Dependencies/重复 ID 语义已落地**（2026-07-21，`PluginGraphValidator`）：重复 ID 全部拒绝加载并中止启动；`Dependencies` 缺失时拒绝加载该插件并级联（Required 插件依赖缺失中止启动）；Required 插件配置/实例化/初始化/启动失败时中止启动并弹窗说明。当前仅 `Login`、`Layout` 为 Required，其余 13 个插件均 `Required = false`——新插件请按"没有它系统是否还可用"判断，功能/硬件类默认应设 `Required = false`。
 - `ConfigureServices` 注册 View/ViewModel；`InitializeAsync` 中按权限条件注册 Region 视图。
 - **View 的 DataContext 注入模式**: 统一采用**构造函数注入 ViewModel**（`public UserListView(UserListViewModel vm)`）。全仓库无 `AutoWireViewModel`；部分插件保留 `ViewModelLocationProvider.Register` 作双保险。Login 窗口由 `LoginService` 手动赋 DataContext；设置编辑器 View 通过 DataTemplate 关联。
 - 插件之间不允许互相引用，通信通过 `Contracts` 事件 + MediatR。
@@ -355,7 +355,7 @@ installer/build-installer.bat
 ## 7. 如何继续工作
 
 1. 先 `dotnet build AP-Automation.Platform.slnx -c Release` 确认当前代码可编译。
-2. 运行三个测试项目确认 475 个测试通过。
+2. 运行三个测试项目确认 536 个测试通过。
 3. 查看 `docs/PROJECT_STATUS.md` 了解当前进度和待办；**架构演进任务以 `docs/EVOLUTION_PLAN.md` 为准**（含任务执行铁律：一次一个 Task、单独提交可回滚、不改公开 API 除非必须、提交后回填状态）。
 4. 处理用户请求前，先通过 `git status` 确认当前工作区状态。
 5. 涉及多文件修改时，优先使用最小改动，保持与现有代码风格一致。

@@ -8,7 +8,7 @@
 - **安全可靠** — 本地用户/角色/权限体系、审计日志、PBKDF2 密码哈希、Polly 容错、PLC 看门狗自愈、崩溃日志
 - **统一视觉** — 全浅色 Material Design 3 主题、统一控件/文字/间距资源、权限行为附加属性
 
-> **当前范围（2026-11-18）**：项目聚焦 **Standalone 单机模式 + SQLite**。Server/Client（gRPC 分布式通信）与 PostgreSQL/SQL Server 支持为**冻结能力**——gRPC 两个项目已物理移出主解决方案与交付链，源文件仅作参考；标注 ❄ 的内容未维护、未验证，请勿用于新部署。详见 `docs/IMPROVEMENT_PLAN.md`。
+> **当前范围（2026-11-19）**：项目聚焦 **Standalone 单机模式 + SQLite**。Server/Client（gRPC 分布式通信）与 PostgreSQL/SQL Server 支持为**冻结能力**——gRPC 两个项目已物理移出主解决方案与交付链，源文件仅作参考；标注 ❄ 的内容未维护、未验证，请勿用于新部署。详见 `docs/IMPROVEMENT_PLAN.md`。
 
 ---
 
@@ -810,7 +810,7 @@ platform/tests/
 │       ├── RequiresCapabilitiesAttributeTests.cs  # 能力依赖特性
 │       └── PluginInterfaceTests.cs            # IPlugin 接口契约
 │
-├── AP.Shared.Tests/                     # 共享库测试（65 个测试）
+├── AP.Shared.Tests/                     # 共享库测试（66 个测试）
 │   ├── PluginSDK/
 │   │   ├── PluginBaseTests.cs                 # 插件基类
 │   │   └── NavigationMenuItemBuilderTests.cs  # 导航菜单构建器
@@ -860,7 +860,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 | **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | 环境准备、配置步骤与插件开发示例 |
 | **[docs/TESTING.md](docs/TESTING.md)** | 测试编写规范与运行指南 |
 | **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** | 项目状态与工作计划 |
-| **[docs/DELIVERY_HARDENING_PLAN.md](docs/DELIVERY_HARDENING_PLAN.md)** | 交付硬化 DH-1~DH-6 计划、完成记录与提交 |
+| **[docs/DELIVERY_HARDENING_PLAN.md](docs/DELIVERY_HARDENING_PLAN.md)** | 交付硬化 DH-1~DH-13 计划、完成记录与提交 |
 | **[docs/DATABASE_BACKUP_RESTORE.md](docs/DATABASE_BACKUP_RESTORE.md)** | SQLite 自动备份与离线恢复步骤 |
 | **[templates/ap-plugin/README.md](templates/ap-plugin/README.md)** | `dotnet new ap-plugin` 业务插件模板使用说明 |
 | **[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md)** | 五维度差距分析与改进计划（2026-07 快照） |
@@ -882,7 +882,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 - [x] 中央包版本管理
 - [x] 通用报表框架（定时归档 / 手动导出 / 补档 / 定期清理）
 - [x] 身份认证与授权（本地用户/角色/权限 + 登录 + 强制改密）
-- [x] 交付硬化 DH-1~DH-6（数据根 / A 模式 / 迁移备份 / gRPC 移出 / CI / 安装冒烟）
+- [x] 交付硬化 DH-1~DH-13（数据根 / A 模式 / 迁移备份 / gRPC 移出 / CI / 安装冒烟 / 插件档位 / 单容器 / 报表配方 / 现场诊断 / 模板）
 - [x] 用户管理 / 角色管理 / 审计日志可视化
 - [x] 配方/工艺参数管理（版本快照 / 默认唯一 / 切换持久化与事件）
 - [x] 报表中心（状态校验 / 失败重生成 / 手动补档 / 启动补档）

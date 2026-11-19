@@ -40,13 +40,15 @@ platform/tests/
 │   ├── EventBus/        # 事件总线测试
 │   ├── Lifecycle/       # 生命周期管理器测试
 │   └── PluginFramework/ # 插件框架测试（Metadata、Capabilities、接口）
-├── AP.Shared.Tests/     # 共享库测试（65 个测试）
+├── AP.Shared.Tests/     # 共享库测试（66 个测试）
 │   ├── PluginSDK/       # PluginBase、导航菜单构建器测试
 │   └── Utilities/       # 工具类/数据根/密码策略测试
 └── AP.Infra.Tests/      # 基础设施层测试（337 个测试）
+    ├── Configuration/   # 配置编辑/CSV 导入测试
     ├── Database/        # 迁移器/备份服务测试
-    ├── Hardware/        # PLC 驱动注册表 / 统一激活服务测试
-    ├── Report/          # 报表框架测试
+    ├── Hardware/        # PLC 驱动注册表/测试连接/通讯日志测试
+    ├── Recipe/          # 配方默认/版本/切换事件测试
+    ├── Report/          # 报表状态/补档测试
     ├── Resilience/      # 容错策略测试
     └── Security/        # 身份/锁定/密码策略测试
 ```

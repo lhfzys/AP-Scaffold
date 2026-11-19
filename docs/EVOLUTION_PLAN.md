@@ -109,7 +109,7 @@ UI 插件 → 应用服务（业务语义） → Tag 服务（逻辑点名，带
 | `AP.Plugin.Login` | 登录窗口/强制改密 |
 | `AP.Plugin.SystemSettings` | 系统配置中心（收集设置贡献者、统一保存/备份/审计） |
 | `AP.Plugin.UserManagement/RoleManagement/AuditLog` | 用户/角色/审计日志管理 UI |
-| `AP.Plugin.RecipeManagement/ReportCenter` | 配方/报表 UI（骨架） |
+| `AP.Plugin.RecipeManagement/ReportCenter` | 配方/报表 UI（后续 DH-11 已补版本/切换/补档） |
 
 ### 2.5 宿主
 
@@ -209,7 +209,7 @@ Tests → 被测项目
 - **安全模块**（身份/权限/审计 + 可开关）：满足单机场景；审计装饰器模式是正确的扩展点，继续沿用。
 - **SQLite 数据访问层**（FreeSql + Repository + 手动 SyncStructure 约定）：简单可控，符合单机定位。
 - **UI 主题/控件体系**：浅色主题、`LoadingSpinner`、`PermissionBehavior` 等已收敛，与通信层演进正交。
-- **报表/配方骨架**：与设备层演进正交，等 Tag 系统落地后再接真实数据源。
+- **报表/配方（后续 DH-11 已闭环）**：与设备层演进正交，等 Tag 系统落地后再接真实数据源。
 - **扫码枪的 Channel + 事件产出模式**：设计正确，仅重连部分未来并入 ConnectionSupervisor。
 
 ---
