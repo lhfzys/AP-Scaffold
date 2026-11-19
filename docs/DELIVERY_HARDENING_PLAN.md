@@ -49,7 +49,7 @@
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
 | DH-9 | 配置保存 merge + 备份/恢复 | P1 | 已完成 | 2d |
-| DH-10 | 扫码枪首开重连 + 有界 Channel | P1 | 待开始 | 1d |
+| DH-10 | 扫码枪首开重连 + 有界 Channel | P1 | 已完成 | 1d |
 | DH-11 | 报表/配方闭环 | P1 | 待开始 | 4d |
 | DH-12 | 现场诊断：测试连接/报文日志/点表导入 | P1 | 待开始 | 4d |
 | DH-13 | 新项目模板 + 示例业务插件 | P1 | 待开始 | 3d |
@@ -308,6 +308,16 @@
 - **备份/恢复**：配置备份时间戳改为毫秒级，避免同秒覆盖；恢复限制在配置目录内，配置中心底部新增“配置备份 + 恢复备份”入口。
 - **验证**：新增 `ConfigurationHelperTests`（未知键保留/数组替换）、`AppConfigurationEditorTests`（编辑器字段保留）、`SettingsServiceTests`（保存 merge + 备份恢复）；全量 **506** 测试通过。
 
+### DH-10 扫码枪首开重连 / 有界 Channel
+
+#### 完成记录（2026-11-19）
+
+- **首开失败不再终止**：`OpenAsync` 打开失败时状态转 `Reconnecting`，随后启动 `ConnectionSupervisor`；监督器按 5 秒周期重试，插上/上电后自动恢复，无需重启应用。
+- **有界 Channel**：数据通道由无界改为有界，容量 `Plugins:Configuration:AP.Plugin.Scanner:BarcodeChannelCapacity`（默认 1000）；满时 `DropWrite` 并告警，不阻塞串口事件线程。
+- **ReadTimeout**：新增 `ReadTimeoutMilliseconds`（默认 1000），避免无换行数据长期占用 `DataReceived` 线程；超时不记错误。
+- **配置**：`appsettings.Standalone.json` 增加上述两个键；`SerialPortOptions` 提供默认值。
+- **验证**：新增首开失败不抛出/进入监督器测试、选项默认值测试；全量 **508** 测试通过。
+
 ### DH-7 ~ DH-13
 
 见评估报告第 8 节；每项单独开 Task、单独提交。
@@ -330,10 +340,11 @@
 | 2026-11-18 | DH-5 | `fbcf354` | 首次/二次启动迁移验证；正式安装旧库升级备份 32KB + quick_check；505 测试通过 |
 | 2026-11-18 | DH-3 | `d72acbe` | net10 全仓构建；502 测试通过；漏洞 0 High；安装冒烟通过；CI 绿 |
 | 2026-11-19 | DH-9 | `cf85718` | 配置保存 merge；备份/恢复入口；506 测试通过；CI 绿 |
+| 2026-11-19 | DH-10 | 待提交 | 首开失败进入监督器；有界 Channel/ReadTimeout；508 测试通过 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v2.2（2026-11-19，DH-9 配置保存 merge/备份恢复完成）
-**下一步**：DH-10 扫码枪首开重连；之后按项目需要选 DH-13 模板或 DH-7 插件 profile。
+**文档版本**：v2.3（2026-11-19，DH-10 扫码枪首开重连完成）
+**下一步**：按项目需要选 DH-13 新项目模板或 DH-7 插件 profile；DH-8/DH-11/DH-12 待排期。

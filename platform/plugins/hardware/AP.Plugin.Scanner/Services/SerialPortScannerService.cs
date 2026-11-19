@@ -35,6 +35,7 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
 
     private readonly object _portLock = new();
     private bool _started;
+    private int _droppedBarcodeCount;
 
     // 缓存 MachineId
     private readonly string _machineId;
@@ -60,7 +61,8 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
             DataBits = _options.DataBits,
             Parity = Enum.Parse<Parity>(_options.Parity),
             StopBits = Enum.Parse<StopBits>(_options.StopBits),
-            NewLine = _options.NewLine
+            NewLine = _options.NewLine,
+            ReadTimeout = _options.ReadTimeoutMilliseconds
         };
 
         _serialPort.DataReceived += OnDataReceived;
@@ -96,22 +98,25 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
     public bool IsConnected => _stateMachine.CurrentState == DeviceConnectionState.Connected;
 
     /// <summary>
-    /// 打开扫码枪（A 方案：首开由驱动驱动状态——有文档说明的例外，失败如实抛出由调用方记录；
-    /// 首开成功后连接监督器接管心跳/重连）。
+    /// 打开扫码枪：启动数据消费与连接监督器；首次打开失败不抛出，
+    /// 状态进入 Reconnecting，由监督器按 5 秒周期继续尝试（插上设备后自动恢复）。
     /// </summary>
     public Task OpenAsync()
     {
         // 数据通道与后台消费者只启动一次（重连不重建，避免丢数据与重复消费）
         if (!_started)
         {
-            _barcodeChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+            _barcodeChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(Math.Max(1, _options.BarcodeChannelCapacity))
             {
                 SingleReader = true,
-                SingleWriter = false
+                SingleWriter = false,
+                // 串口事件线程不能被阻塞；满时丢弃新扫码并记录警告，避免无界堆积
+                FullMode = BoundedChannelFullMode.DropWrite
             });
 
             _processCts = new CancellationTokenSource();
             _processTask = Task.Run(() => ProcessBarcodesAsync(_processCts.Token), _processCts.Token);
+            _droppedBarcodeCount = 0;
 
             _started = true;
         }
@@ -120,16 +125,16 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
         try
         {
             TryOpenPort();
+            _stateMachine.TryTransition(DeviceConnectionState.Connected, "打开成功");
         }
-        catch
+        catch (Exception ex)
         {
-            _stateMachine.TryTransition(DeviceConnectionState.Disconnected, "打开失败");
-            throw;
+            // 首开失败不是致命错误：先进入 Reconnecting，再启动监督器持续重试
+            _stateMachine.TryTransition(DeviceConnectionState.Reconnecting, $"首开失败: {ex.Message}");
+            _logger.LogWarning(ex, "{Device} 首次打开失败，已转入自动重连（无需重启应用）", _deviceName);
         }
 
-        _stateMachine.TryTransition(DeviceConnectionState.Connected, "打开成功");
         _supervisor.Start();
-
         return Task.CompletedTask;
     }
 
@@ -273,8 +278,17 @@ public class SerialPortScannerService : IScannerService, IDevice, IDisposable
 
             if (string.IsNullOrEmpty(barcode)) return;
 
-            // 将条码写入通道，不阻塞串口事件线程
-            _barcodeChannel?.Writer.TryWrite(barcode);
+            // 将条码写入有界通道，不阻塞串口事件线程；满时丢弃并告警，避免无限堆积
+            if (_barcodeChannel != null && !_barcodeChannel.Writer.TryWrite(barcode))
+            {
+                var dropped = Interlocked.Increment(ref _droppedBarcodeCount);
+                if (dropped == 1 || dropped % 100 == 0)
+                    _logger.LogWarning("{Device} 扫码通道已满，已丢弃 {Dropped} 条扫码", _deviceName, dropped);
+            }
+        }
+        catch (TimeoutException)
+        {
+            // ReadTimeout 内没有完整换行数据：正常情况，不记错误
         }
         catch (Exception ex)
         {

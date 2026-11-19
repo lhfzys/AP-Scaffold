@@ -32,7 +32,7 @@
 
 - **分支/提交**：`fix/delivery-hardening` 已快进合并到 `main`，合并点 `0523fcf`；DH-3 .NET 10 迁移提交 `d72acbe`；分支与远端同步。
 - **CI**：`.github/workflows/ci.yml` 已跑绿（build → 三测试项目 → publish → 无 gRPC 校验 → Inno 编译 → 非提权安装冒烟 → artifact）：<https://github.com/lhfzys/AP-Scaffold/actions/runs/44264640846>。
-- **测试**：**506 通过**（Core 130 / Shared 65 / Infra 311）。
+- **测试**：**508 通过**（Core 130 / Shared 65 / Infra 313）。
 - **DH-1 数据目录**：默认 `%ProgramData%\AP-Scaffold`（回退 `%LocalAppData%`，覆盖 `AP_SCAFFOLD_DATA_ROOT`）；安装包授予 Users Modify；Program Files 只读。
 - **DH-2 写路径**：PLC 写路径去重试/去批量嵌套；真机待现场。
 - **DH-3 .NET 10**：**已完成全仓迁移**（2026-11-18，无历史客户，目标框架 net10.0/net10.0-windows，Microsoft.Extensions 10.0.15）；`System.Text.Json` 高危随框架解决，CI 漏洞门禁已改为阻断。
@@ -40,7 +40,8 @@
 - **DH-5 数据库**：`DatabaseSchemaMigrator`（`schema_migrations` + `user_version`）+ `Security/Recipe/Report` contributors；`DatabaseBackupService` 启动前 `VACUUM INTO` + `quick_check` + 保留 10 代；恢复脚本 `scripts/restore-db.ps1`。
 - **DH-6 交付链**：gRPC 两项目移出主解决方案/宿主（32 项目），发布 0 个 Grpc/Protobuf/AspNetCore 文件；安装包只要求 .NET 10 桌面运行时；`setup.iss` 的 `[InstallDelete]` 清理旧 gRPC/插件残留。
 - **DH-9 配置保存**：`ConfigurationHelper` 改为递归 merge，保存基础信息不再抹掉 `LayoutMode`/`DefaultNavigationTarget`/白名单/未知键；编辑器补齐字段；配置中心底部有备份/恢复入口；备份时间戳毫秒级、恢复限制在配置目录内。
-- **下一步**：DH-10 扫码枪首开重连；之后按项目需要选 DH-13 模板或 DH-7 插件 profile。
+- **DH-10 扫码枪**：首开失败不再抛异常/中止，状态进入 Reconnecting 并启动 `ConnectionSupervisor`，插上设备后自动恢复；数据通道改为有界 `Channel`（默认 1000，满时丢弃新码并告警），`ReadLine` 增加 1s 超时。
+- **下一步**：按项目需要选 DH-13 模板或 DH-7 插件 profile；DH-8/DH-11/DH-12 仍待排期。
 
 ### 2.2 已完成功能
 
@@ -285,7 +286,7 @@ installer/build-installer.bat
 - **单实例**：`App.OnStartup` 用命名互斥体 `AP.SCAFFOLD.PLATFORM.RUNNING` 检查（非首实例弹提示退出；该互斥体同时供 Inno `AppMutex` 检测）；托盘重启给新进程传 `--restart`，新进程等待旧实例释放互斥体（最长 60s，含 `AbandonedMutexException` 处理）后再启动。
 - **关闭流程**：`App.OnExit` 把优雅关闭放到线程池执行 + 15s 硬上限（禁止 UI 线程 sync-over-async，会卡死关闭）；`PluginLifecycleManager.StopPluginsAsync` 单插件停止有 5s 独立超时（超时/失败记错后继续其余插件）。注意：构建不会自动删除 `bin/Release/plugins` 里已从源码移除的插件目录，残留 DLL 仍会被加载——删除插件源码后需手动清理该目录。
 - **报表 IHostedService**：见 5.6。
-- **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；`OpenAsync` 首开失败仍同步抛出（A 方案，有注释说明的例外）；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。
+- **扫码枪断线重连**：已迁入统一 `ConnectionSupervisor`（2026-07-25，T3.4）：probe=端口枚举+句柄检查、connect=关残留句柄重开（5s/0s 参数）；**DH-10（2026-11-19）起 `OpenAsync` 首开失败不再抛出**，状态转 Reconnecting 后启动监督器持续重试；数据通道与消费者只建一次，重连只涉及串口句柄、不重建通道。通道有界（`BarcodeChannelCapacity`，默认 1000），`ReadLine` 使用 `ReadTimeoutMilliseconds`（默认 1000）。
 - **LiveCharts2 走宿主共享库模式（2026-08-03 起）**：插件 XAML 引用第三方程序集时，BAML 引用经 Default ALC 解析，程序集必须在**宿主输出根目录**（同 MaterialDesign 既有模式）——宿主 `AP.Host.Desktop` 直接引用 `LiveChartsCore.SkiaSharpView.WPF`，`PluginLoadContext.SharedPrefixes` 含 `LiveChartsCore`/`SkiaSharp`/`OpenTK`，`CleanDuplicateLibs` 删除插件目录私有副本（含 libSkiaSharp 等原生库）。教训：rc6.1 强名引用曾在插件 ALC 内自洽，2.0.4 正式版取消强名（BAML 部分名引用）即报"找不到 LiveChartsCore.SkiaSharpView.WPF"——插件 XAML 新增第三方库时一律按共享库模式接入，勿依赖插件 ALC 私载。`SkiaSharp.Views.WPF` 仅 net462 资产（NU1701 警告，官方文档明确不影响 .NET 10 运行；如需消除可把 TFM 升为 `net10.0-windows10.0.19041`，暂不需要）。**两个必坑（2026-08-06 复现实验确证）**：① 必须在宿主启动早期调用一次 `LiveCharts.Configure(c => c.UseDefaults())`（`App.OnStartup`，注册 SkiaSharp 渲染后端+默认映射器+主题，2.0.4 不隐式初始化）；② **`Axis` 禁止设 `MinStep`**——数据范围小于 MinStep 时整个图表静默空白（无线/无轴/无图例无任何报错），时间轴用 `UnitWidth`+`Labeler` 即可。当前首页已移除趋势图（2026-08-06 框架通用化重构），上述基建为业务插件接入图表保留。
 - **插件禁止注入/引用 Infra 具体类型（2026-08-06 实战教训）**：插件在独立 ALC 加载，Infra DLL 不在插件目录时会经 `PluginLoadContext` 根目录兜底**二次装载进插件 ALC**，与宿主注册类型不恒等 → DryIoc 自动瞬态化 → 拿到从未 Start 的新实例（实例：DashboardViewModel 注入 `TagAcquisitionEngine`/`LatestTagValueStore` 具体类型 → 采集徽标恒"全部停止"、趋势图空白）。需要 Infra 运行时状态时走契约层只读视图接口（`ILatestTagValueStore`/`ITagAcquisitionStatus`，见 5.13）。防护：`SharedPrefixes` 含 `AP.Infra`、`CleanDuplicateLibs` 删插件输出 `AP.Infra.*`。连带坑点：`SharedPrefixes` 新增前缀时，其公开签名里的第三方类型前缀也必须已共享（AP.Infra.Resilience 返回 `Polly.ResiliencePipeline`，故 `Polly` 同步共享，否则跨 ALC 签名不匹配抛 `MissingMethodException`）。
 

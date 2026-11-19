@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 扫码枪首开重连 / 有界 Channel（2026-11-19，DH-10）
+
+修复/变更：
+
+- **首开失败不终止**：`SerialPortScannerService.OpenAsync` 打开失败时状态转 `Reconnecting`，随后启动 `ConnectionSupervisor` 持续重试；开机未插枪/COM 被占用，插上或释放后自动连接，无需重启应用。
+- **有界 Channel**：扫码数据通道容量 `BarcodeChannelCapacity`（默认 1000），满时 `DropWrite` 并告警，不阻塞串口事件线程。
+- **ReadTimeout**：`ReadTimeoutMilliseconds`（默认 1000），避免无换行数据长期占用 `DataReceived` 线程。
+- **测试**：新增首开失败进入监督器/选项默认值测试；全量 **508** 通过（Core 130 / Shared 65 / Infra 313）。
+
 ### 配置中心保存 merge / 备份恢复（2026-11-19，DH-9）
 
 修复/变更：

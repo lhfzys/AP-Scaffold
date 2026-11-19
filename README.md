@@ -389,7 +389,9 @@ Configuration/
   "Plugins": {
     "Configuration": {
       "AP.Plugin.Scanner": {
-        "PortName": "COM3"
+        "PortName": "COM3",
+        "BarcodeChannelCapacity": 1000,
+        "ReadTimeoutMilliseconds": 1000
       }
     }
   }
@@ -757,7 +759,7 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 506 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份与配置 merge。
+项目当前包含 **3 个测试项目 / 508 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge 与扫码枪重连。
 
 ### 测试项目结构
 
@@ -786,7 +788,7 @@ platform/tests/
 │       ├── SerializationHelperTests.cs        # JSON 序列化/反序列化
 │       └── ConfigurationHelperTests.cs        # appsettings.json 配置更新
 │
-└── AP.Infra.Tests/                      # 基础设施层测试（311 个测试）
+└── AP.Infra.Tests/                      # 基础设施层测试（313 个测试）
     ├── Hardware/
     │   ├── ActivePlcServiceTests.cs           # PLC 统一激活服务
     │   └── PlcDriverRegistryTests.cs          # PLC 驱动注册表

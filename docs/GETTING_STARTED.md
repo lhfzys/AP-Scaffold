@@ -414,7 +414,9 @@ Configuration/
         "DataBits": 8,
         "Parity": "None",
         "StopBits": "One",
-        "NewLine": "\r"
+        "NewLine": "\r",
+        "BarcodeChannelCapacity": 1000,
+        "ReadTimeoutMilliseconds": 1000
       }
     }
   }

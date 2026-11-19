@@ -4,7 +4,7 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
-> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）与 **DH-9 配置保存 merge**；GitHub Actions 已跑绿；主解决方案 **32 个项目**，测试 **506 通过**（Core 130 / Shared 65 / Infra 311）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
+> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）、**DH-9 配置保存 merge** 与 **DH-10 扫码枪首开重连**；GitHub Actions 已跑绿；主解决方案 **32 个项目**，测试 **508 通过**（Core 130 / Shared 65 / Infra 313）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
 
 ---
 
@@ -196,6 +196,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 - [x] Dashboard 接入真实统计数据（2026-07-26，T4.6：在线设备=设备注册表、采集点=点表+引擎、今日变化=Tag 变化计数、最近事件=真实事件流）
 - [ ] （可选）列表页 CRUD 交互统一（Recipe 行内按钮 vs User/Role 工具栏）；SettingsShell 补页头标题；AuditLog/Report 工具栏补刷新按钮
 - [x] 配置保存 merge + 备份/恢复（2026-11-19，DH-9；保存基础信息不再丢失布局/导航键）
+- [x] 扫码枪首开失败重连 + 有界 Channel + ReadTimeout（2026-11-19，DH-10）
 - [x] 欧姆龙 PLC 协议支持（2026-07-24 完成：`AP.Plugin.Plc.Omron`，FINS/TCP；字符串读写不支持抛 NotSupportedException、批量写退化为逐条写入）
 
 ### 长期

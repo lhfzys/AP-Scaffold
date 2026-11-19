@@ -40,6 +40,7 @@
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Mitsubishi\AP.Plugin.Plc.Mitsubishi.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Siemens\AP.Plugin.Plc.Siemens.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Omron\AP.Plugin.Plc.Omron.csproj" />
+    <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Scanner\AP.Plugin.Scanner.csproj" />
     <ProjectReference Include="..\..\plugins\system\AP.Plugin.SystemSettings\AP.Plugin.SystemSettings.csproj" />
   </ItemGroup>
 
