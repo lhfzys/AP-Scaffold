@@ -4,7 +4,7 @@
 
 > 如果你刚进入项目，请先阅读根目录的 `AGENTS.md`，它包含了更精简的 AI 交接信息。
 
-> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）、**DH-9 配置保存 merge** 与 **DH-10 扫码枪首开重连**；GitHub Actions 已跑绿；主解决方案 **32 个项目**，测试 **508 通过**（Core 130 / Shared 65 / Infra 313）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
+> **当前状态（2026-11-18）**：交付硬化 DH-1~DH-6 已合并 `main`（`0523fcf`），随后完成 **.NET 10 全仓迁移**（`d72acbe`）、**DH-9 配置保存 merge**、**DH-10 扫码枪首开重连** 与 **DH-13 模板/示例插件**；GitHub Actions 已跑绿；主解决方案 **33 个项目**，测试 **512 通过**（Core 130 / Shared 65 / Infra 317）。默认 A 模式：免登录 + 审计；SQLite 版本化迁移 + 启动前 `VACUUM INTO` 备份；gRPC 已物理移出交付链，安装包只要求 .NET 10 桌面运行时；NuGet 漏洞审计 0 High。
 
 ---
 
@@ -98,6 +98,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 | 插件 | Priority | 功能 |
 |------|---------|------|
 | `AP.Plugin.DeviceConfiguration` | 100 | 通过 `ISettingsContributor` 提供"扫码枪配置"设置页（硬件类，含校验，需重启生效） |
+| `AP.Plugin.Sample` | 200 | 示例业务插件：导航页 + 设置页 + `IReportDataProvider`；作为 `templates/ap-plugin` 的仓库内参考实现 |
 
 ### 7. 硬件插件 `platform/plugins/hardware`
 
@@ -197,6 +198,7 @@ AP-Scaffold 是一个面向工业自动化场景的 **.NET 10 WPF 插件化平�
 - [ ] （可选）列表页 CRUD 交互统一（Recipe 行内按钮 vs User/Role 工具栏）；SettingsShell 补页头标题；AuditLog/Report 工具栏补刷新按钮
 - [x] 配置保存 merge + 备份/恢复（2026-11-19，DH-9；保存基础信息不再丢失布局/导航键）
 - [x] 扫码枪首开失败重连 + 有界 Channel + ReadTimeout（2026-11-19，DH-10）
+- [x] 新项目模板 + 示例业务插件（2026-11-19，DH-13；`templates/ap-plugin` + `AP.Plugin.Sample`）
 - [x] 欧姆龙 PLC 协议支持（2026-07-24 完成：`AP.Plugin.Plc.Omron`，FINS/TCP；字符串读写不支持抛 NotSupportedException、批量写退化为逐条写入）
 
 ### 长期

@@ -43,7 +43,7 @@ platform/tests/
 ├── AP.Shared.Tests/     # 共享库测试（65 个测试）
 │   ├── PluginSDK/       # PluginBase、导航菜单构建器测试
 │   └── Utilities/       # 工具类/数据根/密码策略测试
-└── AP.Infra.Tests/      # 基础设施层测试（313 个测试）
+└── AP.Infra.Tests/      # 基础设施层测试（317 个测试）
     ├── Database/        # 迁移器/备份服务测试
     ├── Hardware/        # PLC 驱动注册表 / 统一激活服务测试
     ├── Report/          # 报表框架测试
@@ -51,7 +51,7 @@ platform/tests/
     └── Security/        # 身份/锁定/密码策略测试
 ```
 
-合计 **3 个测试项目 / 508 个测试**（2026-11-19 实测，全部通过）。
+合计 **3 个测试项目 / 512 个测试**（2026-11-19 实测，全部通过）。
 
 ### 分层测试策略
 

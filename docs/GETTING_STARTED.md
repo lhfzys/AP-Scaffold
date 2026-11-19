@@ -95,6 +95,8 @@ cd AP-Scaffold
 
 ## 创建业务插件
 
+> 快速起步：`dotnet new install .\templates\ap-plugin`，然后 `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再把项目加入 `AP-Automation.Platform.slnx`。模板包含导航页、设置页、报表提供者和 ViewModel 示例。
+
 ### 1. 创建插件项目
 
 在 `platform/plugins/business/` 目录下创建新的类库项目：

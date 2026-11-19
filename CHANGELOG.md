@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 新项目模板 / 示例业务插件（2026-11-19，DH-13）
+
+新增：
+
+- **`AP.Plugin.Sample`**：仓库内可运行示例业务插件，含导航页、设置页（`ISettingsContributor`）、`IReportDataProvider` 和 ViewModel 命令示例。
+- **`templates/ap-plugin`**：`dotnet new ap-plugin` 模板；生成项目含 `Plugin.cs`、View/ViewModel、设置贡献者和报表提供者，`sourceName` 自动替换 `AP.Plugin.Sample`。
+- **使用**：`dotnet new install .\templates\ap-plugin` → `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再加入 `AP-Automation.Platform.slnx`。
+- **测试**：示例插件配置/命令/设置回环/报表/导航测试；模板安装、生成、独立构建通过；全量 **512** 通过（Core 130 / Shared 65 / Infra 317）。
+
 ### 扫码枪首开重连 / 有界 Channel（2026-11-19，DH-10）
 
 修复/变更：

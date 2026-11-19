@@ -117,7 +117,8 @@ AP-Scaffold/
 │   │   │   ├── AP.Plugin.Plc.Omron/      # 欧姆龙 PLC (FINS/TCP协议 + 看门狗)
 │   │   │   └── AP.Plugin.Scanner/        # 串口扫码枪
 │   │   ├── business/                  # 业务功能插件
-│   │   │   └── AP.Plugin.DeviceConfiguration/ # 设备参数配置（设置贡献者）
+│   │   │   ├── AP.Plugin.DeviceConfiguration/ # 设备参数配置（设置贡献者）
+│   │   │   └── AP.Plugin.Sample/      # 示例业务插件（导航/设置/报表，模板参考）
 │   │   └── system/                    # 系统功能插件
 │   │       ├── AP.Plugin.Layout/      # 布局管理/Sidebar/仪表盘
 │   │       ├── AP.Plugin.Login/       # 登录认证
@@ -553,6 +554,17 @@ gRPC 项目已从主解决方案/宿主移除，以下配置仅作为冻结参�
 
 ## 插件开发指南
 
+### 从模板创建新插件
+
+仓库内置 `dotnet new` 模板（导航页 + 设置页 + 报表提供者 + ViewModel 示例）：
+
+```powershell
+dotnet new install .\templates\ap-plugin
+dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness
+```
+
+生成后把项目加入 `AP-Automation.Platform.slnx` 的 `/platform/plugins/business/`，再构建宿主。仓库内 `AP.Plugin.Sample` 是与模板对应的可运行参考实现，测试见 `AP.Infra.Tests/Business/SamplePluginTests.cs`。
+
 ### 新建一个插件
 
 **第 1 步**：在 `platform/plugins/` 下创建类库项目（按分类放到 `hardware/`、`business/` 或 `system/`）。`Directory.Build.props` 会自动把 `AP.Plugin.*` 项目的输出定向到 `bin/$(Configuration)/plugins/{插件名}/`，并清理与宿主重复的共享 DLL —— **无需配置任何构建后事件**。
@@ -759,7 +771,7 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 508 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge 与扫码枪重连。
+项目当前包含 **3 个测试项目 / 512 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份、配置 merge、扫码枪重连与示例业务插件。
 
 ### 测试项目结构
 
@@ -788,7 +800,7 @@ platform/tests/
 │       ├── SerializationHelperTests.cs        # JSON 序列化/反序列化
 │       └── ConfigurationHelperTests.cs        # appsettings.json 配置更新
 │
-└── AP.Infra.Tests/                      # 基础设施层测试（313 个测试）
+└── AP.Infra.Tests/                      # 基础设施层测试（317 个测试）
     ├── Hardware/
     │   ├── ActivePlcServiceTests.cs           # PLC 统一激活服务
     │   └── PlcDriverRegistryTests.cs          # PLC 驱动注册表
@@ -832,6 +844,7 @@ dotnet test platform/tests/AP.Infra.Tests/AP.Infra.Tests.csproj -c Release
 | **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** | 项目状态与工作计划 |
 | **[docs/DELIVERY_HARDENING_PLAN.md](docs/DELIVERY_HARDENING_PLAN.md)** | 交付硬化 DH-1~DH-6 计划、完成记录与提交 |
 | **[docs/DATABASE_BACKUP_RESTORE.md](docs/DATABASE_BACKUP_RESTORE.md)** | SQLite 自动备份与离线恢复步骤 |
+| **[templates/ap-plugin/README.md](templates/ap-plugin/README.md)** | `dotnet new ap-plugin` 业务插件模板使用说明 |
 | **[docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md)** | 五维度差距分析与改进计划（2026-07 快照） |
 
 ---

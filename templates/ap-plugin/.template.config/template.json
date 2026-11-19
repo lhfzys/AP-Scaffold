@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "AP-Scaffold",
+  "classifications": ["AP-Scaffold", "Plugin", "WPF"],
+  "identity": "AP.Scaffold.Plugin",
+  "name": "AP-Scaffold Business Plugin",
+  "description": "生成一个最小业务插件：导航页 + 设置页 + 报表提供者 + ViewModel 示例。",
+  "shortName": "ap-plugin",
+  "sourceName": "AP.Plugin.Sample",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}

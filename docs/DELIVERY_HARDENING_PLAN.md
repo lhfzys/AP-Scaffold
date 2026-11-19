@@ -52,7 +52,7 @@
 | DH-10 | 扫码枪首开重连 + 有界 Channel | P1 | 已完成 | 1d |
 | DH-11 | 报表/配方闭环 | P1 | 待开始 | 4d |
 | DH-12 | 现场诊断：测试连接/报文日志/点表导入 | P1 | 待开始 | 4d |
-| DH-13 | 新项目模板 + 示例业务插件 | P1 | 待开始 | 3d |
+| DH-13 | 新项目模板 + 示例业务插件 | P1 | 已完成 | 3d |
 
 > 状态取值：待开始 / 进行中 / 已完成 / 阻塞。完成时必须填写验证记录。
 
@@ -318,6 +318,16 @@
 - **配置**：`appsettings.Standalone.json` 增加上述两个键；`SerialPortOptions` 提供默认值。
 - **验证**：新增首开失败不抛出/进入监督器测试、选项默认值测试；全量 **508** 测试通过。
 
+### DH-13 新项目模板 / 示例业务插件
+
+#### 完成记录（2026-11-19）
+
+- **示例业务插件**：新增 `AP.Plugin.Sample`（导航页 + 设置页 + `IReportDataProvider` + 视图/VM），加入主解决方案。
+- **dotnet new 模板**：`templates/ap-plugin`，短名称 `ap-plugin`，生成后包含 `Plugin.cs`、View/ViewModel、设置贡献者、报表提供者；`sourceName` 自动替换 `AP.Plugin.Sample`。
+- **验证**：模板安装/生成/独立构建通过；生成项目与模板文件均清理；示例插件测试（配置读取/命令/设置回环/报表/导航）通过。
+- **测试**：全量 **512** 通过（Core 130 / Shared 65 / Infra 317）。
+- 使用说明：`dotnet new install .\templates\ap-plugin` → `dotnet new ap-plugin -n AP.Plugin.MyBusiness -o platform/plugins/business/AP.Plugin.MyBusiness`，再加入 slnx。
+
 ### DH-7 ~ DH-13
 
 见评估报告第 8 节；每项单独开 Task、单独提交。
@@ -341,10 +351,11 @@
 | 2026-11-18 | DH-3 | `d72acbe` | net10 全仓构建；502 测试通过；漏洞 0 High；安装冒烟通过；CI 绿 |
 | 2026-11-19 | DH-9 | `cf85718` | 配置保存 merge；备份/恢复入口；506 测试通过；CI 绿 |
 | 2026-11-19 | DH-10 | `d746733` | 首开失败进入监督器；有界 Channel/ReadTimeout；508 测试通过；CI 绿 |
+| 2026-11-19 | DH-13 | 待提交 | 示例插件 + dotnet new 模板；模板生成构建通过；512 测试通过 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v2.3（2026-11-19，DH-10 扫码枪首开重连完成）
-**下一步**：按项目需要选 DH-13 新项目模板或 DH-7 插件 profile；DH-8/DH-11/DH-12 待排期。
+**文档版本**：v2.4（2026-11-19，DH-13 模板/示例插件完成）
+**下一步**：按项目需要选 DH-7 插件 profile、DH-8 单容器、DH-11 报表/配方或 DH-12 现场诊断。
