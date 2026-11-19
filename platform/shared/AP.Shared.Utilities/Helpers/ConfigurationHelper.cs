@@ -100,8 +100,14 @@ public static class ConfigurationHelper
         }
 
         var finalSection = sections.Last();
-        currentNode[finalSection] =
-            JsonSerializer.SerializeToNode(newValue, new JsonSerializerOptions { WriteIndented = true });
+        var newNode = JsonSerializer.SerializeToNode(newValue, new JsonSerializerOptions { WriteIndented = true });
+
+        // 合并而不是整节替换：保存“应用基础信息”时不能把同节的
+        // LayoutMode / DefaultNavigationTarget / NavigationWhenSecurityDisabled 或插件的未知键抹掉。
+        if (newNode is JsonObject newObject && currentNode[finalSection] is JsonObject existingObject)
+            MergeJsonObject(existingObject, newObject);
+        else
+            currentNode[finalSection] = newNode;
 
         var options = new JsonSerializerOptions { WriteIndented = true };
         var content = root.ToJsonString(options);
@@ -110,5 +116,19 @@ public static class ConfigurationHelper
         var tempPath = filePath + ".tmp";
         File.WriteAllText(tempPath, content);
         File.Move(tempPath, filePath, true);
+    }
+
+    /// <summary>
+    /// 递归合并 JSON 对象：已有键保留，新对象中出现的键覆盖/新增；数组整体替换。
+    /// </summary>
+    private static void MergeJsonObject(JsonObject target, JsonObject source)
+    {
+        foreach (var property in source)
+        {
+            if (target[property.Key] is JsonObject targetChild && property.Value is JsonObject sourceChild)
+                MergeJsonObject(targetChild, sourceChild);
+            else
+                target[property.Key] = property.Value?.DeepClone();
+        }
     }
 }

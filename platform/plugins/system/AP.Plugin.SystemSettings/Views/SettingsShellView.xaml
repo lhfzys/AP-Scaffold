@@ -57,19 +57,41 @@
                     BorderThickness="0,1,0,0"
                     Background="{DynamicResource Brush.Surface}"
                     Padding="24,16">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="取消"
-                            Style="{StaticResource MaterialDesignPaperButton}"
-                            Command="{Binding CancelChangesCommand}"
-                            Height="{DynamicResource Button.StandardHeight}"
-                            Margin="0,0,12,0"/>
-                    <Button Content="保存配置"
-                            Style="{StaticResource RaisedButton.Primary}"
-                            Command="{Binding SaveSettingsCommand}"
-                            Height="{DynamicResource Button.StandardHeight}"
-                            ui:PermissionBehavior.Permission="system.settings"
-                            ui:PermissionBehavior.HideWhenUnauthorized="False"/>
-                </StackPanel>
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="配置备份"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                        <ComboBox Width="220"
+                                  ItemsSource="{Binding BackupFiles}"
+                                  SelectedItem="{Binding SelectedBackup, Mode=TwoWay}"
+                                  DisplayMemberPath="FileName"
+                                  IsEnabled="{Binding HasBackups}"
+                                  Margin="0,0,8,0"/>
+                        <Button Content="恢复备份"
+                                Style="{StaticResource MaterialDesignPaperButton}"
+                                Command="{Binding RestoreBackupCommand}"
+                                IsEnabled="{Binding HasBackups}"
+                                Height="{DynamicResource Button.StandardHeight}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="取消"
+                                Style="{StaticResource MaterialDesignPaperButton}"
+                                Command="{Binding CancelChangesCommand}"
+                                Height="{DynamicResource Button.StandardHeight}"
+                                Margin="0,0,12,0"/>
+                        <Button Content="保存配置"
+                                Style="{StaticResource RaisedButton.Primary}"
+                                Command="{Binding SaveSettingsCommand}"
+                                Height="{DynamicResource Button.StandardHeight}"
+                                ui:PermissionBehavior.Permission="system.settings"
+                                ui:PermissionBehavior.HideWhenUnauthorized="False"/>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
     </md:Card>

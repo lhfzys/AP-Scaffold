@@ -7,7 +7,12 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -35,6 +40,7 @@
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Mitsubishi\AP.Plugin.Plc.Mitsubishi.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Siemens\AP.Plugin.Plc.Siemens.csproj" />
     <ProjectReference Include="..\..\plugins\hardware\AP.Plugin.Plc.Omron\AP.Plugin.Plc.Omron.csproj" />
+    <ProjectReference Include="..\..\plugins\system\AP.Plugin.SystemSettings\AP.Plugin.SystemSettings.csproj" />
   </ItemGroup>
 
 </Project>

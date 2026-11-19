@@ -1,5 +1,6 @@
 using AP.Shared.Utilities.Helpers;
 using FluentAssertions;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace AP.Shared.Tests.Utilities;
@@ -26,6 +27,69 @@ public class ConfigurationHelperTests
         var exception = Record.Exception(() =>
             ConfigurationHelper.UpdateAppSetting<object?>("TestSection", null!));
         exception.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateAppSetting_MergesObject_AndPreservesUnknownAndSiblingKeys()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var fileName = $"merge_test_{Guid.NewGuid():N}.json";
+        var filePath = Path.Combine(configDir, fileName);
+        File.WriteAllText(filePath, """
+            {
+              "AppConfiguration": {
+                "CompanyName": "旧公司",
+                "LayoutMode": "SinglePage",
+                "DefaultNavigationTarget": "TagTableListView",
+                "CustomFutureKey": { "Nested": 7 }
+              }
+            }
+            """);
+
+        try
+        {
+            ConfigurationHelper.UpdateAppSetting("AppConfiguration", new { CompanyName = "新公司" }, fileName);
+
+            var node = JsonNode.Parse(File.ReadAllText(filePath))!["AppConfiguration"]!.AsObject();
+            node["CompanyName"]!.GetValue<string>().Should().Be("新公司");
+            node["LayoutMode"]!.GetValue<string>().Should().Be("SinglePage");
+            node["DefaultNavigationTarget"]!.GetValue<string>().Should().Be("TagTableListView");
+            node["CustomFutureKey"]!["Nested"]!.GetValue<int>().Should().Be(7);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void UpdateAppSetting_ReplacesArray_InsteadOfMergingByIndex()
+    {
+        var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        Directory.CreateDirectory(configDir);
+        var fileName = $"merge_array_test_{Guid.NewGuid():N}.json";
+        var filePath = Path.Combine(configDir, fileName);
+        File.WriteAllText(filePath, """
+            { "AppConfiguration": { "NavigationWhenSecurityDisabled": [ "A", "B" ], "KeepMe": true } }
+            """);
+
+        try
+        {
+            ConfigurationHelper.UpdateAppSetting(
+                "AppConfiguration",
+                new { NavigationWhenSecurityDisabled = new[] { "C" } },
+                fileName);
+
+            var section = JsonNode.Parse(File.ReadAllText(filePath))!["AppConfiguration"]!.AsObject();
+            section["NavigationWhenSecurityDisabled"]!.AsArray().Select(x => x!.GetValue<string>())
+                .Should().Equal("C");
+            section["KeepMe"]!.GetValue<bool>().Should().BeTrue();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
     }
 
     [Fact]

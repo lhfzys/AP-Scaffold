@@ -48,7 +48,7 @@
 | DH-6 | CI 最小流水线 + 安装冒烟 + gRPC 移出交付链 | P0/P1 | 已完成（CI 绿，已合并 main） | 4d |
 | DH-7 | 插件 manifest/启用禁用/交付档位 | P1 | 待开始 | 4d |
 | DH-8 | 单容器 + 插件初始化超时 + 加载报告 | P1 | 待开始 | 3d |
-| DH-9 | 配置保存 merge + 备份/恢复 | P1 | 待开始 | 2d |
+| DH-9 | 配置保存 merge + 备份/恢复 | P1 | 已完成 | 2d |
 | DH-10 | 扫码枪首开重连 + 有界 Channel | P1 | 待开始 | 1d |
 | DH-11 | 报表/配方闭环 | P1 | 待开始 | 4d |
 | DH-12 | 现场诊断：测试连接/报文日志/点表导入 | P1 | 待开始 | 4d |
@@ -299,6 +299,15 @@
 
 **未完成**：NuGet 漏洞门禁待 STJ 补丁后再设为阻断；CI 目前只跑 Windows 构建/测试/安装冒烟，无真机 PLC 测试。
 
+### DH-9 配置保存 merge / 备份恢复
+
+#### 完成记录（2026-11-19）
+
+- **保存不再整节替换**：`ConfigurationHelper.UpdateAppSetting` 改为递归合并 JSON 对象；已有未知键、同级 `LayoutMode`/`DefaultNavigationTarget`/`NavigationWhenSecurityDisabled` 不再被保存“公司名/软件名”抹掉；数组整体替换而不是按索引合并。
+- **编辑器字段补齐**：`AppConfigurationOptions` 与 `AppConfigurationEditorViewModel` 补齐 `LayoutMode`、`DefaultNavigationTarget`、`NavigationWhenSecurityDisabled`，加载后原样回写。
+- **备份/恢复**：配置备份时间戳改为毫秒级，避免同秒覆盖；恢复限制在配置目录内，配置中心底部新增“配置备份 + 恢复备份”入口。
+- **验证**：新增 `ConfigurationHelperTests`（未知键保留/数组替换）、`AppConfigurationEditorTests`（编辑器字段保留）、`SettingsServiceTests`（保存 merge + 备份恢复）；全量 **506** 测试通过。
+
 ### DH-7 ~ DH-13
 
 见评估报告第 8 节；每项单独开 Task、单独提交。
@@ -320,10 +329,11 @@
 | 2026-11-18 | A 模式收口 | `6e58c0a` | 免登录启动（无登录框）；日志显示“审计日志插件已加载”；Sidebar/快捷入口出现“审计日志”；502 测试通过 |
 | 2026-11-18 | DH-5 | `fbcf354` | 首次/二次启动迁移验证；正式安装旧库升级备份 32KB + quick_check；505 测试通过 |
 | 2026-11-18 | DH-3 | `d72acbe` | net10 全仓构建；502 测试通过；漏洞 0 High；安装冒烟通过；CI 绿 |
+| 2026-11-19 | DH-9 | 待提交 | 配置保存 merge；备份/恢复入口；506 测试通过 |
 
 > 每次提交前必须：`dotnet build AP-Automation.Platform.slnx -c Release` 0 错误 + 三个测试项目全绿。
 
 ---
 
-**文档版本**：v2.1（2026-11-18，DH-3 .NET 10 迁移完成）
-**下一步**：按真实项目需求选 P1；优先 DH-9 配置保存 merge 与 DH-10 扫码枪首开重连。
+**文档版本**：v2.2（2026-11-19，DH-9 配置保存 merge/备份恢复完成）
+**下一步**：DH-10 扫码枪首开重连；之后按项目需要选 DH-13 模板或 DH-7 插件 profile。

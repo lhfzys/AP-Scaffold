@@ -294,6 +294,8 @@ public override void ConfigureServices(IServiceCollection services, IConfigurati
 
 编辑器 ViewModel 实现 `ISettingsEditorViewModel`（`LoadFromConfiguration` / `Validate` / `GetConfigurationValue` / `RequiresRestart`），并在 `InitializeAsync` 中把 `编辑器VM → 编辑器View` 的 DataTemplate 注册到 `Application.Current.Resources`。保存时框架统一校验、备份 appsettings 并写回。
 
+> 配置保存按节点递归合并：未知键、同级 `LayoutMode`/`DefaultNavigationTarget`/`NavigationWhenSecurityDisabled` 会保留；保存“应用基础信息”不会再把布局/导航配置抹掉。配置中心底部可查看备份并“恢复备份”（恢复后需重启）。
+
 ---
 
 ## 配置说明

@@ -757,7 +757,7 @@ reports/
 
 ## 测试覆盖
 
-项目当前包含 **3 个测试项目 / 502 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份与安全身份。
+项目当前包含 **3 个测试项目 / 506 个测试**（全部通过），覆盖核心框架、共享库、基础设施、数据库迁移/备份、安全身份与配置 merge。
 
 ### 测试项目结构
 
@@ -778,7 +778,7 @@ platform/tests/
 │       ├── RequiresCapabilitiesAttributeTests.cs  # 能力依赖特性
 │       └── PluginInterfaceTests.cs            # IPlugin 接口契约
 │
-├── AP.Shared.Tests/                     # 共享库测试（63 个测试）
+├── AP.Shared.Tests/                     # 共享库测试（65 个测试）
 │   ├── PluginSDK/
 │   │   ├── PluginBaseTests.cs                 # 插件基类
 │   │   └── NavigationMenuItemBuilderTests.cs  # 导航菜单构建器
@@ -786,7 +786,7 @@ platform/tests/
 │       ├── SerializationHelperTests.cs        # JSON 序列化/反序列化
 │       └── ConfigurationHelperTests.cs        # appsettings.json 配置更新
 │
-└── AP.Infra.Tests/                      # 基础设施层测试（309 个测试）
+└── AP.Infra.Tests/                      # 基础设施层测试（311 个测试）
     ├── Hardware/
     │   ├── ActivePlcServiceTests.cs           # PLC 统一激活服务
     │   └── PlcDriverRegistryTests.cs          # PLC 驱动注册表

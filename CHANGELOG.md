@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 配置中心保存 merge / 备份恢复（2026-11-19，DH-9）
+
+修复/变更：
+
+- **配置保存不再整节替换**：`ConfigurationHelper.UpdateAppSetting` 改为递归合并 JSON 对象，保存公司名/软件名不会再抹掉 `LayoutMode`、`DefaultNavigationTarget`、`NavigationWhenSecurityDisabled` 或未来新增键；数组整体替换。
+- **编辑器字段补齐**：`AppConfigurationOptions` / `AppConfigurationEditorViewModel` 补齐布局与导航字段，加载后原样回写。
+- **备份/恢复**：备份时间戳改毫秒级，避免同秒覆盖；恢复只允许配置目录内文件；配置中心底部新增配置备份下拉框和“恢复备份”按钮。
+- **测试**：新增配置 merge、编辑器字段保留、保存+备份恢复测试；全量 **506** 通过（Core 130 / Shared 65 / Infra 311）。
+
 ### .NET 10 迁移（2026-11-18）
 
 变更：

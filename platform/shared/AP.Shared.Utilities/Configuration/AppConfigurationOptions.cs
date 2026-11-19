@@ -1,4 +1,4 @@
-﻿namespace AP.Shared.Utilities.Configuration;
+namespace AP.Shared.Utilities.Configuration;
 
 /// <summary>
 /// 应用基础配置选项
@@ -12,4 +12,6 @@ public class AppConfigurationOptions
     public string MachineId { get; set; } = "Unknown-Machine";
     public string MachineName { get; set; } = "未命名工位";
     public string LayoutMode { get; set; } = "Standard";
+    public string DefaultNavigationTarget { get; set; } = "DashboardView";
+    public List<string> NavigationWhenSecurityDisabled { get; set; } = new();
 }

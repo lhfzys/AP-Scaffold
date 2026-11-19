@@ -163,7 +163,8 @@ public class SettingsService
             }
 
             var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-            var backupFileName = $"{nameWithoutExtension}.backup.{DateTime.Now:yyyyMMddHHmmss}.json";
+            // 毫秒级时间戳，避免同一秒内连续保存覆盖上一代备份
+            var backupFileName = $"{nameWithoutExtension}.backup.{DateTime.Now:yyyyMMddHHmmssfff}.json";
             var backupPath = Path.Combine(_configDirectory, backupFileName);
             File.Copy(sourcePath, backupPath, overwrite: true);
             backups.Add(backupPath);
@@ -194,7 +195,17 @@ public class SettingsService
         {
             if (!File.Exists(backupPath)) return false;
 
-            // 备份名形如 appsettings[.Role].backup.yyyyMMddHHmmss.json；
+            // 只允许恢复配置目录下的备份，避免通过任意路径覆盖系统文件
+            var configRoot = Path.GetFullPath(_configDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullBackupPath = Path.GetFullPath(backupPath);
+            if (!fullBackupPath.StartsWith(configRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("拒绝恢复配置目录之外的备份: {BackupPath}", backupPath);
+                return false;
+            }
+
+            // 备份名形如 appsettings[.Role].backup.yyyyMMddHHmmss[fff].json；
             // 必须恢复到原来的文件，否则角色文件的备份会被写进基文件而失效。
             var name = Path.GetFileName(backupPath);
             var markerIndex = name.IndexOf(".backup.", StringComparison.OrdinalIgnoreCase);

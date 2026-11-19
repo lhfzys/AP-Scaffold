@@ -35,7 +35,15 @@ public partial class SettingsShellViewModel : ViewModelBase
     private SettingsContributorItem? _selectedContributor;
 
     [ObservableProperty]
+    private ObservableCollection<SettingsBackupItem> _backupFiles = new();
+
+    [ObservableProperty]
+    private SettingsBackupItem? _selectedBackup;
+
+    [ObservableProperty]
     private bool _isBusy;
+
+    public bool HasBackups => BackupFiles.Count > 0;
 
     public SettingsShellViewModel(
         IServiceProvider serviceProvider,
@@ -52,6 +60,15 @@ public partial class SettingsShellViewModel : ViewModelBase
         _logger = logger;
 
         InitializeContributors(contributors);
+        LoadBackupFiles();
+    }
+
+    private void LoadBackupFiles()
+    {
+        BackupFiles = new ObservableCollection<SettingsBackupItem>(
+            _settingsService.GetBackupFiles().Select(path => new SettingsBackupItem(path)));
+        SelectedBackup = BackupFiles.FirstOrDefault();
+        OnPropertyChanged(nameof(HasBackups));
     }
 
     private void InitializeContributors(IEnumerable<ISettingsContributor> contributors)
@@ -135,6 +152,37 @@ public partial class SettingsShellViewModel : ViewModelBase
             _logger.LogInformation("配置保存成功，备份：{BackupPath}", result.BackupPath);
 
             OnRequestClose();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RestoreBackupAsync()
+    {
+        if (IsBusy || SelectedBackup is null) return;
+
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            $"将用备份覆盖当前配置文件：\n{SelectedBackup.FileName}\n\n恢复后请重启应用使配置生效。",
+            "恢复配置备份");
+        if (!confirmed) return;
+
+        BusyText = "正在恢复配置...";
+        IsBusy = true;
+        try
+        {
+            if (_settingsService.RestoreFromBackup(SelectedBackup.FilePath))
+            {
+                await _dialogService.ShowAlertAsync(
+                    "配置已从备份恢复。\n\n请重启应用使配置生效。", "恢复成功");
+                _logger.LogInformation("配置已从备份恢复: {BackupPath}", SelectedBackup.FilePath);
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("恢复失败，请检查备份文件和日志。");
+            }
         }
         finally
         {

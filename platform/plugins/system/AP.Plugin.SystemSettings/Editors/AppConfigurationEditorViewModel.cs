@@ -1,4 +1,4 @@
-﻿using AP.Shared.PluginSDK.Configuration;
+using AP.Shared.PluginSDK.Configuration;
 using AP.Shared.Utilities.Configuration;
 using AP.Shared.UI.Base;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,6 +16,11 @@ public partial class AppConfigurationEditorViewModel : ViewModelBase, ISettingsE
     [ObservableProperty] private string _machineId = "Unknown-Machine";
     [ObservableProperty] private string _machineName = "未命名工位";
 
+    // 以下字段不在此页面展示，但必须原样回写，否则保存基础信息会丢失布局/导航配置。
+    [ObservableProperty] private string _layoutMode = "Standard";
+    [ObservableProperty] private string _defaultNavigationTarget = "DashboardView";
+    [ObservableProperty] private List<string> _navigationWhenSecurityDisabled = new();
+
     public bool RequiresRestart => true;
 
     public void LoadFromConfiguration(IConfiguration configuration)
@@ -27,6 +32,9 @@ public partial class AppConfigurationEditorViewModel : ViewModelBase, ISettingsE
         SoftwareName = options.SoftwareName;
         MachineId = options.MachineId;
         MachineName = options.MachineName;
+        LayoutMode = options.LayoutMode;
+        DefaultNavigationTarget = options.DefaultNavigationTarget;
+        NavigationWhenSecurityDisabled = options.NavigationWhenSecurityDisabled?.ToList() ?? new List<string>();
     }
 
     public IEnumerable<string> Validate()
@@ -55,7 +63,10 @@ public partial class AppConfigurationEditorViewModel : ViewModelBase, ISettingsE
             CompanyName = CompanyName,
             SoftwareName = SoftwareName,
             MachineId = MachineId,
-            MachineName = MachineName
+            MachineName = MachineName,
+            LayoutMode = LayoutMode,
+            DefaultNavigationTarget = DefaultNavigationTarget,
+            NavigationWhenSecurityDisabled = NavigationWhenSecurityDisabled.ToList()
         };
     }
 }
